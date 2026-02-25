@@ -1,0 +1,971 @@
+{
+  "info": {
+    "name": "SiDispo API — Sistem Disposisi Digital",
+    "_postman_id": "sidispo-api-collection-v1",
+    "description": "Koleksi API lengkap untuk SiDispo (Sistem Disposisi Digital).\n\n**Backend:** CodeIgniter 3 + JWT Auth\n**Base URL:** {{base_url}}/api/v1\n\n**Cara Pakai:**\n1. Set variable `base_url` di Environment\n2. Jalankan request `Login` dulu\n3. Token JWT otomatis tersimpan ke variable `token`\n4. Semua request lain otomatis pakai token\n\n**Akun Test (password: Sidispo@2026):**\n- Direktur: direktur@rsud.go.id\n- Kabid Keuangan: kabid.keu@rsud.go.id\n- Kabid Keperawatan: kabid.kep@rsud.go.id\n- Admin: admin@rsud.go.id",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url",      "value": "http://localhost/sidispo-backend", "type": "string" },
+    { "key": "token",         "value": "", "type": "string" },
+    { "key": "disposisi_id",  "value": "1", "type": "string" },
+    { "key": "penerima_id",   "value": "1", "type": "string" },
+    { "key": "folder_id",     "value": "1", "type": "string" },
+    { "key": "surat_id",      "value": "1", "type": "string" },
+    { "key": "notif_id",      "value": "1", "type": "string" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "item": [
+
+    {
+      "name": "🔐 Auth",
+      "item": [
+        {
+          "name": "Login — Direktur",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.status === 'success' && res.data && res.data.token) {",
+                  "    pm.collectionVariables.set('token', res.data.token);",
+                  "    pm.test('Login berhasil & token tersimpan', () => pm.expect(res.status).to.eql('success'));",
+                  "    console.log('Token:', res.data.token);",
+                  "} else {",
+                  "    pm.test('Login gagal', () => pm.expect(res.status).to.eql('success'));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"direktur@rsud.go.id\",\n  \"password\": \"Sidispo@2026\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/auth/login", "host": ["{{base_url}}"], "path": ["api","v1","auth","login"] },
+            "description": "Login sebagai Direktur. Token JWT otomatis tersimpan ke variable `token`."
+          }
+        },
+        {
+          "name": "Login — Kabid Keuangan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.status === 'success' && res.data && res.data.token) {",
+                  "    pm.collectionVariables.set('token', res.data.token);",
+                  "    pm.test('Login Kabid Keuangan berhasil', () => pm.expect(res.status).to.eql('success'));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"kabid.keu@rsud.go.id\",\n  \"password\": \"Sidispo@2026\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/auth/login", "host": ["{{base_url}}"], "path": ["api","v1","auth","login"] }
+          }
+        },
+        {
+          "name": "Login — Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.status === 'success' && res.data && res.data.token) {",
+                  "    pm.collectionVariables.set('token', res.data.token);",
+                  "    pm.test('Login Admin berhasil', () => pm.expect(res.status).to.eql('success'));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@rsud.go.id\",\n  \"password\": \"Sidispo@2026\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/auth/login", "host": ["{{base_url}}"], "path": ["api","v1","auth","login"] }
+          }
+        },
+        {
+          "name": "Get Profile (Me)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('Ada data user', () => pm.expect(res.data).to.have.property('nama_lengkap'));",
+                  "console.log('User:', res.data.nama_lengkap, '|', res.data.role);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/auth/me", "host": ["{{base_url}}"], "path": ["api","v1","auth","me"] },
+            "description": "Ambil data user yang sedang login berdasarkan token."
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/api/v1/auth/logout", "host": ["{{base_url}}"], "path": ["api","v1","auth","logout"] }
+          }
+        },
+        {
+          "name": "[❌ NEGATIF] Login Password Salah",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Harus return 401', () => pm.response.to.have.status(401));",
+                  "const res = pm.response.json();",
+                  "pm.test('Ada pesan error', () => pm.expect(res.status).to.eql('error'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"direktur@rsud.go.id\",\n  \"password\": \"password_salah\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/auth/login", "host": ["{{base_url}}"], "path": ["api","v1","auth","login"] }
+          }
+        },
+        {
+          "name": "[❌ NEGATIF] Akses Tanpa Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Harus return 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/disposisi", "host": ["{{base_url}}"], "path": ["api","v1","disposisi"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "📊 Dashboard",
+      "item": [
+        {
+          "name": "Get Stats Dashboard",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('Ada statistik', () => {",
+                  "    pm.expect(res.data).to.have.property('total_aktif');",
+                  "    pm.expect(res.data).to.have.property('total_selesai');",
+                  "    pm.expect(res.data).to.have.property('total_overdue');",
+                  "});",
+                  "console.log('Stats:', JSON.stringify(res.data, null, 2));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/dashboard", "host": ["{{base_url}}"], "path": ["api","v1","dashboard"] },
+            "description": "Statistik ringkasan untuk dashboard: total aktif, selesai, overdue, diproses, progress per unit."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "📋 Disposisi",
+      "item": [
+        {
+          "name": "Get Semua Disposisi",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('Ada array data', () => pm.expect(res.data).to.be.an('array'));",
+                  "if (res.data.length > 0) {",
+                  "    pm.collectionVariables.set('disposisi_id', res.data[0].id);",
+                  "    console.log('Total disposisi:', res.data.length);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/disposisi",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","disposisi"],
+              "query": [
+                { "key": "status", "value": "", "description": "Filter: AKTIF | SELESAI | ARSIP", "disabled": true },
+                { "key": "folder_id", "value": "", "description": "Filter by folder ID", "disabled": true },
+                { "key": "prioritas", "value": "", "description": "Filter: URGENT | NORMAL | BIASA", "disabled": true },
+                { "key": "dari_tanggal", "value": "", "description": "Filter dari tanggal (Y-m-d)", "disabled": true },
+                { "key": "sampai_tanggal", "value": "", "description": "Filter sampai tanggal (Y-m-d)", "disabled": true },
+                { "key": "keyword", "value": "", "description": "Search keyword perihal/nomor", "disabled": true },
+                { "key": "per_page", "value": "10", "description": "Jumlah per halaman", "disabled": true },
+                { "key": "page", "value": "1", "description": "Halaman", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Disposisi — Filter Status AKTIF",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/disposisi?status=AKTIF",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","disposisi"],
+              "query": [{ "key": "status", "value": "AKTIF" }]
+            }
+          }
+        },
+        {
+          "name": "Get Disposisi — Filter URGENT",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/disposisi?prioritas=URGENT",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","disposisi"],
+              "query": [{ "key": "prioritas", "value": "URGENT" }]
+            }
+          }
+        },
+        {
+          "name": "Get Disposisi Overdue",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('Semua overdue', () => {",
+                  "    res.data.forEach(d => pm.expect(d.sisa_hari).to.be.below(0));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/disposisi/overdue", "host": ["{{base_url}}"], "path": ["api","v1","disposisi","overdue"] }
+          }
+        },
+        {
+          "name": "Get Statistik Disposisi",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/disposisi/stats", "host": ["{{base_url}}"], "path": ["api","v1","disposisi","stats"] }
+          }
+        },
+        {
+          "name": "Get Detail Disposisi",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('Ada detail lengkap', () => {",
+                  "    pm.expect(res.data).to.have.property('nomor_disposisi');",
+                  "    pm.expect(res.data).to.have.property('isi_disposisi');",
+                  "    pm.expect(res.data).to.have.property('penerima');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/disposisi/{{disposisi_id}}", "host": ["{{base_url}}"], "path": ["api","v1","disposisi","{{disposisi_id}}"] }
+          }
+        },
+        {
+          "name": "Buat Disposisi Baru",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "const res = pm.response.json();",
+                  "pm.test('Disposisi berhasil dibuat', () => pm.expect(res.status).to.eql('success'));",
+                  "if (res.data && res.data.id) {",
+                  "    pm.collectionVariables.set('disposisi_id', res.data.id);",
+                  "    console.log('Disposisi baru ID:', res.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"surat_masuk_id\": 1,\n  \"folder_id\": 7,\n  \"isi_disposisi\": \"Segera tindaklanjuti edaran ini. Koordinasikan dengan semua unit terkait dan laporkan hasilnya dalam 7 hari kerja.\",\n  \"prioritas\": \"URGENT\",\n  \"batas_waktu\": \"2026-03-01\",\n  \"catatan_direktur\": \"Pastikan tidak ada yang terlewat.\",\n  \"penerima\": [6, 5]\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/disposisi", "host": ["{{base_url}}"], "path": ["api","v1","disposisi"] },
+            "description": "Buat disposisi baru. Field `penerima` adalah array user_id."
+          }
+        },
+        {
+          "name": "Update Disposisi",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isi_disposisi\": \"Update instruksi: Tambahkan koordinasi dengan Bagian Perencanaan sebelum eksekusi.\",\n  \"prioritas\": \"NORMAL\",\n  \"batas_waktu\": \"2026-03-05\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/disposisi/{{disposisi_id}}", "host": ["{{base_url}}"], "path": ["api","v1","disposisi","{{disposisi_id}}"] }
+          }
+        },
+        {
+          "name": "Arsipkan Disposisi",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/api/v1/disposisi/{{disposisi_id}}", "host": ["{{base_url}}"], "path": ["api","v1","disposisi","{{disposisi_id}}"] }
+          }
+        },
+        {
+          "name": "[❌ NEGATIF] Buat Disposisi — Field Kosong",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Harus return 422', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"surat_masuk_id\": 1\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/disposisi", "host": ["{{base_url}}"], "path": ["api","v1","disposisi"] }
+          }
+        },
+        {
+          "name": "[❌ NEGATIF] Buat Disposisi — Role STAF",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Harus return 403 Forbidden', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"surat_masuk_id\": 1,\n  \"isi_disposisi\": \"Test oleh staf\",\n  \"penerima\": [6]\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/disposisi", "host": ["{{base_url}}"], "path": ["api","v1","disposisi"] },
+            "description": "Ganti token ke akun STAF sebelum jalankan ini."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "👥 Penerima & Progress",
+      "item": [
+        {
+          "name": "Get Daftar Penerima",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('Ada array penerima', () => pm.expect(res.data).to.be.an('array'));",
+                  "if (res.data.length > 0) {",
+                  "    pm.collectionVariables.set('penerima_id', res.data[0].id);",
+                  "    console.log('Penerima pertama ID:', res.data[0].id, '| Status:', res.data[0].status);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/penerima/{{disposisi_id}}", "host": ["{{base_url}}"], "path": ["api","v1","penerima","{{disposisi_id}}"] },
+            "description": "List semua penerima disposisi beserta status masing-masing."
+          }
+        },
+        {
+          "name": "Update Status — Mulai Proses",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('Status berhasil diupdate', () => pm.expect(res.status).to.eql('success'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"PROSES\",\n  \"catatan\": \"Mulai mengerjakan. Koordinasi dengan tim terkait sudah dilakukan.\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/penerima/{{penerima_id}}/status", "host": ["{{base_url}}"], "path": ["api","v1","penerima","{{penerima_id}}","status"] }
+          }
+        },
+        {
+          "name": "Update Status — Menunggu Approval",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"TUNGGU\",\n  \"catatan\": \"Draft sudah selesai. Menunggu persetujuan dari Wadir sebelum dikirim.\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/penerima/{{penerima_id}}/status", "host": ["{{base_url}}"], "path": ["api","v1","penerima","{{penerima_id}}","status"] }
+          }
+        },
+        {
+          "name": "Update Status — Selesai",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "console.log('Disposisi diselesaikan. Cek apakah status_global otomatis berubah ke SELESAI.');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"SELESAI\",\n  \"catatan\": \"Pekerjaan selesai. Semua dokumen sudah diproses dan diarsipkan.\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/penerima/{{penerima_id}}/status", "host": ["{{base_url}}"], "path": ["api","v1","penerima","{{penerima_id}}","status"] }
+          }
+        },
+        {
+          "name": "Get Timeline Progress",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('Ada array log', () => pm.expect(res.data).to.be.an('array'));",
+                  "console.log('Total log:', res.data.length);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/progress/{{penerima_id}}", "host": ["{{base_url}}"], "path": ["api","v1","progress","{{penerima_id}}"] },
+            "description": "Ambil timeline progress (log immutable) untuk satu penerima."
+          }
+        },
+        {
+          "name": "Tambah Log Progress",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Log berhasil ditambah', () => pm.expect(pm.response.json().status).to.eql('success'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"catatan\": \"Update berkala: Data dari 10 unit sudah masuk. Proses rekap sedang berjalan dan diperkirakan selesai besok.\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/progress/{{penerima_id}}", "host": ["{{base_url}}"], "path": ["api","v1","progress","{{penerima_id}}"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "📁 Folder",
+      "item": [
+        {
+          "name": "Get Semua Folder (Tree)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('Ada data folder', () => pm.expect(res.data).to.be.an('array'));",
+                  "if (res.data.length > 0) {",
+                  "    pm.collectionVariables.set('folder_id', res.data[0].id);",
+                  "    console.log('Total folder utama:', res.data.length);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/folder", "host": ["{{base_url}}"], "path": ["api","v1","folder"] },
+            "description": "List semua folder dalam struktur nested tree (parent + children)."
+          }
+        },
+        {
+          "name": "Buat Folder Utama",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "const res = pm.response.json();",
+                  "if (res.data && res.data.id) pm.collectionVariables.set('folder_id', res.data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nama\": \"Surat Kerjasama & MoU\",\n  \"deskripsi\": \"Surat terkait kerjasama dan Memorandum of Understanding\",\n  \"parent_id\": null,\n  \"warna\": \"#0891B2\",\n  \"urutan\": 7\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/folder", "host": ["{{base_url}}"], "path": ["api","v1","folder"] }
+          }
+        },
+        {
+          "name": "Buat Sub-Folder",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nama\": \"MoU Rumah Sakit\",\n  \"deskripsi\": \"MoU dengan instansi rumah sakit lain\",\n  \"parent_id\": {{folder_id}},\n  \"warna\": \"#22D3EE\",\n  \"urutan\": 1\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/folder", "host": ["{{base_url}}"], "path": ["api","v1","folder"] }
+          }
+        },
+        {
+          "name": "Update Folder",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nama\": \"Surat Kerjasama, MoU & PKS\",\n  \"warna\": \"#0891B2\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/folder/{{folder_id}}", "host": ["{{base_url}}"], "path": ["api","v1","folder","{{folder_id}}"] }
+          }
+        },
+        {
+          "name": "Hapus Folder",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('Folder terhapus atau ada pesan error jika ada isi', () => pm.expect(res).to.have.property('status'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/api/v1/folder/{{folder_id}}", "host": ["{{base_url}}"], "path": ["api","v1","folder","{{folder_id}}"] },
+            "description": "Folder tidak bisa dihapus jika masih ada dokumen di dalamnya."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "📨 Surat Masuk",
+      "item": [
+        {
+          "name": "Get Daftar Surat Masuk",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "if (res.data.length > 0) pm.collectionVariables.set('surat_id', res.data[0].id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/surat",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","surat"],
+              "query": [
+                { "key": "folder_id", "value": "", "disabled": true },
+                { "key": "dari_tanggal", "value": "", "disabled": true },
+                { "key": "sampai_tanggal", "value": "", "disabled": true },
+                { "key": "keyword", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Input Surat Masuk Baru",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "const res = pm.response.json();",
+                  "if (res.data && res.data.id) {",
+                  "    pm.collectionVariables.set('surat_id', res.data.id);",
+                  "    console.log('Surat baru:', res.data.nomor_agenda);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nomor_surat\": \"BPJS/TEST/2026/099\",\n  \"tanggal_surat\": \"2026-02-22\",\n  \"tanggal_terima\": \"2026-02-23\",\n  \"asal_surat\": \"BPJS Kesehatan Cabang Malang\",\n  \"perihal\": \"Test Input Surat Masuk via API\",\n  \"folder_id\": 7,\n  \"keterangan\": \"Surat test untuk keperluan development\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/surat", "host": ["{{base_url}}"], "path": ["api","v1","surat"] }
+          }
+        },
+        {
+          "name": "Upload File Lampiran",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "surat_masuk_id", "value": "{{surat_id}}", "type": "text" },
+                { "key": "file", "type": "file", "src": [] }
+              ]
+            },
+            "url": { "raw": "{{base_url}}/api/v1/upload", "host": ["{{base_url}}"], "path": ["api","v1","upload"] },
+            "description": "Upload file lampiran untuk surat masuk. Mendukung PDF, JPG, PNG. Maks 10MB."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🔔 Notifikasi",
+      "item": [
+        {
+          "name": "Get Daftar Notifikasi",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('Ada data notifikasi', () => pm.expect(res.data).to.be.an('array'));",
+                  "const unread = res.data.filter(n => !n.dibaca_at);",
+                  "console.log('Total:', res.data.length, '| Belum dibaca:', unread.length);",
+                  "if (res.data.length > 0) pm.collectionVariables.set('notif_id', res.data[0].id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifikasi",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","notifikasi"],
+              "query": [
+                { "key": "belum_baca", "value": "1", "description": "Hanya tampilkan yang belum dibaca", "disabled": true },
+                { "key": "jenis", "value": "", "description": "Filter: DISPOSISI_BARU | DEADLINE_REMINDER | SELESAI | OVERDUE", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Tandai Satu Notifikasi Dibaca",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Berhasil tandai dibaca', () => pm.expect(pm.response.json().status).to.eql('success'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "url": { "raw": "{{base_url}}/api/v1/notifikasi/{{notif_id}}/baca", "host": ["{{base_url}}"], "path": ["api","v1","notifikasi","{{notif_id}}","baca"] }
+          }
+        },
+        {
+          "name": "Tandai Semua Notifikasi Dibaca",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Semua notif ditandai dibaca', () => pm.expect(pm.response.json().status).to.eql('success'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "url": { "raw": "{{base_url}}/api/v1/notifikasi/baca-semua", "host": ["{{base_url}}"], "path": ["api","v1","notifikasi","baca-semua"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🧪 Test Skenario Lengkap",
+      "description": "Skenario end-to-end: Login → Input Surat → Tulis Disposisi → Update Progress → Selesai",
+      "item": [
+        {
+          "name": "STEP 1 — Login sebagai Direktur",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.collectionVariables.set('token', res.data.token);",
+                  "pm.test('[STEP 1] Login OK', () => pm.expect(res.status).to.eql('success'));",
+                  "console.log('✅ Step 1: Login Direktur berhasil');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"direktur@rsud.go.id\",\n  \"password\": \"Sidispo@2026\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/auth/login", "host": ["{{base_url}}"], "path": ["api","v1","auth","login"] }
+          }
+        },
+        {
+          "name": "STEP 2 — Input Surat Masuk (sebagai Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.collectionVariables.set('surat_id', res.data.id);",
+                  "pm.test('[STEP 2] Surat masuk berhasil diinput', () => pm.expect(res.status).to.eql('success'));",
+                  "console.log('✅ Step 2: Surat ID:', res.data.id, '| Nomor:', res.data.nomor_agenda);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nomor_surat\": \"BPJS/E2E/2026/001\",\n  \"tanggal_surat\": \"2026-02-23\",\n  \"tanggal_terima\": \"2026-02-23\",\n  \"asal_surat\": \"BPJS Kesehatan Pusat\",\n  \"perihal\": \"Skenario Test E2E: Evaluasi Pelayanan BPJS Q1 2026\",\n  \"folder_id\": 9,\n  \"keterangan\": \"Surat untuk test skenario end-to-end\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/surat", "host": ["{{base_url}}"], "path": ["api","v1","surat"] }
+          }
+        },
+        {
+          "name": "STEP 3 — Tulis Disposisi (sebagai Direktur)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.collectionVariables.set('disposisi_id', res.data.id);",
+                  "pm.test('[STEP 3] Disposisi berhasil dibuat', () => pm.expect(res.status).to.eql('success'));",
+                  "console.log('✅ Step 3: Disposisi ID:', res.data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"surat_masuk_id\": {{surat_id}},\n  \"folder_id\": 9,\n  \"isi_disposisi\": \"[E2E TEST] Tindaklanjuti surat evaluasi BPJS ini. Siapkan data klaim Q1 dan kirimkan respons resmi dalam 7 hari.\",\n  \"prioritas\": \"NORMAL\",\n  \"batas_waktu\": \"2026-03-02\",\n  \"penerima\": [6]\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/disposisi", "host": ["{{base_url}}"], "path": ["api","v1","disposisi"] }
+          }
+        },
+        {
+          "name": "STEP 4 — Ambil ID Penerima",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.collectionVariables.set('penerima_id', res.data[0].id);",
+                  "pm.test('[STEP 4] Penerima ditemukan', () => pm.expect(res.data.length).to.be.above(0));",
+                  "console.log('✅ Step 4: Penerima ID:', res.data[0].id, '| Status:', res.data[0].status);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/penerima/{{disposisi_id}}", "host": ["{{base_url}}"], "path": ["api","v1","penerima","{{disposisi_id}}"] }
+          }
+        },
+        {
+          "name": "STEP 5 — Update Status ke PROSES",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('[STEP 5] Status berhasil diupdate ke PROSES', () => pm.response.to.have.status(200));",
+                  "console.log('✅ Step 5: Status diubah ke PROSES');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"PROSES\",\n  \"catatan\": \"[E2E] Mulai mempersiapkan data klaim Q1 2026.\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/penerima/{{penerima_id}}/status", "host": ["{{base_url}}"], "path": ["api","v1","penerima","{{penerima_id}}","status"] }
+          }
+        },
+        {
+          "name": "STEP 6 — Update Status ke SELESAI",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('[STEP 6] Status berhasil diupdate ke SELESAI', () => pm.response.to.have.status(200));",
+                  "console.log('✅ Step 6: Status SELESAI. Trigger otomatis harus ubah status_global disposisi.');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"SELESAI\",\n  \"catatan\": \"[E2E] Data klaim Q1 sudah disiapkan dan dikirim ke BPJS. Proses selesai.\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/penerima/{{penerima_id}}/status", "host": ["{{base_url}}"], "path": ["api","v1","penerima","{{penerima_id}}","status"] }
+          }
+        },
+        {
+          "name": "STEP 7 — Verifikasi Disposisi SELESAI",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('[STEP 7] Status 200', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('[STEP 7] status_global harus SELESAI (trigger berhasil)', () => {",
+                  "    pm.expect(res.data.status_global).to.eql('SELESAI');",
+                  "});",
+                  "console.log('✅ STEP 7: status_global =', res.data.status_global);",
+                  "console.log('🎉 SKENARIO END-TO-END SELESAI!');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/disposisi/{{disposisi_id}}", "host": ["{{base_url}}"], "path": ["api","v1","disposisi","{{disposisi_id}}"] }
+          }
+        }
+      ]
+    }
+
+  ]
+}

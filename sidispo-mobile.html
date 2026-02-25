@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SiDispo — Mobile Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: #0a0a0f;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px 60px;
+  overflow-x: hidden;
+}
+
+/* Ambient background */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 20% 20%, rgba(37,99,235,0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 80% 80%, rgba(124,58,237,0.10) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 60% at 50% 50%, rgba(16,163,74,0.05) 0%, transparent 70%);
+  pointer-events: none; z-index: 0;
+}
+
+/* PAGE HEADER */
+.page-header {
+  text-align: center; margin-bottom: 48px; position: relative; z-index: 1;
+}
+.page-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(37,99,235,0.15); border: 1px solid rgba(37,99,235,0.3);
+  color: #60a5fa; font-size: 12px; font-weight: 600;
+  padding: 6px 14px; border-radius: 20px; margin-bottom: 16px;
+  letter-spacing: 0.5px;
+}
+.page-title {
+  font-size: clamp(28px,5vw,42px); font-weight: 700;
+  color: #fff; letter-spacing: -1px; margin-bottom: 10px;
+  line-height: 1.1;
+}
+.page-title span { color: #60a5fa; }
+.page-sub { font-size: 15px; color: #6b7280; }
+
+/* SCREEN SELECTOR */
+.screen-selector {
+  display: flex; gap: 8px; margin-bottom: 40px;
+  flex-wrap: wrap; justify-content: center;
+  position: relative; z-index: 1;
+}
+.screen-btn {
+  padding: 9px 18px; border-radius: 10px;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  border: 1.5px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.05);
+  color: #9ca3af; transition: all 0.2s;
+  display: flex; align-items: center; gap: 7px;
+}
+.screen-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.screen-btn.active {
+  background: rgba(37,99,235,0.2); color: #60a5fa;
+  border-color: rgba(37,99,235,0.5);
+  box-shadow: 0 0 20px rgba(37,99,235,0.2);
+}
+
+/* MOCKUP STAGE */
+.mockup-stage {
+  display: flex; gap: 32px; align-items: flex-start;
+  justify-content: center; flex-wrap: wrap;
+  position: relative; z-index: 1;
+  width: 100%; max-width: 1100px;
+}
+
+/* PHONE FRAME */
+.phone-wrap {
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+}
+.phone-label {
+  font-size: 12px; font-weight: 600; color: #4b5563;
+  letter-spacing: 1px; text-transform: uppercase;
+}
+.phone-frame {
+  width: 320px;
+  background: #111318;
+  border-radius: 44px;
+  border: 2px solid #2a2d35;
+  box-shadow:
+    0 0 0 1px #1f2128,
+    0 40px 80px rgba(0,0,0,0.6),
+    inset 0 0 0 1px rgba(255,255,255,0.04);
+  overflow: hidden;
+  position: relative;
+}
+.phone-notch {
+  width: 120px; height: 32px;
+  background: #111318;
+  border-radius: 0 0 18px 18px;
+  margin: 0 auto;
+  position: relative; z-index: 10;
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px;
+}
+.notch-camera {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: #1a1d24;
+  border: 1.5px solid #252830;
+}
+.notch-speaker {
+  width: 48px; height: 4px; border-radius: 2px;
+  background: #1a1d24;
+}
+
+/* SCREEN */
+.phone-screen {
+  background: #0f1117;
+  min-height: 640px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* STATUS BAR */
+.status-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 20px 4px;
+  font-size: 11px; font-weight: 600; color: #fff;
+}
+.status-time { font-family: 'DM Mono', monospace; font-size: 13px; }
+.status-icons { display: flex; gap: 5px; align-items: center; }
+.status-icons svg { width: 14px; height: 14px; fill: #fff; }
+
+/* ============= SCREEN CONTENTS ============= */
+.screen { display: none; }
+.screen.active { display: flex; flex-direction: column; min-height: 640px; }
+
+/* ------ SCREEN: LOGIN ------ */
+.login-bg {
+  flex: 1;
+  background: linear-gradient(160deg, #0d1117 0%, #0f1520 100%);
+  padding: 32px 24px 100px;
+  display: flex; flex-direction: column;
+  align-items: center;
+}
+.login-logo {
+  width: 64px; height: 64px; border-radius: 20px;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; margin-bottom: 16px;
+  box-shadow: 0 8px 32px rgba(37,99,235,0.4);
+}
+.login-title { font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+.login-sub { font-size: 13px; color: #6b7280; margin-bottom: 36px; }
+.inp-group { width: 100%; margin-bottom: 14px; }
+.inp-label { font-size: 11px; font-weight: 600; color: #6b7280; margin-bottom: 6px; letter-spacing: 0.5px; text-transform: uppercase; }
+.inp-field {
+  width: 100%; background: #161b24;
+  border: 1.5px solid #252d3a; border-radius: 12px;
+  padding: 13px 16px; color: #e0e6ef; font-size: 14px; font-family: inherit;
+  display: flex; align-items: center; gap: 10px;
+}
+.inp-icon { font-size: 16px; }
+.inp-text { color: #4b5563; font-size: 14px; }
+.inp-text.filled { color: #e0e6ef; }
+.btn-login {
+  width: 100%; background: #2563eb;
+  border-radius: 12px; padding: 14px;
+  color: #fff; font-size: 15px; font-weight: 700;
+  text-align: center; margin-top: 8px; cursor: pointer;
+  box-shadow: 0 4px 20px rgba(37,99,235,0.4);
+  transition: all 0.2s;
+}
+.btn-login:active { transform: scale(0.97); }
+.login-footer { font-size: 12px; color: #4b5563; margin-top: 20px; text-align: center; }
+
+/* ------ SCREEN: HOME ------ */
+.home-header {
+  background: linear-gradient(180deg, #161b24 0%, #0f1117 100%);
+  padding: 12px 20px 20px;
+}
+.home-toprow { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.home-greeting { font-size: 13px; color: #6b7280; }
+.home-name { font-size: 17px; font-weight: 700; color: #fff; margin-top: 1px; }
+.notif-circle {
+  width: 38px; height: 38px; border-radius: 12px;
+  background: #1e2530; border: 1px solid #252d3a;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; position: relative; cursor: pointer;
+}
+.red-dot {
+  position: absolute; top: 7px; right: 7px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #ef4444; border: 1.5px solid #0f1117;
+}
+
+/* Stats row */
+.stats-row {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+  padding: 0 20px 16px;
+}
+.stat-tile {
+  background: #161b24; border: 1px solid #252d3a;
+  border-radius: 14px; padding: 14px 16px;
+  cursor: pointer; transition: all 0.2s;
+}
+.stat-tile:active { transform: scale(0.97); }
+.stat-emoji { font-size: 20px; margin-bottom: 8px; }
+.stat-num { font-size: 26px; font-weight: 700; color: #fff; line-height: 1; }
+.stat-lbl { font-size: 11px; color: #6b7280; margin-top: 4px; }
+
+/* Section header */
+.sec-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px 12px;
+}
+.sec-title { font-size: 14px; font-weight: 700; color: #fff; }
+.sec-link { font-size: 12px; color: #3b82f6; cursor: pointer; }
+
+/* Disposisi cards */
+.disp-scroll { padding: 0 20px; display: flex; flex-direction: column; gap: 10px; }
+.disp-card {
+  background: #161b24; border: 1px solid #252d3a;
+  border-radius: 14px; padding: 14px 16px;
+  cursor: pointer; transition: all 0.15s;
+  display: flex; gap: 12px; align-items: flex-start;
+}
+.disp-card:active { transform: scale(0.98); background: #1e2530; }
+.disp-prio {
+  width: 4px; min-height: 40px; border-radius: 2px; flex-shrink: 0; margin-top: 2px;
+}
+.disp-info { flex: 1; min-width: 0; }
+.disp-num-sm {
+  font-family: 'DM Mono', monospace; font-size: 10px; color: #4b5563;
+  margin-bottom: 3px;
+}
+.disp-title-sm {
+  font-size: 13px; font-weight: 600; color: #e0e6ef;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-bottom: 6px;
+}
+.disp-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip {
+  font-size: 10px; font-weight: 600; padding: 2px 8px;
+  border-radius: 20px; display: inline-flex; align-items: center; gap: 3px;
+}
+.chip-red { background: rgba(239,68,68,0.15); color: #f87171; }
+.chip-blue { background: rgba(59,130,246,0.15); color: #60a5fa; }
+.chip-green { background: rgba(34,197,94,0.15); color: #4ade80; }
+.chip-yellow { background: rgba(234,179,8,0.15); color: #fbbf24; }
+.chip-gray { background: rgba(107,114,128,0.2); color: #9ca3af; }
+.disp-right-sm { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.disp-date-sm { font-size: 10px; color: #4b5563; white-space: nowrap; }
+.mini-av {
+  width: 26px; height: 26px; border-radius: 50%;
+  font-size: 10px; font-weight: 700; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* Bottom nav */
+.bottom-nav {
+  position: sticky; bottom: 0;
+  background: #161b24; border-top: 1px solid #252d3a;
+  display: flex; padding: 10px 0 20px;
+}
+.nav-btn {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  gap: 4px; cursor: pointer; padding: 6px 0;
+  transition: all 0.15s;
+}
+.nav-btn:active { opacity: 0.7; }
+.nav-icon { font-size: 20px; }
+.nav-lbl { font-size: 10px; font-weight: 600; color: #4b5563; }
+.nav-btn.active .nav-lbl { color: #3b82f6; }
+.nav-dot {
+  width: 4px; height: 4px; border-radius: 50%; background: #3b82f6;
+  margin-top: -2px;
+}
+
+/* ------ SCREEN: DETAIL ------ */
+.detail-header {
+  background: #161b24;
+  padding: 12px 20px 16px;
+}
+.back-row {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 14px; cursor: pointer;
+}
+.back-icon {
+  width: 32px; height: 32px; border-radius: 10px;
+  background: #1e2530; border: 1px solid #252d3a;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+}
+.back-label { font-size: 13px; color: #9ca3af; }
+.detail-num { font-family: 'DM Mono', monospace; font-size: 11px; color: #4b5563; margin-bottom: 4px; }
+.detail-title-big { font-size: 17px; font-weight: 700; color: #fff; line-height: 1.3; margin-bottom: 10px; }
+.chips-row { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.detail-body { flex: 1; padding: 16px 20px; overflow-y: auto; }
+.detail-block {
+  background: #161b24; border: 1px solid #252d3a;
+  border-radius: 14px; padding: 14px 16px; margin-bottom: 12px;
+}
+.block-title {
+  font-size: 10px; font-weight: 700; color: #4b5563;
+  text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;
+}
+.kv-row { display: flex; gap: 8px; margin-bottom: 7px; }
+.kv-key { font-size: 12px; color: #6b7280; width: 80px; flex-shrink: 0; }
+.kv-val { font-size: 12px; color: #e0e6ef; font-weight: 500; }
+
+/* Timeline */
+.tl { display: flex; flex-direction: column; gap: 0; }
+.tl-row { display: flex; gap: 12px; position: relative; }
+.tl-left { display: flex; flex-direction: column; align-items: center; }
+.tl-dot-sm {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; flex-shrink: 0;
+  border: 2px solid #0f1117;
+}
+.tl-line { width: 2px; flex: 1; background: #252d3a; min-height: 16px; }
+.tl-content-sm { flex: 1; padding-bottom: 14px; }
+.tl-text-sm { font-size: 12.5px; font-weight: 600; color: #e0e6ef; }
+.tl-time-sm { font-size: 11px; color: #4b5563; margin-top: 2px; }
+.tl-note-sm {
+  font-size: 11px; color: #9ca3af; background: #1e2530;
+  border-radius: 8px; padding: 8px 10px; margin-top: 6px;
+  border-left: 3px solid #3b82f6; line-height: 1.5;
+}
+
+/* Update input */
+.update-area {
+  padding: 14px 20px 0;
+  border-top: 1px solid #252d3a;
+}
+.update-label { font-size: 11px; font-weight: 700; color: #4b5563; margin-bottom: 8px; letter-spacing: 0.5px; text-transform: uppercase; }
+.update-input {
+  width: 100%; background: #161b24; border: 1.5px solid #252d3a;
+  border-radius: 12px; padding: 11px 14px; color: #9ca3af;
+  font-size: 13px; font-family: inherit; margin-bottom: 10px;
+}
+.update-row { display: flex; gap: 8px; }
+.status-sel {
+  flex: 1; background: #161b24; border: 1.5px solid #252d3a;
+  border-radius: 10px; padding: 10px 12px; color: #9ca3af;
+  font-size: 12px;
+}
+.btn-send {
+  background: #2563eb; color: #fff;
+  border-radius: 10px; padding: 10px 16px;
+  font-size: 12px; font-weight: 700; cursor: pointer;
+}
+
+/* ------ SCREEN: TULIS ------ */
+.tulis-header {
+  background: #161b24; padding: 12px 20px 16px;
+  border-bottom: 1px solid #252d3a;
+}
+.tulis-title { font-size: 17px; font-weight: 700; color: #fff; }
+.tulis-sub { font-size: 12px; color: #6b7280; margin-top: 2px; }
+.tulis-body { flex: 1; padding: 16px 20px; overflow-y: auto; }
+.form-grp { margin-bottom: 14px; }
+.form-lbl {
+  font-size: 10px; font-weight: 700; color: #4b5563;
+  text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px;
+}
+.form-inp {
+  width: 100%; background: #161b24; border: 1.5px solid #252d3a;
+  border-radius: 12px; padding: 12px 14px; color: #e0e6ef;
+  font-size: 13.5px; font-family: inherit;
+  display: flex; align-items: center; gap: 8px;
+}
+.form-inp.muted .inp-txt { color: #4b5563; }
+.inp-txt { font-size: 13.5px; color: #e0e6ef; flex: 1; }
+.form-inp-txt {
+  width: 100%; background: #161b24; border: 1.5px solid #252d3a;
+  border-radius: 12px; padding: 12px 14px; color: #4b5563;
+  font-size: 13px; min-height: 80px; resize: none; font-family: inherit;
+}
+.prio-row { display: flex; gap: 8px; }
+.prio-btn {
+  flex: 1; background: #161b24; border: 1.5px solid #252d3a;
+  border-radius: 10px; padding: 10px 8px; text-align: center;
+  font-size: 12px; font-weight: 600; color: #6b7280; cursor: pointer;
+  transition: all 0.15s;
+}
+.prio-btn:active { transform: scale(0.97); }
+.prio-btn.active-red { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.4); color: #f87171; }
+.prio-btn.active-yellow { background: rgba(234,179,8,0.15); border-color: rgba(234,179,8,0.4); color: #fbbf24; }
+.prio-btn.active-green { background: rgba(34,197,94,0.15); border-color: rgba(34,197,94,0.4); color: #4ade80; }
+.assignee-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.assignee-chip {
+  background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3);
+  color: #60a5fa; font-size: 11.5px; font-weight: 600;
+  padding: 5px 10px; border-radius: 20px;
+  display: flex; align-items: center; gap: 5px; cursor: pointer;
+}
+.add-chip {
+  background: #161b24; border: 1.5px dashed #252d3a;
+  color: #4b5563; font-size: 11.5px; font-weight: 600;
+  padding: 5px 10px; border-radius: 20px; cursor: pointer;
+}
+.upload-box {
+  background: #161b24; border: 1.5px dashed #252d3a;
+  border-radius: 12px; padding: 20px; text-align: center;
+}
+.upload-emoji { font-size: 24px; margin-bottom: 6px; }
+.upload-txt { font-size: 12px; color: #4b5563; line-height: 1.5; }
+.btn-submit {
+  width: 100%; background: #2563eb; color: #fff;
+  border-radius: 14px; padding: 15px; margin-top: 16px;
+  font-size: 15px; font-weight: 700; text-align: center;
+  cursor: pointer; box-shadow: 0 4px 20px rgba(37,99,235,0.3);
+  transition: all 0.15s;
+}
+.btn-submit:active { transform: scale(0.98); }
+
+/* ------ SCREEN: FOLDER ------ */
+.folder-header {
+  background: #161b24; padding: 12px 20px 16px;
+}
+.folder-title { font-size: 17px; font-weight: 700; color: #fff; }
+.folder-sub { font-size: 12px; color: #6b7280; margin-top: 2px; }
+.search-inp {
+  margin: 0 20px 16px;
+  background: #161b24; border: 1.5px solid #252d3a;
+  border-radius: 12px; padding: 11px 14px;
+  display: flex; align-items: center; gap: 8px;
+  color: #4b5563; font-size: 13px;
+}
+.folder-list { padding: 0 20px; display: flex; flex-direction: column; gap: 8px; }
+.folder-card {
+  background: #161b24; border: 1px solid #252d3a;
+  border-radius: 14px; overflow: hidden; cursor: pointer;
+  transition: all 0.15s;
+}
+.folder-card:active { transform: scale(0.98); }
+.folder-card-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px;
+}
+.folder-color {
+  width: 40px; height: 40px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.folder-name { font-size: 14px; font-weight: 700; color: #e0e6ef; }
+.folder-count { font-size: 11px; color: #6b7280; margin-top: 2px; }
+.folder-arrow { margin-left: auto; color: #4b5563; font-size: 14px; }
+.sub-folders {
+  padding: 0 16px 14px; display: flex; flex-direction: column; gap: 6px;
+}
+.sub-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px; background: #1e2530;
+  border-radius: 10px; cursor: pointer;
+}
+.sub-icon { font-size: 13px; }
+.sub-name { font-size: 12.5px; color: #9ca3af; font-weight: 500; }
+.sub-count { margin-left: auto; font-size: 11px; color: #4b5563; font-family: 'DM Mono', monospace; }
+
+/* ------ SCREEN: NOTIF ------ */
+.notif-header { background: #161b24; padding: 12px 20px 16px; }
+.notif-title { font-size: 17px; font-weight: 700; color: #fff; }
+.notif-sub { font-size: 12px; color: #6b7280; margin-top: 2px; }
+.notif-filter { display: flex; gap: 6px; padding: 0 20px 14px; }
+.nf-btn {
+  padding: 6px 14px; border-radius: 20px;
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  background: #161b24; border: 1px solid #252d3a; color: #6b7280;
+  transition: all 0.15s;
+}
+.nf-btn.active { background: rgba(37,99,235,0.15); border-color: rgba(37,99,235,0.4); color: #60a5fa; }
+.notif-list { padding: 0 20px; display: flex; flex-direction: column; gap: 8px; }
+.notif-card {
+  background: #161b24; border: 1px solid #252d3a;
+  border-radius: 14px; padding: 14px 16px;
+  display: flex; gap: 12px;
+  cursor: pointer; transition: all 0.15s;
+}
+.notif-card:active { transform: scale(0.98); }
+.notif-card.unread { border-color: rgba(37,99,235,0.3); background: rgba(37,99,235,0.05); }
+.notif-icon-circle {
+  width: 40px; height: 40px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.notif-body-txt { font-size: 13px; color: #e0e6ef; line-height: 1.4; }
+.notif-body-txt strong { font-weight: 700; }
+.notif-time { font-size: 11px; color: #4b5563; margin-top: 4px; }
+.unread-badge {
+  width: 8px; height: 8px; border-radius: 50%; background: #3b82f6;
+  flex-shrink: 0; margin-top: 6px;
+}
+
+/* HOME scroll fix */
+.home-scroll { flex: 1; overflow-y: auto; padding-bottom: 8px; }
+
+/* TRANSITIONS */
+.screen { animation: screenIn 0.25s ease; }
+@keyframes screenIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
+
+/* PHONE BOTTOM EDGE */
+.phone-home-bar {
+  height: 28px; background: #0f1117;
+  display: flex; align-items: center; justify-content: center;
+}
+.home-bar-line {
+  width: 100px; height: 4px; border-radius: 2px;
+  background: rgba(255,255,255,0.2);
+}
+
+/* INFO CALLOUT */
+.callout {
+  max-width: 900px; width: 100%;
+  background: rgba(37,99,235,0.08);
+  border: 1px solid rgba(37,99,235,0.2);
+  border-radius: 16px; padding: 18px 24px;
+  margin-top: 40px; position: relative; z-index: 1;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+.callout-item { display: flex; gap: 10px; align-items: flex-start; }
+.callout-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+.callout-text { font-size: 12.5px; color: #9ca3af; line-height: 1.5; }
+.callout-text strong { color: #e0e6ef; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<!-- PAGE HEADER -->
+<div class="page-header">
+  <div class="page-badge">📱 Mobile Mockup · Fase 2</div>
+  <div class="page-title">SiDispo <span>App</span></div>
+  <div class="page-sub">Klik tombol di bawah untuk preview tiap layar</div>
+</div>
+
+<!-- SCREEN SELECTOR -->
+<div class="screen-selector">
+  <div class="screen-btn active" onclick="switchScreen('login',this)">🔐 Login</div>
+  <div class="screen-btn" onclick="switchScreen('home',this)">🏠 Beranda</div>
+  <div class="screen-btn" onclick="switchScreen('detail',this)">📋 Detail</div>
+  <div class="screen-btn" onclick="switchScreen('tulis',this)">✏️ Tulis</div>
+  <div class="screen-btn" onclick="switchScreen('folder',this)">📁 Folder</div>
+  <div class="screen-btn" onclick="switchScreen('notif',this)">🔔 Notifikasi</div>
+</div>
+
+<!-- MOCKUP STAGE -->
+<div class="mockup-stage">
+
+  <!-- PRIMARY PHONE -->
+  <div class="phone-wrap">
+    <div class="phone-label">Preview Interaktif</div>
+    <div class="phone-frame">
+      <div class="phone-notch">
+        <div class="notch-speaker"></div>
+        <div class="notch-camera"></div>
+      </div>
+      <div class="phone-screen" id="phoneScreen">
+        <div class="status-bar">
+          <span class="status-time">09:41</span>
+          <div class="status-icons">
+            <svg viewBox="0 0 24 24"><path d="M1.5 8.5C4.5 5.5 8 4 12 4s7.5 1.5 10.5 4.5L12 20 1.5 8.5z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M1 1l22 22M16.72 11.06C14.56 9.23 12.28 8.5 10 8.5c-2.1 0-4.3.74-6.2 2.2M5 12.55a11 11 0 0114.08 0M10.71 5.05A16 16 0 0122.56 9M1.42 9a15.91 15.91 0 014.7-2.88"/></svg>
+            <svg viewBox="0 0 24 24"><rect x="2" y="7" width="18" height="10" rx="2"/><rect x="22" y="10" width="2" height="4" rx="1"/></svg>
+          </div>
+        </div>
+
+        <!-- ===== SCREEN: LOGIN ===== -->
+        <div class="screen active" id="screen-login">
+          <div class="login-bg">
+            <div class="login-logo">📋</div>
+            <div class="login-title">SiDispo</div>
+            <div class="login-sub">Sistem Disposisi Digital</div>
+            <div class="inp-group">
+              <div class="inp-label">NIP / Email</div>
+              <div class="inp-field">
+                <span class="inp-icon">👤</span>
+                <span class="inp-text filled">197801012005011001</span>
+              </div>
+            </div>
+            <div class="inp-group">
+              <div class="inp-label">Password</div>
+              <div class="inp-field">
+                <span class="inp-icon">🔒</span>
+                <span class="inp-text">••••••••</span>
+              </div>
+            </div>
+            <div class="btn-login" onclick="switchScreen('home', document.querySelectorAll('.screen-btn')[1])">
+              Masuk →
+            </div>
+            <div class="login-footer">RSUD dr. Saiful Anwar<br>Kementerian Kesehatan RI</div>
+          </div>
+        </div>
+
+        <!-- ===== SCREEN: HOME ===== -->
+        <div class="screen" id="screen-home">
+          <div class="home-header">
+            <div class="home-toprow">
+              <div>
+                <div class="home-greeting">Selamat pagi 👋</div>
+                <div class="home-name">dr. Rahman, SpPD</div>
+              </div>
+              <div class="notif-circle" onclick="switchScreen('notif', document.querySelectorAll('.screen-btn')[5])">
+                🔔<div class="red-dot"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="home-scroll">
+            <div class="stats-row">
+              <div class="stat-tile">
+                <div class="stat-emoji">📋</div>
+                <div class="stat-num">24</div>
+                <div class="stat-lbl">Disposisi Aktif</div>
+              </div>
+              <div class="stat-tile" style="border-color:rgba(239,68,68,0.3)">
+                <div class="stat-emoji">🚨</div>
+                <div class="stat-num" style="color:#f87171">2</div>
+                <div class="stat-lbl">Overdue</div>
+              </div>
+              <div class="stat-tile" style="border-color:rgba(34,197,94,0.2)">
+                <div class="stat-emoji">✅</div>
+                <div class="stat-num" style="color:#4ade80">18</div>
+                <div class="stat-lbl">Selesai Bulan Ini</div>
+              </div>
+              <div class="stat-tile">
+                <div class="stat-emoji">⏳</div>
+                <div class="stat-num" style="color:#fbbf24">4</div>
+                <div class="stat-lbl">Diproses</div>
+              </div>
+            </div>
+
+            <div class="sec-head">
+              <div class="sec-title">Perlu Perhatian</div>
+              <div class="sec-link" onclick="switchScreen('home', document.querySelectorAll('.screen-btn')[1])">Lihat semua</div>
+            </div>
+
+            <div class="disp-scroll">
+              <div class="disp-card" onclick="switchScreen('detail', document.querySelectorAll('.screen-btn')[2])">
+                <div class="disp-prio" style="background:#ef4444"></div>
+                <div class="disp-info">
+                  <div class="disp-num-sm">D-2601</div>
+                  <div class="disp-title-sm">Update iuran BPJS Kesehatan 2026</div>
+                  <div class="disp-chips">
+                    <span class="chip chip-red">🚨 Overdue</span>
+                    <span class="chip chip-gray">Keu</span>
+                  </div>
+                </div>
+                <div class="disp-right-sm">
+                  <div class="disp-date-sm">01 Feb</div>
+                  <div class="mini-av" style="background:linear-gradient(135deg,#dc2626,#b91c1c)">KK</div>
+                </div>
+              </div>
+
+              <div class="disp-card" onclick="switchScreen('detail', document.querySelectorAll('.screen-btn')[2])">
+                <div class="disp-prio" style="background:#f59e0b"></div>
+                <div class="disp-info">
+                  <div class="disp-num-sm">D-2602</div>
+                  <div class="disp-title-sm">Telaah staf pengadaan alat keperawatan</div>
+                  <div class="disp-chips">
+                    <span class="chip chip-blue">🔄 Diproses</span>
+                    <span class="chip chip-gray">Kep</span>
+                  </div>
+                </div>
+                <div class="disp-right-sm">
+                  <div class="disp-date-sm">05 Feb</div>
+                  <div class="mini-av" style="background:linear-gradient(135deg,#2563eb,#1d4ed8)">BK</div>
+                </div>
+              </div>
+
+              <div class="disp-card" onclick="switchScreen('detail', document.querySelectorAll('.screen-btn')[2])">
+                <div class="disp-prio" style="background:#f59e0b"></div>
+                <div class="disp-info">
+                  <div class="disp-num-sm">D-2603</div>
+                  <div class="disp-title-sm">Memo NA BPJS Kepesertaan baru</div>
+                  <div class="disp-chips">
+                    <span class="chip chip-yellow">⏳ Tunggu Approval</span>
+                  </div>
+                </div>
+                <div class="disp-right-sm">
+                  <div class="disp-date-sm">08 Feb</div>
+                  <div class="mini-av" style="background:linear-gradient(135deg,#7c3aed,#6d28d9)">WU</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="sec-head" style="margin-top:16px">
+              <div class="sec-title">Selesai Terbaru</div>
+            </div>
+            <div class="disp-scroll" style="padding-bottom:12px">
+              <div class="disp-card">
+                <div class="disp-prio" style="background:#22c55e"></div>
+                <div class="disp-info">
+                  <div class="disp-num-sm">D-2604</div>
+                  <div class="disp-title-sm">Pencairan anggaran RKA program prioritas</div>
+                  <div class="disp-chips">
+                    <span class="chip chip-green">✅ Selesai</span>
+                  </div>
+                </div>
+                <div class="disp-right-sm">
+                  <div class="disp-date-sm">10 Feb</div>
+                  <div class="mini-av" style="background:linear-gradient(135deg,#16a34a,#15803d)">KK</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bottom-nav">
+            <div class="nav-btn active" onclick="switchScreen('home',document.querySelectorAll('.screen-btn')[1])">
+              <div class="nav-icon">🏠</div>
+              <div class="nav-lbl">Beranda</div>
+              <div class="nav-dot"></div>
+            </div>
+            <div class="nav-btn" onclick="switchScreen('folder',document.querySelectorAll('.screen-btn')[4])">
+              <div class="nav-icon">📁</div>
+              <div class="nav-lbl">Folder</div>
+            </div>
+            <div class="nav-btn" onclick="switchScreen('tulis',document.querySelectorAll('.screen-btn')[3])">
+              <div style="width:44px;height:44px;background:#2563eb;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-top:-12px;box-shadow:0 4px 16px rgba(37,99,235,0.5)">✏️</div>
+            </div>
+            <div class="nav-btn" onclick="switchScreen('notif',document.querySelectorAll('.screen-btn')[5])">
+              <div class="nav-icon">🔔</div>
+              <div class="nav-lbl">Notif</div>
+            </div>
+            <div class="nav-btn">
+              <div class="nav-icon">👤</div>
+              <div class="nav-lbl">Profil</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== SCREEN: DETAIL ===== -->
+        <div class="screen" id="screen-detail">
+          <div class="detail-header">
+            <div class="back-row" onclick="switchScreen('home',document.querySelectorAll('.screen-btn')[1])">
+              <div class="back-icon">←</div>
+              <div class="back-label">Kembali</div>
+            </div>
+            <div class="detail-num">D-2601 · 01 Februari 2026</div>
+            <div class="detail-title-big">Update iuran BPJS Kesehatan 2026</div>
+            <div class="chips-row">
+              <span class="chip chip-red">🚨 Overdue</span>
+              <span class="chip chip-gray">📁 BPJS / Iuran</span>
+              <span class="chip" style="background:rgba(239,68,68,0.15);color:#f87171">🔴 Urgent</span>
+            </div>
+          </div>
+
+          <div class="detail-body">
+            <div class="detail-block">
+              <div class="block-title">Info Disposisi</div>
+              <div class="kv-row"><span class="kv-key">Dari</span><span class="kv-val">BPJS Kes. Malang</span></div>
+              <div class="kv-row"><span class="kv-key">Ke</span><span class="kv-val">Kabid Keuangan</span></div>
+              <div class="kv-row"><span class="kv-key">Deadline</span><span class="kv-val" style="color:#f87171">15 Feb 2026 🚨</span></div>
+              <div class="kv-row"><span class="kv-key">Status</span><span class="kv-val" style="color:#f87171">Overdue</span></div>
+            </div>
+
+            <div class="detail-block">
+              <div class="block-title">Instruksi Direktur</div>
+              <div style="font-size:13px;color:#9ca3af;line-height:1.6;background:#1e2530;border-radius:10px;padding:10px 12px;border-left:3px solid #3b82f6">
+                Segera lakukan update data iuran BPJS sesuai edaran terbaru. Koordinasikan dengan keuangan dan laporkan hasilnya dalam 14 hari.
+              </div>
+            </div>
+
+            <div class="detail-block">
+              <div class="block-title">Timeline Progress</div>
+              <div class="tl">
+                <div class="tl-row">
+                  <div class="tl-left">
+                    <div class="tl-dot-sm" style="background:rgba(59,130,246,0.2);color:#60a5fa">📥</div>
+                    <div class="tl-line"></div>
+                  </div>
+                  <div class="tl-content-sm">
+                    <div class="tl-text-sm">Disposisi diterima</div>
+                    <div class="tl-time-sm">01 Feb 2026 · 09.15</div>
+                  </div>
+                </div>
+                <div class="tl-row">
+                  <div class="tl-left">
+                    <div class="tl-dot-sm" style="background:rgba(234,179,8,0.2);color:#fbbf24">🔄</div>
+                    <div class="tl-line"></div>
+                  </div>
+                  <div class="tl-content-sm">
+                    <div class="tl-text-sm">Mulai diproses</div>
+                    <div class="tl-time-sm">03 Feb 2026 · 14.00</div>
+                    <div class="tl-note-sm">Mengumpulkan data iuran dari unit terkait</div>
+                  </div>
+                </div>
+                <div class="tl-row">
+                  <div class="tl-left">
+                    <div class="tl-dot-sm" style="background:rgba(239,68,68,0.2);color:#f87171">🚨</div>
+                  </div>
+                  <div class="tl-content-sm">
+                    <div class="tl-text-sm" style="color:#f87171">Melewati batas waktu</div>
+                    <div class="tl-time-sm">15 Feb 2026</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="update-area">
+            <div class="update-label">Update Progress</div>
+            <div class="update-input">Tulis catatan progress...</div>
+            <div class="update-row">
+              <div class="status-sel">🔄 Diproses</div>
+              <div class="btn-send">Kirim ✓</div>
+            </div>
+          </div>
+          <div style="height:14px;background:#0f1117"></div>
+        </div>
+
+        <!-- ===== SCREEN: TULIS DISPOSISI ===== -->
+        <div class="screen" id="screen-tulis">
+          <div class="tulis-header">
+            <div class="back-row" onclick="switchScreen('home',document.querySelectorAll('.screen-btn')[1])" style="margin-bottom:10px">
+              <div class="back-icon">←</div>
+              <div class="back-label">Batal</div>
+            </div>
+            <div class="tulis-title">✏️ Tulis Disposisi</div>
+            <div class="tulis-sub">Buat instruksi disposisi baru</div>
+          </div>
+
+          <div class="tulis-body">
+            <div class="form-grp">
+              <div class="form-lbl">Nomor Surat</div>
+              <div class="form-inp muted">
+                <span>📄</span><span class="inp-txt" style="color:#4b5563">No. surat / referensi</span>
+              </div>
+            </div>
+            <div class="form-grp">
+              <div class="form-lbl">Asal / Pengirim</div>
+              <div class="form-inp">
+                <span>🏢</span><span class="inp-txt">BPJS Kesehatan Cab. Malang</span>
+              </div>
+            </div>
+            <div class="form-grp">
+              <div class="form-lbl">Perihal</div>
+              <div class="form-inp">
+                <span>📝</span><span class="inp-txt">Update iuran BPJS 2026</span>
+              </div>
+            </div>
+            <div class="form-grp">
+              <div class="form-lbl">Folder</div>
+              <div class="form-inp" onclick="switchScreen('folder',document.querySelectorAll('.screen-btn')[4])">
+                <span>📁</span><span class="inp-txt">BPJS Kes → Iuran</span>
+                <span style="margin-left:auto;color:#4b5563">▾</span>
+              </div>
+            </div>
+            <div class="form-grp">
+              <div class="form-lbl">Isi Instruksi</div>
+              <textarea class="form-inp-txt">Segera update data iuran BPJS sesuai edaran terbaru. Koordinasikan dengan keuangan...</textarea>
+            </div>
+            <div class="form-grp">
+              <div class="form-lbl">Ditujukan Kepada</div>
+              <div class="assignee-chips">
+                <div class="assignee-chip">👤 Kabid Keuangan ×</div>
+                <div class="add-chip">+ Tambah</div>
+              </div>
+            </div>
+            <div class="form-grp">
+              <div class="form-lbl">Prioritas</div>
+              <div class="prio-row">
+                <div class="prio-btn active-red">🔴 Urgent</div>
+                <div class="prio-btn">🟡 Normal</div>
+                <div class="prio-btn">🟢 Biasa</div>
+              </div>
+            </div>
+            <div class="form-grp">
+              <div class="form-lbl">Batas Waktu</div>
+              <div class="form-inp">
+                <span>📅</span><span class="inp-txt">15 Februari 2026</span>
+              </div>
+            </div>
+            <div class="form-grp">
+              <div class="form-lbl">Lampiran</div>
+              <div class="upload-box">
+                <div class="upload-emoji">📎</div>
+                <div class="upload-txt">Tap untuk upload file<br><span style="color:#374151">PDF, JPG, PNG · maks 10MB</span></div>
+              </div>
+            </div>
+            <div class="btn-submit" onclick="switchScreen('home',document.querySelectorAll('.screen-btn')[1])">
+              📤 Kirim Disposisi
+            </div>
+            <div style="height:20px"></div>
+          </div>
+        </div>
+
+        <!-- ===== SCREEN: FOLDER ===== -->
+        <div class="screen" id="screen-folder">
+          <div class="folder-header">
+            <div class="back-row" onclick="switchScreen('home',document.querySelectorAll('.screen-btn')[1])" style="margin-bottom:10px">
+              <div class="back-icon">←</div>
+              <div class="back-label">Kembali</div>
+            </div>
+            <div class="folder-title">📁 Folder Dokumen</div>
+            <div class="folder-sub">Kelola kategori surat & disposisi</div>
+          </div>
+
+          <div class="search-inp">🔍 &nbsp;Cari folder...</div>
+
+          <div class="folder-list" style="padding-bottom:20px">
+            <div class="folder-card">
+              <div class="folder-card-header">
+                <div class="folder-color" style="background:rgba(37,99,235,0.15)">📘</div>
+                <div>
+                  <div class="folder-name">Edaran BPJS Kesehatan</div>
+                  <div class="folder-count">8 dokumen</div>
+                </div>
+                <div class="folder-arrow">▾</div>
+              </div>
+              <div class="sub-folders">
+                <div class="sub-row">
+                  <span class="sub-icon">📄</span>
+                  <span class="sub-name">Iuran</span>
+                  <span class="sub-count">3</span>
+                </div>
+                <div class="sub-row">
+                  <span class="sub-icon">📄</span>
+                  <span class="sub-name">Kepesertaan</span>
+                  <span class="sub-count">2</span>
+                </div>
+                <div class="sub-row">
+                  <span class="sub-icon">📄</span>
+                  <span class="sub-name">Klaim</span>
+                  <span class="sub-count">3</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="folder-card">
+              <div class="folder-card-header">
+                <div class="folder-color" style="background:rgba(22,163,74,0.15)">📗</div>
+                <div>
+                  <div class="folder-name">Telaah Staf Bid. Kep</div>
+                  <div class="folder-count">6 dokumen</div>
+                </div>
+                <div class="folder-arrow">▸</div>
+              </div>
+            </div>
+
+            <div class="folder-card">
+              <div class="folder-card-header">
+                <div class="folder-color" style="background:rgba(124,58,237,0.15)">📙</div>
+                <div>
+                  <div class="folder-name">SK & Regulasi</div>
+                  <div class="folder-count">5 dokumen</div>
+                </div>
+                <div class="folder-arrow">▸</div>
+              </div>
+            </div>
+
+            <div class="folder-card">
+              <div class="folder-card-header">
+                <div class="folder-color" style="background:rgba(202,138,4,0.15)">📒</div>
+                <div>
+                  <div class="folder-name">Surat Dinas / Dinkes</div>
+                  <div class="folder-count">5 dokumen</div>
+                </div>
+                <div class="folder-arrow">▸</div>
+              </div>
+            </div>
+
+            <div class="folder-card" style="border-style:dashed;background:transparent">
+              <div class="folder-card-header">
+                <div class="folder-color" style="background:#1e2530">➕</div>
+                <div>
+                  <div class="folder-name" style="color:#4b5563">Tambah Folder Baru</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== SCREEN: NOTIFIKASI ===== -->
+        <div class="screen" id="screen-notif">
+          <div class="notif-header">
+            <div class="back-row" onclick="switchScreen('home',document.querySelectorAll('.screen-btn')[1])" style="margin-bottom:10px">
+              <div class="back-icon">←</div>
+              <div class="back-label">Kembali</div>
+            </div>
+            <div class="notif-title">🔔 Notifikasi</div>
+            <div class="notif-sub">4 notifikasi belum dibaca</div>
+          </div>
+
+          <div class="notif-filter">
+            <div class="nf-btn active">Semua</div>
+            <div class="nf-btn">Belum Dibaca</div>
+            <div class="nf-btn">Deadline</div>
+          </div>
+
+          <div class="notif-list" style="padding-bottom:20px">
+            <div class="notif-card unread" onclick="switchScreen('detail',document.querySelectorAll('.screen-btn')[2])">
+              <div class="notif-icon-circle" style="background:rgba(34,197,94,0.15)">✅</div>
+              <div style="flex:1">
+                <div class="notif-body-txt"><strong>Kabid Keuangan</strong> menyelesaikan disposisi pencairan RKA</div>
+                <div class="notif-time">10 menit lalu</div>
+              </div>
+              <div class="unread-badge"></div>
+            </div>
+
+            <div class="notif-card unread" onclick="switchScreen('detail',document.querySelectorAll('.screen-btn')[2])">
+              <div class="notif-icon-circle" style="background:rgba(239,68,68,0.15)">🚨</div>
+              <div style="flex:1">
+                <div class="notif-body-txt"><strong>D-2601</strong> melewati batas waktu penyelesaian!</div>
+                <div class="notif-time">2 jam lalu</div>
+              </div>
+              <div class="unread-badge"></div>
+            </div>
+
+            <div class="notif-card unread" onclick="switchScreen('detail',document.querySelectorAll('.screen-btn')[2])">
+              <div class="notif-icon-circle" style="background:rgba(59,130,246,0.15)">🔄</div>
+              <div style="flex:1">
+                <div class="notif-body-txt"><strong>Kabid Keperawatan</strong> mengupdate progress telaah staf alat</div>
+                <div class="notif-time">5 jam lalu</div>
+              </div>
+              <div class="unread-badge"></div>
+            </div>
+
+            <div class="notif-card unread">
+              <div class="notif-icon-circle" style="background:rgba(234,179,8,0.15)">⏰</div>
+              <div style="flex:1">
+                <div class="notif-body-txt">Reminder: <strong>D-2603</strong> deadline 2 hari lagi</div>
+                <div class="notif-time">Kemarin</div>
+              </div>
+              <div class="unread-badge"></div>
+            </div>
+
+            <div class="notif-card">
+              <div class="notif-icon-circle" style="background:rgba(107,114,128,0.1)">📥</div>
+              <div style="flex:1">
+                <div class="notif-body-txt" style="color:#6b7280">Disposisi baru dari Sekretariat masuk</div>
+                <div class="notif-time">1 hari lalu</div>
+              </div>
+            </div>
+
+            <div class="notif-card">
+              <div class="notif-icon-circle" style="background:rgba(107,114,128,0.1)">📥</div>
+              <div style="flex:1">
+                <div class="notif-body-txt" style="color:#6b7280">Surat Dinkes diterima, menunggu disposisi</div>
+                <div class="notif-time">2 hari lalu</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- phone-screen -->
+      <div class="phone-home-bar"><div class="home-bar-line"></div></div>
+    </div><!-- phone-frame -->
+  </div><!-- phone-wrap -->
+
+  <!-- ANNOTATION PANEL -->
+  <div style="max-width:280px;display:flex;flex-direction:column;gap:16px;padding-top:40px" id="annotationPanel">
+
+    <div id="ann-login" class="ann-block" style="background:#161b24;border:1px solid #252d3a;border-radius:16px;padding:20px">
+      <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:12px">🔐 Layar Login</div>
+      <div style="font-size:12.5px;color:#6b7280;line-height:1.7">
+        ✦ Login pakai <strong style="color:#9ca3af">NIP atau email</strong><br>
+        ✦ Role user langsung aktif setelah login<br>
+        ✦ Session token disimpan di device<br>
+        ✦ Auto-logout setelah 8 jam idle
+      </div>
+    </div>
+
+    <div id="ann-home" class="ann-block" style="display:none;background:#161b24;border:1px solid #252d3a;border-radius:16px;padding:20px">
+      <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:12px">🏠 Beranda</div>
+      <div style="font-size:12.5px;color:#6b7280;line-height:1.7">
+        ✦ <strong style="color:#9ca3af">4 statistik</strong> real-time di atas<br>
+        ✦ List disposisi prioritas tinggi + overdue<br>
+        ✦ Tap kartu → buka detail & timeline<br>
+        ✦ Fab button tengah = tulis disposisi baru<br>
+        ✦ Bell icon = notifikasi dengan red dot
+      </div>
+    </div>
+
+    <div id="ann-detail" class="ann-block" style="display:none;background:#161b24;border:1px solid #252d3a;border-radius:16px;padding:20px">
+      <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:12px">📋 Detail Disposisi</div>
+      <div style="font-size:12.5px;color:#6b7280;line-height:1.7">
+        ✦ Info lengkap: asal, ke, deadline, folder<br>
+        ✦ Instruksi Direktur dalam kotak biru<br>
+        ✦ <strong style="color:#9ca3af">Timeline progress</strong> kronologis lengkap<br>
+        ✦ Form update status di bawah<br>
+        ✦ Penerima bisa tambah catatan & ubah status
+      </div>
+    </div>
+
+    <div id="ann-tulis" class="ann-block" style="display:none;background:#161b24;border:1px solid #252d3a;border-radius:16px;padding:20px">
+      <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:12px">✏️ Tulis Disposisi</div>
+      <div style="font-size:12.5px;color:#6b7280;line-height:1.7">
+        ✦ Pilih folder langsung dari picker<br>
+        ✦ Assignee bisa multiple (chip)<br>
+        ✦ <strong style="color:#9ca3af">3 level prioritas</strong>: Urgent / Normal / Biasa<br>
+        ✦ Upload lampiran langsung dari kamera/galeri<br>
+        ✦ Tombol kirim → notifikasi otomatis ke penerima
+      </div>
+    </div>
+
+    <div id="ann-folder" class="ann-block" style="display:none;background:#161b24;border:1px solid #252d3a;border-radius:16px;padding:20px">
+      <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:12px">📁 Folder</div>
+      <div style="font-size:12.5px;color:#6b7280;line-height:1.7">
+        ✦ Folder utama dengan subfolder expandable<br>
+        ✦ Warna folder bisa dikustomisasi<br>
+        ✦ Counter dokumen real-time<br>
+        ✦ Pencarian folder di atas<br>
+        ✦ <strong style="color:#9ca3af">Tombol + Tambah Folder</strong> baru
+      </div>
+    </div>
+
+    <div id="ann-notif" class="ann-block" style="display:none;background:#161b24;border:1px solid #252d3a;border-radius:16px;padding:20px">
+      <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:12px">🔔 Notifikasi</div>
+      <div style="font-size:12.5px;color:#6b7280;line-height:1.7">
+        ✦ Badge biru = belum dibaca<br>
+        ✦ Filter: Semua / Belum Dibaca / Deadline<br>
+        ✦ <strong style="color:#9ca3af">4 jenis</strong>: Selesai, Overdue, Update, Reminder<br>
+        ✦ Tap notif → langsung buka detail disposisi<br>
+        ✦ Push notification via FCM (Firebase)
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- CALLOUT -->
+<div class="callout">
+  <div class="callout-item">
+    <div class="callout-icon">📱</div>
+    <div class="callout-text"><strong>Native Feel</strong><br>Animasi smooth, tap feedback, gesture swipe back</div>
+  </div>
+  <div class="callout-item">
+    <div class="callout-icon">🔔</div>
+    <div class="callout-text"><strong>Push Notification</strong><br>Firebase FCM untuk notif real-time ke HP</div>
+  </div>
+  <div class="callout-item">
+    <div class="callout-icon">📷</div>
+    <div class="callout-text"><strong>Upload Cepat</strong><br>Foto surat langsung dari kamera HP</div>
+  </div>
+  <div class="callout-item">
+    <div class="callout-icon">🌙</div>
+    <div class="callout-text"><strong>Dark Mode</strong><br>Nyaman di mata, hemat baterai OLED</div>
+  </div>
+  <div class="callout-item">
+    <div class="callout-icon">⚡</div>
+    <div class="callout-text"><strong>Offline Ready</strong><br>Data tersimpan lokal, sync saat online</div>
+  </div>
+</div>
+
+<script>
+const screenMap = {
+  login: 'screen-login',
+  home: 'screen-home',
+  detail: 'screen-detail',
+  tulis: 'screen-tulis',
+  folder: 'screen-folder',
+  notif: 'screen-notif',
+};
+
+const annMap = {
+  login: 'ann-login',
+  home: 'ann-home',
+  detail: 'ann-detail',
+  tulis: 'ann-tulis',
+  folder: 'ann-folder',
+  notif: 'ann-notif',
+};
+
+function switchScreen(name, btnEl) {
+  // Switch screens
+  Object.values(screenMap).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('active');
+  });
+  const target = document.getElementById(screenMap[name]);
+  if (target) target.classList.add('active');
+
+  // Switch buttons
+  document.querySelectorAll('.screen-btn').forEach(b => b.classList.remove('active'));
+  if (btnEl) btnEl.classList.add('active');
+
+  // Switch annotations
+  Object.values(annMap).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  const annTarget = document.getElementById(annMap[name]);
+  if (annTarget) annTarget.style.display = 'block';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SiDispo — Sistem Disposisi Digital</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1e2530;
+    --surface3: #252d3a;
+    --border: #2a3441;
+    --text: #e6edf3;
+    --text-muted: #7d8590;
+    --text-dim: #4a5568;
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --accent-glow: rgba(37,99,235,0.15);
+    --green: #16a34a;
+    --green-bg: rgba(22,163,74,0.12);
+    --yellow: #ca8a04;
+    --yellow-bg: rgba(202,138,4,0.12);
+    --red: #dc2626;
+    --red-bg: rgba(220,38,38,0.12);
+    --blue: #2563eb;
+    --blue-bg: rgba(37,99,235,0.12);
+    --purple: #7c3aed;
+    --purple-bg: rgba(124,58,237,0.12);
+    --cyan: #0891b2;
+    --cyan-bg: rgba(8,145,178,0.12);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 260px;
+    min-width: 260px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow-y: auto;
+    transition: all 0.3s;
+  }
+  .sidebar-logo {
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo-badge {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: var(--accent);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 0 20px var(--accent-glow);
+  }
+  .logo-text { font-size: 16px; font-weight: 800; letter-spacing: -0.5px; }
+  .logo-sub { font-size: 10px; color: var(--text-muted); font-weight: 400; letter-spacing: 0.5px; }
+
+  .sidebar-section { padding: 16px 12px 8px; }
+  .sidebar-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+    color: var(--text-dim); text-transform: uppercase;
+    padding: 0 8px; margin-bottom: 6px;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 10px; border-radius: 8px;
+    cursor: pointer; font-size: 13.5px; font-weight: 500;
+    color: var(--text-muted); transition: all 0.15s;
+    margin-bottom: 2px;
+  }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: var(--accent-glow); color: #60a5fa; border: 1px solid rgba(37,99,235,0.3); }
+  .nav-item .icon { font-size: 15px; width: 20px; text-align: center; }
+  .nav-badge {
+    margin-left: auto; background: var(--red); color: #fff;
+    font-size: 10px; font-weight: 700; padding: 1px 6px;
+    border-radius: 20px; min-width: 18px; text-align: center;
+  }
+
+  .folder-tree { padding: 0 12px 12px; }
+  .folder-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 10px; border-radius: 8px;
+    cursor: pointer; font-size: 13px;
+    color: var(--text-muted); transition: all 0.15s;
+    margin-bottom: 1px;
+  }
+  .folder-item:hover { background: var(--surface2); color: var(--text); }
+  .folder-item.active { background: var(--surface2); color: var(--text); }
+  .folder-icon { font-size: 13px; }
+  .folder-count {
+    margin-left: auto; font-size: 11px; color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .sub-folder { padding-left: 26px; }
+
+  .sidebar-user {
+    margin-top: auto; padding: 14px 16px;
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .user-avatar {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 13px; flex-shrink: 0;
+  }
+  .user-name { font-size: 13px; font-weight: 600; }
+  .user-role { font-size: 11px; color: var(--text-muted); }
+
+  /* MAIN */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+  .topbar {
+    height: 56px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center;
+    padding: 0 24px; gap: 16px; flex-shrink: 0;
+  }
+  .topbar-title { font-size: 15px; font-weight: 700; }
+  .topbar-spacer { flex: 1; }
+  .search-box {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 7px 12px;
+    font-size: 13px; color: var(--text-muted); cursor: pointer;
+    transition: all 0.2s;
+  }
+  .search-box:hover { border-color: var(--accent); color: var(--text); }
+  .btn {
+    display: flex; align-items: center; gap: 7px;
+    padding: 8px 14px; border-radius: 8px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    border: none; transition: all 0.15s; font-family: inherit;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-hover); box-shadow: 0 0 20px var(--accent-glow); }
+  .btn-ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+  .btn-ghost:hover { background: var(--surface2); color: var(--text); }
+  .notif-btn {
+    position: relative; width: 36px; height: 36px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 16px; transition: all 0.2s;
+  }
+  .notif-btn:hover { border-color: var(--accent); }
+  .notif-dot {
+    position: absolute; top: 6px; right: 6px;
+    width: 8px; height: 8px; border-radius: 50%; background: var(--red);
+    border: 2px solid var(--surface);
+  }
+
+  .content {
+    flex: 1; overflow-y: auto; padding: 24px;
+  }
+
+  /* STATS */
+  .stats-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 14px; margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px 20px;
+    transition: all 0.2s; cursor: default;
+  }
+  .stat-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .stat-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .stat-icon {
+    width: 36px; height: 36px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center; font-size: 16px;
+  }
+  .stat-trend { font-size: 12px; font-weight: 600; }
+  .stat-trend.up { color: var(--green); }
+  .stat-trend.warn { color: var(--yellow); }
+  .stat-num { font-size: 28px; font-weight: 800; letter-spacing: -1px; }
+  .stat-label { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+
+  /* PANEL GRID */
+  .panel-grid {
+    display: grid; grid-template-columns: 1fr 340px;
+    gap: 20px;
+  }
+
+  /* TABLE PANEL */
+  .panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; overflow: hidden;
+  }
+  .panel-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+  }
+  .panel-title { font-size: 14px; font-weight: 700; }
+  .panel-count {
+    font-size: 12px; font-weight: 600; color: var(--text-muted);
+    background: var(--surface2); padding: 2px 8px; border-radius: 20px;
+  }
+  .panel-action { margin-left: auto; }
+
+  /* FILTER TABS */
+  .filter-tabs {
+    display: flex; gap: 4px;
+    padding: 12px 20px; border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .tab {
+    padding: 5px 12px; border-radius: 6px;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    color: var(--text-muted); transition: all 0.15s;
+  }
+  .tab:hover { background: var(--surface2); color: var(--text); }
+  .tab.active { background: var(--accent-glow); color: #60a5fa; }
+
+  /* DISPOSITION LIST */
+  .disp-item {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+    cursor: pointer; transition: all 0.15s;
+  }
+  .disp-item:hover { background: var(--surface2); }
+  .disp-item:last-child { border-bottom: none; }
+  .disp-check {
+    width: 18px; height: 18px; border-radius: 4px;
+    border: 1.5px solid var(--border); flex-shrink: 0; margin-top: 2px;
+    cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center;
+  }
+  .disp-check:hover { border-color: var(--accent); }
+  .disp-body { flex: 1; min-width: 0; }
+  .disp-top { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+  .disp-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--text-muted); flex-shrink: 0;
+  }
+  .disp-title { font-size: 13.5px; font-weight: 600; }
+  .priority-dot {
+    width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-top: 3px;
+  }
+  .disp-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .badge {
+    font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .badge-selesai { background: var(--green-bg); color: #4ade80; }
+  .badge-proses { background: var(--blue-bg); color: #60a5fa; }
+  .badge-tunggu { background: var(--yellow-bg); color: #fbbf24; }
+  .badge-overdue { background: var(--red-bg); color: #f87171; }
+  .badge-diterima { background: var(--cyan-bg); color: #22d3ee; }
+  .badge-folder { background: var(--surface3); color: var(--text-muted); }
+  .disp-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+  .disp-date { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+  .disp-assignee {
+    display: flex; align-items: center; gap: -4px;
+  }
+  .mini-avatar {
+    width: 24px; height: 24px; border-radius: 50%;
+    border: 2px solid var(--surface);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; margin-left: -4px;
+  }
+  .mini-avatar:first-child { margin-left: 0; }
+
+  /* SIDE PANEL */
+  .side-panels { display: flex; flex-direction: column; gap: 16px; }
+
+  /* NOTIF PANEL */
+  .notif-item {
+    display: flex; gap: 12px; padding: 12px 16px;
+    border-bottom: 1px solid var(--border); cursor: pointer;
+    transition: all 0.15s;
+  }
+  .notif-item:hover { background: var(--surface2); }
+  .notif-item:last-child { border-bottom: none; }
+  .notif-dot-left {
+    width: 8px; height: 8px; border-radius: 50%;
+    flex-shrink: 0; margin-top: 5px;
+  }
+  .notif-text { font-size: 12.5px; line-height: 1.5; }
+  .notif-time { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+
+  /* PROGRESS CHART */
+  .mini-chart {
+    padding: 16px 20px;
+  }
+  .chart-bar-group { margin-bottom: 12px; }
+  .chart-bar-label {
+    display: flex; justify-content: space-between;
+    font-size: 12px; margin-bottom: 6px;
+  }
+  .chart-bar-label span:first-child { color: var(--text-muted); }
+  .chart-bar-label span:last-child { font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+  .bar-track {
+    height: 8px; background: var(--surface3);
+    border-radius: 4px; overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%; border-radius: 4px;
+    transition: width 1s ease;
+  }
+
+  /* DEADLINE */
+  .deadline-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 16px; border-bottom: 1px solid var(--border);
+    cursor: pointer; transition: all 0.15s;
+  }
+  .deadline-item:hover { background: var(--surface2); }
+  .deadline-item:last-child { border-bottom: none; }
+  .deadline-indicator {
+    width: 4px; height: 40px; border-radius: 2px; flex-shrink: 0;
+  }
+  .deadline-info { flex: 1; min-width: 0; }
+  .deadline-title { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .deadline-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .deadline-days {
+    font-size: 12px; font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7); z-index: 100;
+    align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; width: 600px; max-width: 95vw;
+    max-height: 90vh; overflow-y: auto;
+    animation: modalIn 0.2s ease;
+  }
+  @keyframes modalIn { from { opacity:0; transform: scale(0.95) translateY(10px); } to { opacity:1; transform: scale(1) translateY(0); } }
+  .modal-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 20px 24px; border-bottom: 1px solid var(--border);
+  }
+  .modal-title { font-size: 16px; font-weight: 700; }
+  .modal-close {
+    margin-left: auto; width: 32px; height: 32px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 16px; transition: all 0.15s; color: var(--text-muted);
+  }
+  .modal-close:hover { background: var(--red-bg); color: var(--red); border-color: var(--red); }
+  .modal-body { padding: 20px 24px; }
+  .form-row { margin-bottom: 16px; }
+  .form-label { font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .form-input {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 12px; color: var(--text);
+    font-size: 13.5px; font-family: inherit; transition: all 0.15s; outline: none;
+  }
+  .form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+  .form-input::placeholder { color: var(--text-dim); }
+  .form-textarea { min-height: 80px; resize: vertical; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-select {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 12px; color: var(--text);
+    font-size: 13.5px; font-family: inherit; outline: none; cursor: pointer;
+    appearance: none;
+  }
+  .form-select:focus { border-color: var(--accent); }
+  .upload-area {
+    border: 2px dashed var(--border); border-radius: 8px;
+    padding: 24px; text-align: center; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .upload-area:hover { border-color: var(--accent); background: var(--accent-glow); }
+  .upload-icon { font-size: 28px; margin-bottom: 8px; }
+  .upload-text { font-size: 13px; color: var(--text-muted); }
+  .modal-footer {
+    display: flex; align-items: center; gap: 10px;
+    padding: 16px 24px; border-top: 1px solid var(--border);
+    justify-content: flex-end;
+  }
+
+  /* DETAIL PANEL */
+  .detail-overlay {
+    display: none; position: fixed; top: 56px; right: 0;
+    width: 440px; height: calc(100vh - 56px);
+    background: var(--surface); border-left: 1px solid var(--border);
+    z-index: 50; overflow-y: auto;
+    animation: slideIn 0.25s ease;
+  }
+  .detail-overlay.show { display: block; }
+  @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+  .detail-header {
+    padding: 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: flex-start; gap: 12px;
+  }
+  .detail-close {
+    width: 30px; height: 30px; flex-shrink: 0;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 14px; color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .detail-body { padding: 20px; }
+  .detail-section { margin-bottom: 20px; }
+  .detail-section-title {
+    font-size: 11px; font-weight: 700; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;
+  }
+  .detail-kv { display: flex; gap: 8px; margin-bottom: 8px; align-items: flex-start; }
+  .detail-key { font-size: 12px; color: var(--text-muted); width: 100px; flex-shrink: 0; }
+  .detail-val { font-size: 12.5px; font-weight: 500; }
+  .timeline { position: relative; }
+  .timeline::before {
+    content: ''; position: absolute; left: 12px; top: 0; bottom: 0;
+    width: 2px; background: var(--border);
+  }
+  .tl-item { display: flex; gap: 16px; margin-bottom: 16px; position: relative; }
+  .tl-dot {
+    width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; z-index: 1; border: 2px solid var(--surface);
+  }
+  .tl-content { flex: 1; padding-top: 2px; }
+  .tl-text { font-size: 13px; font-weight: 500; }
+  .tl-time { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .tl-note {
+    font-size: 12px; color: var(--text-muted);
+    background: var(--surface2); border-radius: 6px;
+    padding: 8px 10px; margin-top: 8px; border-left: 3px solid var(--accent);
+  }
+  .update-form { padding: 16px 20px; border-top: 1px solid var(--border); }
+  .update-title { font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+  /* RESPONSIVE */
+  @media (max-width: 768px) {
+    .sidebar { width: 220px; min-width: 220px; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .panel-grid { grid-template-columns: 1fr; }
+    .side-panels { display: none; }
+  }
+
+  /* ANIMATIONS */
+  .fade-in { animation: fadeIn 0.4s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  .pulse { animation: pulse 2s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+  /* empty state */
+  .empty { text-align: center; padding: 40px; color: var(--text-muted); }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-text { font-size: 14px; }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-badge">
+      <div class="logo-icon">📋</div>
+      <div>
+        <div class="logo-text">SiDispo</div>
+        <div class="logo-sub">Sistem Disposisi Digital</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Menu</div>
+    <div class="nav-item active" onclick="setNav(this)">
+      <span class="icon">🏠</span> Dashboard
+    </div>
+    <div class="nav-item" onclick="setNav(this)">
+      <span class="icon">📥</span> Surat Masuk
+      <span class="nav-badge">3</span>
+    </div>
+    <div class="nav-item" onclick="setNav(this)">
+      <span class="icon">📤</span> Disposisi Saya
+    </div>
+    <div class="nav-item" onclick="setNav(this)">
+      <span class="icon">✅</span> Selesai
+    </div>
+    <div class="nav-item" onclick="setNav(this)">
+      <span class="icon">⚠️</span> Overdue
+      <span class="nav-badge" style="background:var(--yellow)">2</span>
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Folder</div>
+  </div>
+  <div class="folder-tree">
+    <div class="folder-item active" onclick="setFolder(this)">
+      <span class="folder-icon">📂</span> Semua Dokumen
+      <span class="folder-count">24</span>
+    </div>
+    <div class="folder-item" onclick="setFolder(this)">
+      <span class="folder-icon">📁</span> Edaran BPJS Kes
+      <span class="folder-count">8</span>
+    </div>
+    <div class="folder-item sub-folder" onclick="setFolder(this)">
+      <span class="folder-icon">📄</span> Iuran
+      <span class="folder-count">3</span>
+    </div>
+    <div class="folder-item sub-folder" onclick="setFolder(this)">
+      <span class="folder-icon">📄</span> Kepesertaan
+      <span class="folder-count">2</span>
+    </div>
+    <div class="folder-item sub-folder" onclick="setFolder(this)">
+      <span class="folder-icon">📄</span> Klaim
+      <span class="folder-count">3</span>
+    </div>
+    <div class="folder-item" onclick="setFolder(this)">
+      <span class="folder-icon">📁</span> Telaah Staf Bid. Kep
+      <span class="folder-count">6</span>
+    </div>
+    <div class="folder-item sub-folder" onclick="setFolder(this)">
+      <span class="folder-icon">📄</span> SDM Keperawatan
+      <span class="folder-count">2</span>
+    </div>
+    <div class="folder-item sub-folder" onclick="setFolder(this)">
+      <span class="folder-icon">📄</span> SOP & Prosedur
+      <span class="folder-count">4</span>
+    </div>
+    <div class="folder-item" onclick="setFolder(this)">
+      <span class="folder-icon">📁</span> SK & Regulasi
+      <span class="folder-count">5</span>
+    </div>
+    <div class="folder-item" onclick="setFolder(this)">
+      <span class="folder-icon">📁</span> Surat Dinas/Dinkes
+      <span class="folder-count">5</span>
+    </div>
+    <div class="folder-item" onclick="addFolder()">
+      <span class="folder-icon">➕</span> <span style="color:var(--accent);font-size:12px;">Tambah Folder</span>
+    </div>
+  </div>
+
+  <div class="sidebar-user">
+    <div class="user-avatar">DR</div>
+    <div>
+      <div class="user-name">dr. Rahman, SpPD</div>
+      <div class="user-role">Direktur</div>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-title">Dashboard Disposisi</div>
+    <div class="topbar-spacer"></div>
+    <div class="search-box" onclick="showSearch()">
+      🔍 &nbsp;Cari surat, perihal...
+      <span style="margin-left:8px;font-size:11px;color:var(--text-dim);background:var(--surface3);padding:2px 6px;border-radius:4px;">Ctrl K</span>
+    </div>
+    <div class="notif-btn" onclick="toggleNotif()" id="notifBtn">
+      🔔
+      <div class="notif-dot"></div>
+    </div>
+    <button class="btn btn-primary" onclick="showModal()">
+      ✏️ &nbsp;Tulis Disposisi
+    </button>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content fade-in">
+
+    <!-- STATS -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-top">
+          <div class="stat-icon" style="background:var(--blue-bg)">📋</div>
+          <span class="stat-trend up">+5 minggu ini</span>
+        </div>
+        <div class="stat-num">24</div>
+        <div class="stat-label">Total Disposisi Aktif</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-top">
+          <div class="stat-icon" style="background:var(--green-bg)">✅</div>
+          <span class="stat-trend up">↑ 83%</span>
+        </div>
+        <div class="stat-num">18</div>
+        <div class="stat-label">Selesai Bulan Ini</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-top">
+          <div class="stat-icon" style="background:var(--yellow-bg)">⏳</div>
+          <span class="stat-trend warn">Perlu perhatian</span>
+        </div>
+        <div class="stat-num">4</div>
+        <div class="stat-label">Sedang Diproses</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-top">
+          <div class="stat-icon" style="background:var(--red-bg)">🚨</div>
+          <span class="stat-trend" style="color:var(--red)">Segera!</span>
+        </div>
+        <div class="stat-num">2</div>
+        <div class="stat-label">Overdue / Terlambat</div>
+      </div>
+    </div>
+
+    <!-- PANEL GRID -->
+    <div class="panel-grid">
+
+      <!-- DISPOSISI LIST -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">📋 Daftar Disposisi</div>
+          <div class="panel-count">24 dokumen</div>
+          <div class="panel-action">
+            <button class="btn btn-ghost" style="font-size:12px;padding:6px 10px;">Filter ▾</button>
+          </div>
+        </div>
+        <div class="filter-tabs">
+          <div class="tab active" onclick="filterTab(this)">Semua</div>
+          <div class="tab" onclick="filterTab(this)">Diproses</div>
+          <div class="tab" onclick="filterTab(this)">Menunggu</div>
+          <div class="tab" onclick="filterTab(this)">Selesai</div>
+          <div class="tab" onclick="filterTab(this)">Overdue</div>
+        </div>
+
+        <!-- Items -->
+        <div id="dispList">
+          <div class="disp-item" onclick="showDetail('D-2601')">
+            <div class="disp-check"></div>
+            <div class="priority-dot" style="background:#dc2626;margin-top:4px;"></div>
+            <div class="disp-body">
+              <div class="disp-top">
+                <span class="disp-num">D-2601</span>
+                <span class="disp-title">Update iuran BPJS Kesehatan 2026</span>
+              </div>
+              <div class="disp-meta">
+                <span class="badge badge-overdue">🚨 Overdue</span>
+                <span class="badge badge-folder">📁 BPJS Kes / Iuran</span>
+                <span style="font-size:11px;color:var(--text-muted)">→ Kabid Keuangan</span>
+              </div>
+            </div>
+            <div class="disp-right">
+              <span class="disp-date">01 Feb 2026</span>
+              <div class="disp-assignee">
+                <div class="mini-avatar" style="background:linear-gradient(135deg,#dc2626,#b91c1c)">KK</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="disp-item" onclick="showDetail('D-2602')">
+            <div class="disp-check"></div>
+            <div class="priority-dot" style="background:#ca8a04;margin-top:4px;"></div>
+            <div class="disp-body">
+              <div class="disp-top">
+                <span class="disp-num">D-2602</span>
+                <span class="disp-title">Telaah staf pengadaan alat keperawatan</span>
+              </div>
+              <div class="disp-meta">
+                <span class="badge badge-proses">🔄 Diproses</span>
+                <span class="badge badge-folder">📁 Telaah / SDM Kep</span>
+                <span style="font-size:11px;color:var(--text-muted)">→ Kabid Keperawatan</span>
+              </div>
+            </div>
+            <div class="disp-right">
+              <span class="disp-date">05 Feb 2026</span>
+              <div class="disp-assignee">
+                <div class="mini-avatar" style="background:linear-gradient(135deg,#2563eb,#1d4ed8)">BK</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="disp-item" onclick="showDetail('D-2603')">
+            <div class="disp-check"></div>
+            <div class="priority-dot" style="background:#ca8a04;margin-top:4px;"></div>
+            <div class="disp-body">
+              <div class="disp-top">
+                <span class="disp-num">D-2603</span>
+                <span class="disp-title">Memo NA BPJS Kesehatan kepesertaan baru</span>
+              </div>
+              <div class="disp-meta">
+                <span class="badge badge-tunggu">⏳ Menunggu Approval</span>
+                <span class="badge badge-folder">📁 BPJS Kes / Kepesertaan</span>
+                <span style="font-size:11px;color:var(--text-muted)">→ Wadir Umum</span>
+              </div>
+            </div>
+            <div class="disp-right">
+              <span class="disp-date">08 Feb 2026</span>
+              <div class="disp-assignee">
+                <div class="mini-avatar" style="background:linear-gradient(135deg,#7c3aed,#6d28d9)">WU</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="disp-item" onclick="showDetail('D-2604')">
+            <div class="disp-check"></div>
+            <div class="priority-dot" style="background:#16a34a;margin-top:4px;"></div>
+            <div class="disp-body">
+              <div class="disp-top">
+                <span class="disp-num">D-2604</span>
+                <span class="disp-title">Pencairan anggaran RKA program prioritas</span>
+              </div>
+              <div class="disp-meta">
+                <span class="badge badge-selesai">✅ Selesai</span>
+                <span class="badge badge-folder">📁 SK & Regulasi</span>
+                <span style="font-size:11px;color:var(--text-muted)">→ Kabid Keuangan</span>
+              </div>
+            </div>
+            <div class="disp-right">
+              <span class="disp-date">10 Feb 2026</span>
+              <div class="disp-assignee">
+                <div class="mini-avatar" style="background:linear-gradient(135deg,#16a34a,#15803d)">KK</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="disp-item" onclick="showDetail('D-2605')">
+            <div class="disp-check"></div>
+            <div class="priority-dot" style="background:#dc2626;margin-top:4px;"></div>
+            <div class="disp-body">
+              <div class="disp-top">
+                <span class="disp-num">D-2605</span>
+                <span class="disp-title">Kunjungan kerja tim BPJS Kes ke RS</span>
+              </div>
+              <div class="disp-meta">
+                <span class="badge badge-overdue">🚨 Overdue</span>
+                <span class="badge badge-folder">📁 Surat Dinas</span>
+                <span style="font-size:11px;color:var(--text-muted)">→ Humas, Wadir Yanmed</span>
+              </div>
+            </div>
+            <div class="disp-right">
+              <span class="disp-date">12 Feb 2026</span>
+              <div class="disp-assignee">
+                <div class="mini-avatar" style="background:linear-gradient(135deg,#0891b2,#0e7490)">HM</div>
+                <div class="mini-avatar" style="background:linear-gradient(135deg,#7c3aed,#6d28d9)">WY</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="disp-item" onclick="showDetail('D-2606')">
+            <div class="disp-check"></div>
+            <div class="priority-dot" style="background:#2563eb;margin-top:4px;"></div>
+            <div class="disp-body">
+              <div class="disp-top">
+                <span class="disp-num">D-2606</span>
+                <span class="disp-title">SOP pelayanan prima pasien rawat inap</span>
+              </div>
+              <div class="disp-meta">
+                <span class="badge badge-diterima">📥 Diterima</span>
+                <span class="badge badge-folder">📁 Telaah / SOP</span>
+                <span style="font-size:11px;color:var(--text-muted)">→ Kabid Keperawatan</span>
+              </div>
+            </div>
+            <div class="disp-right">
+              <span class="disp-date">15 Feb 2026</span>
+              <div class="disp-assignee">
+                <div class="mini-avatar" style="background:linear-gradient(135deg,#2563eb,#1d4ed8)">BK</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="disp-item" onclick="showDetail('D-2607')">
+            <div class="disp-check"></div>
+            <div class="priority-dot" style="background:#16a34a;margin-top:4px;"></div>
+            <div class="disp-body">
+              <div class="disp-top">
+                <span class="disp-num">D-2607</span>
+                <span class="disp-title">Update upah staf berdasarkan regulasi baru</span>
+              </div>
+              <div class="disp-meta">
+                <span class="badge badge-proses">🔄 Diproses</span>
+                <span class="badge badge-folder">📁 BPJS Kes / Iuran</span>
+                <span style="font-size:11px;color:var(--text-muted)">→ Kabid SDM</span>
+              </div>
+            </div>
+            <div class="disp-right">
+              <span class="disp-date">18 Feb 2026</span>
+              <div class="disp-assignee">
+                <div class="mini-avatar" style="background:linear-gradient(135deg,#ca8a04,#a16207)">SD</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SIDE PANELS -->
+      <div class="side-panels">
+
+        <!-- NOTIF PANEL -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">🔔 Notifikasi</div>
+            <div class="panel-count">4 baru</div>
+          </div>
+          <div class="notif-item">
+            <div class="notif-dot-left pulse" style="background:var(--green)"></div>
+            <div>
+              <div class="notif-text"><b>Kabid Keuangan</b> menyelesaikan disposisi pencairan RKA</div>
+              <div class="notif-time">10 menit lalu</div>
+            </div>
+          </div>
+          <div class="notif-item">
+            <div class="notif-dot-left pulse" style="background:var(--red)"></div>
+            <div>
+              <div class="notif-text">⚠️ <b>D-2601</b> melewati batas waktu penyelesaian</div>
+              <div class="notif-time">2 jam lalu</div>
+            </div>
+          </div>
+          <div class="notif-item">
+            <div class="notif-dot-left pulse" style="background:var(--blue)"></div>
+            <div>
+              <div class="notif-text"><b>Kabid Keperawatan</b> mengupdate progress telaah staf</div>
+              <div class="notif-time">5 jam lalu</div>
+            </div>
+          </div>
+          <div class="notif-item">
+            <div class="notif-dot-left" style="background:var(--text-dim)"></div>
+            <div>
+              <div class="notif-text">Disposisi baru masuk dari Sekretariat</div>
+              <div class="notif-time">1 hari lalu</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PROGRESS PANEL -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">📊 Progres Per Unit</div>
+          </div>
+          <div class="mini-chart">
+            <div class="chart-bar-group">
+              <div class="chart-bar-label"><span>Bid. Keuangan</span><span>6/7</span></div>
+              <div class="bar-track"><div class="bar-fill" style="width:85%;background:var(--green)"></div></div>
+            </div>
+            <div class="chart-bar-group">
+              <div class="chart-bar-label"><span>Bid. Keperawatan</span><span>4/6</span></div>
+              <div class="bar-track"><div class="bar-fill" style="width:66%;background:var(--blue)"></div></div>
+            </div>
+            <div class="chart-bar-group">
+              <div class="chart-bar-label"><span>Wadir Umum</span><span>3/5</span></div>
+              <div class="bar-track"><div class="bar-fill" style="width:60%;background:var(--purple)"></div></div>
+            </div>
+            <div class="chart-bar-group">
+              <div class="chart-bar-label"><span>Humas</span><span>2/4</span></div>
+              <div class="bar-track"><div class="bar-fill" style="width:50%;background:var(--yellow)"></div></div>
+            </div>
+            <div class="chart-bar-group">
+              <div class="chart-bar-label"><span>Bid. SDM</span><span>1/2</span></div>
+              <div class="bar-track"><div class="bar-fill" style="width:50%;background:var(--cyan)"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DEADLINE PANEL -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">⏰ Deadline Dekat</div>
+          </div>
+          <div class="deadline-item">
+            <div class="deadline-indicator" style="background:var(--red)"></div>
+            <div class="deadline-info">
+              <div class="deadline-title">Kunjungan BPJS Kes</div>
+              <div class="deadline-sub">Humas & Wadir Yanmed</div>
+            </div>
+            <div class="deadline-days" style="color:var(--red)">Hari ini</div>
+          </div>
+          <div class="deadline-item">
+            <div class="deadline-indicator" style="background:var(--yellow)"></div>
+            <div class="deadline-info">
+              <div class="deadline-title">Memo NA Kepesertaan</div>
+              <div class="deadline-sub">Wadir Umum</div>
+            </div>
+            <div class="deadline-days" style="color:var(--yellow)">2 hari</div>
+          </div>
+          <div class="deadline-item">
+            <div class="deadline-indicator" style="background:var(--blue)"></div>
+            <div class="deadline-info">
+              <div class="deadline-title">Telaah Alat Kep</div>
+              <div class="deadline-sub">Kabid Keperawatan</div>
+            </div>
+            <div class="deadline-days" style="color:var(--blue)">5 hari</div>
+          </div>
+          <div class="deadline-item">
+            <div class="deadline-indicator" style="background:var(--green)"></div>
+            <div class="deadline-info">
+              <div class="deadline-title">SOP Pelayanan Prima</div>
+              <div class="deadline-sub">Kabid Keperawatan</div>
+            </div>
+            <div class="deadline-days" style="color:var(--green)">7 hari</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- MODAL TULIS DISPOSISI -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <span style="font-size:20px">✏️</span>
+      <div class="modal-title">Tulis Disposisi Baru</div>
+      <div class="modal-close" onclick="closeModal()">✕</div>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-label">Nomor & Tanggal Surat</div>
+        <div class="form-grid">
+          <input class="form-input" placeholder="No. surat / referensi" />
+          <input class="form-input" type="date" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-label">Asal / Pengirim Surat</div>
+        <input class="form-input" placeholder="Contoh: BPJS Kesehatan Cab. Malang" />
+      </div>
+      <div class="form-row">
+        <div class="form-label">Perihal</div>
+        <input class="form-input" placeholder="Perihal surat..." />
+      </div>
+      <div class="form-row">
+        <div class="form-label">Folder Dokumen</div>
+        <select class="form-select">
+          <option>-- Pilih Folder --</option>
+          <option>📁 Edaran BPJS Kesehatan → Iuran</option>
+          <option>📁 Edaran BPJS Kesehatan → Kepesertaan</option>
+          <option>📁 Edaran BPJS Kesehatan → Klaim</option>
+          <option>📁 Telaah Staf Bid. Keperawatan → SDM</option>
+          <option>📁 Telaah Staf Bid. Keperawatan → SOP</option>
+          <option>📁 SK & Regulasi</option>
+          <option>📁 Surat Dinas / Dinkes</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-label">Isi Disposisi / Instruksi</div>
+        <textarea class="form-input form-textarea" placeholder="Tulis instruksi disposisi di sini..."></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-label">Ditujukan Kepada</div>
+        <input class="form-input" placeholder="Pilih pejabat / unit (bisa lebih dari 1)" />
+      </div>
+      <div class="form-grid">
+        <div class="form-row">
+          <div class="form-label">Batas Waktu</div>
+          <input class="form-input" type="date" />
+        </div>
+        <div class="form-row">
+          <div class="form-label">Prioritas</div>
+          <select class="form-select">
+            <option>🔴 Urgent</option>
+            <option>🟡 Normal</option>
+            <option>🟢 Biasa</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-label">Upload Dokumen</div>
+        <div class="upload-area">
+          <div class="upload-icon">📎</div>
+          <div class="upload-text">Klik atau drag & drop file<br><span style="font-size:11px;color:var(--text-dim)">PDF, JPG, PNG — maks. 10MB</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Batal</button>
+      <button class="btn btn-primary" onclick="submitDisposisi()">📤 Kirim Disposisi</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL PANEL -->
+<div class="detail-overlay" id="detailPanel">
+  <div class="detail-header">
+    <div style="flex:1">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;font-family:'JetBrains Mono',monospace" id="detailNum"></div>
+      <div style="font-size:15px;font-weight:700" id="detailTitle"></div>
+      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap" id="detailBadges"></div>
+    </div>
+    <div class="detail-close" onclick="closeDetail()">✕</div>
+  </div>
+  <div class="detail-body">
+    <div class="detail-section">
+      <div class="detail-section-title">Informasi Disposisi</div>
+      <div class="detail-kv"><span class="detail-key">Tanggal</span><span class="detail-val" id="dTgl"></span></div>
+      <div class="detail-kv"><span class="detail-key">Dari</span><span class="detail-val" id="dDari"></span></div>
+      <div class="detail-kv"><span class="detail-key">Folder</span><span class="detail-val" id="dFolder"></span></div>
+      <div class="detail-kv"><span class="detail-key">Ditujukan</span><span class="detail-val" id="dKe"></span></div>
+      <div class="detail-kv"><span class="detail-key">Deadline</span><span class="detail-val" id="dDeadline"></span></div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Instruksi Direktur</div>
+      <div style="font-size:13px;line-height:1.6;color:var(--text-muted);background:var(--surface2);border-radius:8px;padding:12px;border-left:3px solid var(--accent)" id="dInstruksi"></div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Timeline Progress</div>
+      <div class="timeline" id="dTimeline"></div>
+    </div>
+  </div>
+  <div class="update-form">
+    <div class="update-title">Update Progress</div>
+    <textarea class="form-input form-textarea" style="min-height:60px;margin-bottom:10px" placeholder="Tulis update / catatan progress..."></textarea>
+    <div style="display:flex;gap:8px">
+      <select class="form-select" style="flex:1">
+        <option>🔄 Diproses</option>
+        <option>⏳ Menunggu Approval</option>
+        <option>✅ Selesai</option>
+      </select>
+      <button class="btn btn-primary" onclick="addUpdate()">Kirim</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const disposisiData = {
+  'D-2601': {
+    title: 'Update iuran BPJS Kesehatan 2026',
+    status: 'overdue', folder: '📁 BPJS Kes / Iuran',
+    dari: 'BPJS Kesehatan Cab. Malang', ke: 'Kabid Keuangan',
+    tgl: '01 Februari 2026', deadline: '15 Februari 2026 🚨 Overdue',
+    instruksi: 'Segera lakukan update data iuran BPJS Kesehatan sesuai edaran terbaru. Koordinasikan dengan bagian keuangan dan laporkan hasilnya dalam 14 hari.',
+    timeline: [
+      { dot: '#2563eb', bg: 'var(--blue-bg)', icon: '📥', text: 'Disposisi diterima Kabid Keuangan', time: '01 Feb 2026, 09.15', note: null },
+      { dot: '#ca8a04', bg: 'var(--yellow-bg)', icon: '🔄', text: 'Mulai diproses, koordinasi tim', time: '03 Feb 2026, 14.00', note: 'Sedang mengumpulkan data iuran dari unit terkait' },
+      { dot: '#dc2626', bg: 'var(--red-bg)', icon: '🚨', text: 'Melewati batas waktu', time: '15 Feb 2026', note: null },
+    ]
+  },
+  'D-2602': {
+    title: 'Telaah staf pengadaan alat keperawatan',
+    status: 'proses', folder: '📁 Telaah Staf Bid. Keperawatan / SDM',
+    dari: 'Kabid Keperawatan', ke: 'Kabid Keperawatan',
+    tgl: '05 Februari 2026', deadline: '20 Februari 2026',
+    instruksi: 'Lakukan telaah kebutuhan alat keperawatan untuk triwulan I 2026. Sertakan estimasi anggaran dan prioritas pengadaan.',
+    timeline: [
+      { dot: '#2563eb', bg: 'var(--blue-bg)', icon: '📥', text: 'Disposisi diterima', time: '05 Feb 2026, 10.00', note: null },
+      { dot: '#2563eb', bg: 'var(--blue-bg)', icon: '🔄', text: 'Proses telaah kebutuhan alat', time: '10 Feb 2026, 08.30', note: 'Draft telaah sudah 60% selesai, estimasi anggaran sedang dihitung' },
+    ]
+  },
+  'D-2603': {
+    title: 'Memo NA BPJS Kesehatan kepesertaan baru',
+    status: 'tunggu', folder: '📁 BPJS Kes / Kepesertaan',
+    dari: 'BPJS Kesehatan Pusat', ke: 'Wadir Umum',
+    tgl: '08 Februari 2026', deadline: '25 Februari 2026',
+    instruksi: 'Tindaklanjuti memo NA tentang skema kepesertaan baru. Koordinasikan dengan bagian umum dan siapkan laporan respon RS.',
+    timeline: [
+      { dot: '#2563eb', bg: 'var(--blue-bg)', icon: '📥', text: 'Disposisi diterima Wadir Umum', time: '08 Feb 2026, 11.00', note: null },
+      { dot: '#ca8a04', bg: 'var(--yellow-bg)', icon: '⏳', text: 'Menunggu approval Wadir Yanmed', time: '14 Feb 2026, 16.00', note: 'Memerlukan tanda tangan Wadir Yanmed sebelum dikirim ke BPJS' },
+    ]
+  },
+  'D-2604': {
+    title: 'Pencairan anggaran RKA program prioritas',
+    status: 'selesai', folder: '📁 SK & Regulasi',
+    dari: 'Bagian Perencanaan', ke: 'Kabid Keuangan',
+    tgl: '10 Februari 2026', deadline: '17 Februari 2026',
+    instruksi: 'Proses pencairan anggaran RKA untuk program prioritas Q1. Pastikan semua dokumen pendukung sudah lengkap.',
+    timeline: [
+      { dot: '#2563eb', bg: 'var(--blue-bg)', icon: '📥', text: 'Disposisi diterima', time: '10 Feb 2026, 09.00', note: null },
+      { dot: '#2563eb', bg: 'var(--blue-bg)', icon: '🔄', text: 'Dokumen disiapkan', time: '11 Feb 2026, 14.00', note: null },
+      { dot: '#16a34a', bg: 'var(--green-bg)', icon: '✅', text: 'Pencairan berhasil diproses', time: '15 Feb 2026, 10.30', note: 'Anggaran sudah cair dan terdistribusi ke unit terkait. Bukti transfer terlampir.' },
+    ]
+  },
+  'D-2605': {
+    title: 'Kunjungan kerja tim BPJS Kes ke RS',
+    status: 'overdue', folder: '📁 Surat Dinas',
+    dari: 'BPJS Kesehatan Cab. Malang', ke: 'Humas & Wadir Yanmed',
+    tgl: '12 Februari 2026', deadline: '23 Februari 2026',
+    instruksi: 'Persiapkan penerimaan kunjungan tim BPJS Kes. Siapkan data capaian klaim, fasilitas, dan laporan kinerja terbaru.',
+    timeline: [
+      { dot: '#2563eb', bg: 'var(--blue-bg)', icon: '📥', text: 'Disposisi diterima Humas & Wadir', time: '12 Feb 2026, 13.00', note: null },
+    ]
+  },
+  'D-2606': {
+    title: 'SOP pelayanan prima pasien rawat inap',
+    status: 'diterima', folder: '📁 Telaah / SOP & Prosedur',
+    dari: 'Kabid Keperawatan', ke: 'Kabid Keperawatan',
+    tgl: '15 Februari 2026', deadline: '01 Maret 2026',
+    instruksi: 'Susun dan revisi SOP pelayanan prima untuk pasien rawat inap. Libatkan kepala ruang dalam penyusunan.',
+    timeline: [
+      { dot: '#22d3ee', bg: 'var(--cyan-bg)', icon: '📥', text: 'Disposisi diterima', time: '15 Feb 2026, 09.00', note: null },
+    ]
+  },
+  'D-2607': {
+    title: 'Update upah staf berdasarkan regulasi baru',
+    status: 'proses', folder: '📁 BPJS Kes / Iuran',
+    dari: 'Bagian SDM', ke: 'Kabid SDM',
+    tgl: '18 Februari 2026', deadline: '28 Februari 2026',
+    instruksi: 'Sesuaikan data upah staf dengan regulasi terbaru. Koordinasikan dengan payroll dan pastikan perubahan efektif per 1 Maret.',
+    timeline: [
+      { dot: '#2563eb', bg: 'var(--blue-bg)', icon: '📥', text: 'Disposisi diterima Kabid SDM', time: '18 Feb 2026, 10.00', note: null },
+      { dot: '#2563eb', bg: 'var(--blue-bg)', icon: '🔄', text: 'Data karyawan sedang diverifikasi', time: '20 Feb 2026, 14.00', note: 'Verifikasi 245 dari 312 karyawan sudah selesai' },
+    ]
+  }
+};
+
+function setNav(el) { document.querySelectorAll('.nav-item').forEach(e=>e.classList.remove('active')); el.classList.add('active'); }
+function setFolder(el) { document.querySelectorAll('.folder-item').forEach(e=>e.classList.remove('active')); el.classList.add('active'); }
+function filterTab(el) { document.querySelectorAll('.tab').forEach(e=>e.classList.remove('active')); el.classList.add('active'); }
+function showModal() { document.getElementById('modalOverlay').classList.add('show'); }
+function closeModal() { document.getElementById('modalOverlay').classList.remove('show'); }
+function closeModalOutside(e) { if(e.target===document.getElementById('modalOverlay')) closeModal(); }
+function toggleNotif() { /* toggle notif panel */ }
+function showSearch() { /* search UI */ }
+function addFolder() { const name = prompt('Nama folder baru:'); if(name) alert('Folder "'+name+'" berhasil dibuat!'); }
+
+function showDetail(id) {
+  const d = disposisiData[id];
+  if(!d) return;
+  document.getElementById('detailNum').textContent = id;
+  document.getElementById('detailTitle').textContent = d.title;
+
+  const statusMap = {
+    overdue: '<span class="badge badge-overdue">🚨 Overdue</span>',
+    proses: '<span class="badge badge-proses">🔄 Diproses</span>',
+    tunggu: '<span class="badge badge-tunggu">⏳ Menunggu</span>',
+    selesai: '<span class="badge badge-selesai">✅ Selesai</span>',
+    diterima: '<span class="badge badge-diterima">📥 Diterima</span>',
+  };
+  document.getElementById('detailBadges').innerHTML = (statusMap[d.status]||'') + '<span class="badge badge-folder">'+d.folder+'</span>';
+
+  document.getElementById('dTgl').textContent = d.tgl;
+  document.getElementById('dDari').textContent = d.dari;
+  document.getElementById('dFolder').textContent = d.folder;
+  document.getElementById('dKe').textContent = d.ke;
+  document.getElementById('dDeadline').innerHTML = d.deadline;
+  document.getElementById('dInstruksi').textContent = d.instruksi;
+
+  let tlHtml = '';
+  d.timeline.forEach(t => {
+    tlHtml += `<div class="tl-item">
+      <div class="tl-dot" style="background:${t.bg};color:${t.dot}">${t.icon}</div>
+      <div class="tl-content">
+        <div class="tl-text">${t.text}</div>
+        <div class="tl-time">${t.time}</div>
+        ${t.note ? `<div class="tl-note">${t.note}</div>` : ''}
+      </div>
+    </div>`;
+  });
+  document.getElementById('dTimeline').innerHTML = tlHtml;
+
+  document.getElementById('detailPanel').classList.add('show');
+}
+
+function closeDetail() { document.getElementById('detailPanel').classList.remove('show'); }
+
+function submitDisposisi() {
+  alert('✅ Disposisi berhasil dikirim!\nPenerima akan mendapat notifikasi.');
+  closeModal();
+}
+
+function addUpdate() {
+  alert('✅ Update progress berhasil disimpan.\nDirektur akan mendapat notifikasi.');
+}
+</script>
+</body>
+</html>

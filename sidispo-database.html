@@ -1,0 +1,1361 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SiDispo — Struktur Database</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f4f1eb;
+  --paper: #faf8f3;
+  --paper2: #f0ece2;
+  --ink: #1a1612;
+  --ink2: #3d342a;
+  --ink3: #7a6f62;
+  --ink4: #b5a99a;
+  --red: #c0392b;
+  --blue: #1a56a8;
+  --green: #1a6b3a;
+  --amber: #b45309;
+  --purple: #5b21b6;
+  --teal: #0f766e;
+  --border: #d4c9b8;
+  --border2: #e8e0d0;
+  --shadow: rgba(26,22,18,0.08);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Instrument Sans', sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+}
+
+/* HEADER */
+.header {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 28px 40px;
+  display: flex; align-items: center; gap: 20px;
+  position: sticky; top: 0; z-index: 100;
+  border-bottom: 3px solid var(--red);
+}
+.header-badge {
+  background: var(--red); color: #fff;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px; font-weight: 600;
+  padding: 4px 10px; border-radius: 4px;
+  letter-spacing: 1px;
+}
+.header-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 22px; font-weight: 800; letter-spacing: -0.5px;
+}
+.header-sub { font-size: 13px; color: var(--ink4); margin-top: 2px; }
+.header-right { margin-left: auto; display: flex; gap: 12px; }
+.header-stat {
+  text-align: center;
+  padding: 8px 16px;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+}
+.header-stat-num { font-family: 'IBM Plex Mono', monospace; font-size: 20px; font-weight: 600; }
+.header-stat-label { font-size: 11px; color: var(--ink4); margin-top: 2px; }
+
+/* NAV TABS */
+.nav-tabs {
+  background: var(--paper);
+  border-bottom: 2px solid var(--border);
+  display: flex; gap: 0; padding: 0 40px;
+  overflow-x: auto;
+}
+.nav-tab {
+  padding: 14px 20px; font-size: 13px; font-weight: 600;
+  cursor: pointer; color: var(--ink3);
+  border-bottom: 3px solid transparent; margin-bottom: -2px;
+  transition: all 0.15s; white-space: nowrap;
+  display: flex; align-items: center; gap: 8px;
+}
+.nav-tab:hover { color: var(--ink); }
+.nav-tab.active { color: var(--red); border-bottom-color: var(--red); }
+.tab-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+/* CONTENT */
+.content { padding: 32px 40px; max-width: 1400px; margin: 0 auto; }
+
+/* SECTION */
+.section { display: none; }
+.section.active { display: block; }
+
+/* ERD VIEW */
+.erd-intro {
+  display: flex; gap: 16px; margin-bottom: 28px; flex-wrap: wrap;
+}
+.erd-legend {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--paper); border: 1px solid var(--border);
+  padding: 8px 14px; border-radius: 8px;
+  font-size: 12px; font-weight: 500; color: var(--ink2);
+}
+.legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+
+.tables-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+/* TABLE CARD */
+.tbl-card {
+  background: var(--paper);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px var(--shadow);
+  transition: all 0.2s;
+  cursor: pointer;
+}
+.tbl-card:hover {
+  border-color: var(--ink2);
+  box-shadow: 0 4px 24px var(--shadow);
+  transform: translateY(-2px);
+}
+.tbl-card.expanded { border-color: var(--ink); }
+
+.tbl-header {
+  padding: 14px 18px;
+  display: flex; align-items: center; gap: 10px;
+  border-bottom: 1.5px solid var(--border);
+}
+.tbl-color-bar {
+  width: 4px; height: 36px; border-radius: 2px; flex-shrink: 0;
+}
+.tbl-name {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 14px; font-weight: 600;
+}
+.tbl-desc { font-size: 12px; color: var(--ink3); margin-top: 1px; }
+.tbl-badge {
+  margin-left: auto;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; color: var(--ink3);
+  background: var(--bg); padding: 3px 8px;
+  border-radius: 20px; border: 1px solid var(--border);
+}
+
+.tbl-fields { padding: 0; }
+.field-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 18px; border-bottom: 1px solid var(--border2);
+  transition: background 0.1s;
+}
+.field-row:last-child { border-bottom: none; }
+.field-row:hover { background: var(--bg); }
+.field-key {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
+  padding: 2px 6px; border-radius: 4px; flex-shrink: 0;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.key-pk { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+.key-fk { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+.key-uk { background: #f0fdf4; color: #166534; border: 1px solid #86efac; }
+.field-name {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12.5px; font-weight: 500; flex: 1;
+}
+.field-type {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px; color: var(--blue); flex-shrink: 0;
+}
+.field-null {
+  font-size: 10px; color: var(--ink4);
+  background: var(--border2); padding: 1px 5px;
+  border-radius: 3px; flex-shrink: 0;
+}
+.field-note {
+  width: 100%; padding: 5px 18px 8px 18px;
+  font-size: 11px; color: var(--ink3); line-height: 1.5;
+  background: var(--bg); border-left: 3px solid;
+  display: none;
+}
+.tbl-card.expanded .field-note { display: block; }
+
+/* RELATIONS */
+.relations-section {
+  margin-top: 28px;
+  background: var(--paper);
+  border: 1.5px solid var(--border);
+  border-radius: 12px; overflow: hidden;
+}
+.rel-header {
+  padding: 14px 20px; background: var(--ink);
+  color: var(--paper); font-family: 'Syne', sans-serif;
+  font-size: 14px; font-weight: 700;
+}
+.rel-grid { padding: 16px 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.rel-item {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 14px; font-size: 12.5px;
+}
+.rel-arrow { font-size: 16px; color: var(--red); }
+.rel-type {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
+  padding: 2px 6px; border-radius: 4px; margin-left: auto;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.rt-1m { background: #fee2e2; color: #991b1b; }
+.rt-mm { background: #ede9fe; color: #5b21b6; }
+.rt-11 { background: #d1fae5; color: #065f46; }
+
+/* FLOW VIEW */
+.flow-container { position: relative; }
+.flow-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 20px; font-weight: 800;
+  margin-bottom: 24px;
+}
+.flow-steps {
+  display: flex; gap: 0; margin-bottom: 32px;
+  position: relative;
+}
+.flow-steps::before {
+  content: '';
+  position: absolute;
+  top: 32px; left: 32px; right: 32px; height: 2px;
+  background: linear-gradient(90deg, var(--red), var(--blue), var(--green), var(--amber));
+  z-index: 0;
+}
+.flow-step {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  text-align: center; position: relative; z-index: 1;
+}
+.flow-circle {
+  width: 64px; height: 64px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; font-weight: 800;
+  border: 3px solid var(--bg); margin-bottom: 12px;
+  box-shadow: 0 4px 16px var(--shadow);
+}
+.flow-step-title { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+.flow-step-sub { font-size: 11px; color: var(--ink3); line-height: 1.4; }
+
+.flow-detail-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;
+}
+.flow-card {
+  background: var(--paper);
+  border: 1.5px solid var(--border);
+  border-radius: 12px; overflow: hidden;
+}
+.flow-card-header {
+  padding: 12px 18px;
+  display: flex; align-items: center; gap: 10px;
+  font-weight: 700; font-size: 13px;
+}
+.flow-card-body { padding: 16px 18px; }
+.flow-row {
+  display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start;
+}
+.flow-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+.flow-text { font-size: 13px; line-height: 1.5; }
+.flow-text strong { font-weight: 600; }
+.flow-sub { font-size: 11px; color: var(--ink3); margin-top: 2px; }
+
+/* SQL VIEW */
+.sql-container { display: grid; grid-template-columns: 240px 1fr; gap: 20px; }
+.sql-nav {
+  background: var(--paper);
+  border: 1.5px solid var(--border);
+  border-radius: 12px; padding: 12px;
+  height: fit-content; position: sticky; top: 80px;
+}
+.sql-nav-title {
+  font-size: 11px; font-weight: 700; color: var(--ink3);
+  text-transform: uppercase; letter-spacing: 1px;
+  margin-bottom: 10px; padding: 0 6px;
+}
+.sql-nav-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: 6px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px; cursor: pointer; color: var(--ink2);
+  transition: all 0.15s; margin-bottom: 2px;
+}
+.sql-nav-item:hover { background: var(--bg); }
+.sql-nav-item.active { background: var(--ink); color: var(--paper); }
+.sql-nav-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
+.sql-panel {
+  background: #1e1e1e;
+  border-radius: 12px; overflow: hidden;
+  border: 1.5px solid #333;
+}
+.sql-topbar {
+  background: #2d2d2d; padding: 12px 20px;
+  display: flex; align-items: center; gap: 10px;
+  border-bottom: 1px solid #3a3a3a;
+}
+.sql-dots { display: flex; gap: 6px; }
+.sql-dot { width: 12px; height: 12px; border-radius: 50%; }
+.sql-filename {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px; color: #888;
+}
+.sql-copy {
+  margin-left: auto; background: #3a3a3a; color: #aaa;
+  border: none; border-radius: 6px; padding: 5px 12px;
+  font-size: 11px; cursor: pointer; font-family: inherit;
+  transition: all 0.15s;
+}
+.sql-copy:hover { background: #4a4a4a; color: #fff; }
+.sql-code {
+  padding: 20px; overflow-x: auto;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px; line-height: 1.7; color: #d4d4d4;
+}
+.sql-section { display: none; }
+.sql-section.active { display: block; }
+
+/* SQL syntax highlighting */
+.kw { color: #569cd6; } /* keyword */
+.tb { color: #4ec9b0; } /* table name */
+.col { color: #9cdcfe; } /* column */
+.ty { color: #4ec9b0; } /* type */
+.cm { color: #6a9955; font-style: italic; } /* comment */
+.st { color: #ce9178; } /* string */
+.nm { color: #b5cea8; } /* number */
+.op { color: #d4d4d4; } /* operator */
+
+/* DATA DICT */
+.dict-table {
+  width: 100%; border-collapse: collapse;
+  background: var(--paper);
+  border-radius: 12px; overflow: hidden;
+  border: 1.5px solid var(--border);
+  margin-bottom: 24px;
+}
+.dict-table thead tr {
+  background: var(--ink); color: var(--paper);
+}
+.dict-table th {
+  padding: 12px 16px; font-size: 12px; font-weight: 700;
+  text-align: left; font-family: 'IBM Plex Mono', monospace;
+  letter-spacing: 0.5px;
+}
+.dict-table td {
+  padding: 10px 16px; font-size: 12.5px;
+  border-bottom: 1px solid var(--border2);
+  vertical-align: top;
+}
+.dict-table tr:last-child td { border-bottom: none; }
+.dict-table tr:hover td { background: var(--bg); }
+.dict-tbl-name {
+  font-family: 'Syne', sans-serif;
+  font-size: 15px; font-weight: 800;
+  padding: 16px; background: var(--bg);
+  border-bottom: 1.5px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+}
+.dict-section { margin-bottom: 28px; }
+.mono { font-family: 'IBM Plex Mono', monospace; font-size: 12px; }
+.tag {
+  display: inline-block; font-size: 10px; font-weight: 700;
+  padding: 1px 6px; border-radius: 3px; margin-right: 4px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+/* RESPONSIVE */
+@media(max-width: 768px) {
+  .content { padding: 20px 16px; }
+  .header { padding: 16px 20px; }
+  .nav-tabs { padding: 0 16px; }
+  .tables-grid { grid-template-columns: 1fr; }
+  .flow-detail-grid { grid-template-columns: 1fr; }
+  .sql-container { grid-template-columns: 1fr; }
+  .sql-nav { position: static; }
+  .header-right { display: none; }
+  .flow-steps { flex-direction: column; }
+  .flow-steps::before { display: none; }
+}
+
+/* Animations */
+.fade-up { animation: fadeUp 0.4s ease both; }
+@keyframes fadeUp { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+      <span class="header-badge">DATABASE DOCS</span>
+      <span class="header-badge" style="background:var(--blue)">v1.0</span>
+    </div>
+    <div class="header-title">SiDispo — Struktur Database Lengkap</div>
+    <div class="header-sub">Sistem Disposisi Digital · Dokumentasi Teknis</div>
+  </div>
+  <div class="header-right">
+    <div class="header-stat">
+      <div class="header-stat-num">8</div>
+      <div class="header-stat-label">Tabel</div>
+    </div>
+    <div class="header-stat">
+      <div class="header-stat-num">52</div>
+      <div class="header-stat-label">Kolom</div>
+    </div>
+    <div class="header-stat">
+      <div class="header-stat-num">12</div>
+      <div class="header-stat-label">Relasi</div>
+    </div>
+  </div>
+</div>
+
+<!-- NAV TABS -->
+<div class="nav-tabs">
+  <div class="nav-tab active" onclick="switchTab('erd',this)">
+    <div class="tab-dot" style="background:var(--red)"></div>
+    📐 Struktur Tabel (ERD)
+  </div>
+  <div class="nav-tab" onclick="switchTab('flow',this)">
+    <div class="tab-dot" style="background:var(--blue)"></div>
+    🔄 Alur Data
+  </div>
+  <div class="nav-tab" onclick="switchTab('sql',this)">
+    <div class="tab-dot" style="background:var(--green)"></div>
+    💾 SQL Schema
+  </div>
+  <div class="nav-tab" onclick="switchTab('dict',this)">
+    <div class="tab-dot" style="background:var(--amber)"></div>
+    📖 Data Dictionary
+  </div>
+</div>
+
+<!-- ===================== SECTION 1: ERD ===================== -->
+<div id="erd" class="section active">
+<div class="content fade-up">
+  <div class="erd-intro">
+    <div class="erd-legend"><div class="legend-dot" style="background:#fbbf24"></div> PK — Primary Key</div>
+    <div class="erd-legend"><div class="legend-dot" style="background:#60a5fa"></div> FK — Foreign Key</div>
+    <div class="erd-legend"><div class="legend-dot" style="background:#4ade80"></div> UK — Unique Key</div>
+    <div class="erd-legend" style="cursor:pointer;color:var(--red)" onclick="toggleAll()">🔍 Klik tabel untuk detail</div>
+  </div>
+
+  <div class="tables-grid">
+
+    <!-- USERS -->
+    <div class="tbl-card" onclick="toggleCard(this)">
+      <div class="tbl-header">
+        <div class="tbl-color-bar" style="background:var(--red)"></div>
+        <div><div class="tbl-name">users</div><div class="tbl-desc">Pengguna & autentikasi</div></div>
+        <div class="tbl-badge">7 kolom</div>
+      </div>
+      <div class="tbl-fields">
+        <div class="field-row"><span class="field-key key-pk">PK</span><span class="field-name">id</span><span class="field-type">BIGINT</span></div>
+        <div class="field-row"><span class="field-key key-uk">UK</span><span class="field-name">nip</span><span class="field-type">VARCHAR(20)</span></div>
+        <div class="field-row"><span class="field-key key-uk">UK</span><span class="field-name">email</span><span class="field-type">VARCHAR(100)</span></div>
+        <div class="field-row"><span class="field-name" style="margin-left:30px">nama_lengkap</span><span class="field-type">VARCHAR(100)</span></div>
+        <div class="field-row"><span class="field-name" style="margin-left:30px">jabatan</span><span class="field-type">VARCHAR(100)</span></div>
+        <div class="field-row"><span class="field-name" style="margin-left:30px">role</span><span class="field-type">ENUM</span><span class="field-null">DIREKTUR/PEJABAT/STAF/ADMIN</span></div>
+        <div class="field-row"><span class="field-name" style="margin-left:30px">is_active</span><span class="field-type">BOOLEAN</span><span class="field-null">DEFAULT true</span></div>
+        <div class="field-note" style="border-color:var(--red)">
+          Tabel inti pengguna. Role menentukan hak akses: DIREKTUR bisa buat & lihat semua disposisi; PEJABAT bisa buat & terima; STAF hanya terima & update; ADMIN kelola sistem.
+        </div>
+      </div>
+    </div>
+
+    <!-- FOLDERS -->
+    <div class="tbl-card" onclick="toggleCard(this)">
+      <div class="tbl-header">
+        <div class="tbl-color-bar" style="background:var(--amber)"></div>
+        <div><div class="tbl-name">folders</div><div class="tbl-desc">Folder & subfolder dokumen</div></div>
+        <div class="tbl-badge">6 kolom</div>
+      </div>
+      <div class="tbl-fields">
+        <div class="field-row"><span class="field-key key-pk">PK</span><span class="field-name">id</span><span class="field-type">BIGINT</span></div>
+        <div class="field-row"><span class="field-name" style="margin-left:30px">nama</span><span class="field-type">VARCHAR(100)</span></div>
+        <div class="field-row"><span class="field-name" style="margin-left:30px">deskripsi</span><span class="field-type">TEXT</span><span class="field-null">NULL</span></div>
+        <div class="field-row"><span class="field-key key-fk">FK</span><span class="field-name">parent_id</span><span class="field-type">BIGINT</span><span class="field-null">NULL → folders.id</span></div>
+        <div class="field-row"><span class="field-name" style="margin-left:30px">warna</span><span class="field-type">VARCHAR(7)</span><span class="field-null">hex color</span></div>
+        <div class="field-row"><span class="field-name" style="margin-left:30px">urutan</span><span class="field-type">INT</span><span class="field-null">DEFAULT 0</span></div>
+        <div class="field-note" style="border-color:var(--amber)">
+          Self-referencing tabel untuk hierarki folder tak terbatas. parent_id NULL = folder utama. Contoh: "Edaran BPJS Kes" (parent) → "Iuran", "Kepesertaan", "Klaim" (child).
+        </div>
+      </div>
+    </div>
+
+    <!-- SURAT_MASUK -->
+    <div class="tbl-card" onclick="toggleCard(this)">
+      <div class="tbl-header">
+        <div class="tbl-color-bar" style="background:var(--blue)"></div>
+        <div><div class="tbl-name">surat_masuk</div><div class="tbl-desc">Registrasi surat masuk</div></div>
+        <div class="tbl-badge">9 kolom</div>
+      </div>
+      <div class="tbl-fields">
+        <div class="field-row"><span class="field-key key-pk">PK</span><span class="field-name">id</span><span class="field-type">BIGINT</span></div>
+        <div class="field-row"><span class="field-key key-uk">UK</span><span class="field-name">nomor_agenda</span><span class="field-type">VARCHAR(30)</span><span class="field-null">auto-gen</span></div>
+        <div class="field-row"><span class="field-name" style="margin-left:30px">nomor_surat</span><span class="field-type">VARCHAR(100)</span></div>
+        <div class="field-row"><span class="field-name" style="margin-left:30px">tanggal_surat</span><span class="field-type">DATE</span></div>
+        <div class="field-row"><span class="field-name" style="margin-left:30px">asal_surat</span><span class="field-type">VARCHAR(200)</span></div>
+        <div class="field-row"><span class="field-name" style="margin-left:30px">perihal</span><span class="field-type">TEXT</span></div>
+        <div class="field-row"><span class="field-key key-fk">FK</span><span class="field-name">folder_id</span><span class="field-type">BIGINT</span><span class="field-null">→ folders.id</span></div>
+        <div class="field-row"><span class="field-key key-fk">FK</span><span class="field-name">input_oleh</span><span class="field-type">BIGINT</span><span class="field-null">→ users.id</span></div>
+        <div class="field-row"><span class="field-name" style="margin-left:30px">tanggal_terima</span><span class="field-type">TIMESTAMP</span></div>
+        <div class="field-note" style="border-color:var(--blue)">
+          Pencatatan surat masuk oleh admin/sekretariat. nomor_agenda di-generate otomatis format: SM-YYYY-XXXXX. Setiap surat masuk bisa menghasilkan 1 atau lebih disposisi.
+        </div>
+      </div>
+    </div>
+
+    <!-- DOKUMEN_FILE -->
+    <div class="tbl-card" onclick="toggleCard(this)">
+      <div class="tbl-header">
+        <div class="tbl-color-bar" style="background:var(--teal)"></div>
+        <div><div class="tbl-name">dokumen_file</div><div class="tbl-desc">File lampiran dokumen</div></div>
+        <div class="tbl-badge">7 kolom</div>
+      </div>
+      <div class="tbl-fields">
+        <div class="field-row"><span class="field-key key-pk">PK</span><span class="field-name">id</span><span class="field-type">BIGINT</span></div>
+        <div class="field-row"><span class="field-key key-fk">FK</span><span class="field-name">surat_masuk_id</span><span class="field-type">BIGINT</span><span class="field-null">→ surat_masuk.id</span></div>
+        <div class="field-row"><span class="field-name" style="margin-left:30px">nama_file</span><span class="field-type">VARCHAR(255)</span></div>
+        <div class="field-row"><span class="field-name" style="margin-left:30px">path_file</span><span class="field-type">VARCHAR(500)</span></div>
+        <div class="field-row"><span class="field-name" style="margin-left:30px">mime_type</span><span class="field-type">VARCHAR(100)</span></div>
+        <div class="field-row"><span class="field-name" style="margin-left:30px">ukuran_bytes</span><span class="field-type">BIGINT</span></div>
+        <div class="field-row"><span class="field-key key-fk">FK</span><span class="field-name">upload_oleh</span><span class="field-type">BIGINT</span><span class="field-null">→ users.id</span></div>
+        <div class="field-note" style="border-color:var(--teal)">
+          Satu surat masuk bisa memiliki banyak file lampiran (scan, PDF, foto). File disimpan di storage server / cloud, tabel hanya menyimpan path referensi.
+        </div>
+      </div>
+    </div>
+
+    <!-- DISPOSISI -->
+    <div class="tbl-card" onclick="toggleCard(this)" style="border-color:var(--red)">
+      <div class="tbl-header" style="background:rgba(192,57,43,0.04)">
+        <div class="tbl-color-bar" style="background:var(--red);height:48px"></div>
+        <div>
+          <div class="tbl-name" style="font-size:16px">disposisi</div>
+          <div class="tbl-desc">⭐ Tabel utama — inti sistem</div>
+        </div>
+        <div class="tbl-badge">11 kolom</div>
+      </div>
+      <div class="tbl-fields">
+        <div class="field-row"><span class="field-key key-pk">PK</span><span class="field-name">id</span><span class="field-type">BIGINT</span></div>
+        <div class="field-row"><span class="field-key key-uk">UK</span><span class="field-name">nomor_disposisi</span><span class="field-type">VARCHAR(20)</span><span class="field-null">D-XXXXXX</span></div>
+        <div class="field-row"><span class="field-key key-fk">FK</span><span class="field-name">surat_masuk_id</span><span class="field-type">BIGINT</span><span class="field-null">→ surat_masuk.id</span></div>
+        <div class="field-row"><span class="field-key key-fk">FK</span><span class="field-name">dibuat_oleh</span><span class="field-type">BIGINT</span><span class="field-null">→ users.id</span></div>
+        <div class="field-row"><span class="field-name" style="margin-left:30px">isi_disposisi</span><span class="field-type">TEXT</span></div>
+        <div class="field-row"><span class="field-name" style="margin-left:30px">prioritas</span><span class="field-type">ENUM</span><span class="field-null">URGENT/NORMAL/BIASA</span></div>
+        <div class="field-row"><span class="field-name" style="margin-left:30px">tanggal_disposisi</span><span class="field-type">TIMESTAMP</span></div>
+        <div class="field-row"><span class="field-name" style="margin-left:30px">batas_waktu</span><span class="field-type">DATE</span><span class="field-null">NULL</span></div>
+        <div class="field-row"><span class="field-name" style="margin-left:30px">status_global</span><span class="field-type">ENUM</span><span class="field-null">AKTIF/SELESAI/ARSIP</span></div>
+        <div class="field-name" style="margin-left:30px;padding:9px 18px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;border-bottom:1px solid var(--border2)">catatan_direktur <span class="field-type" style="margin-left:8px">TEXT NULL</span></div>
+        <div class="field-row"><span class="field-key key-fk">FK</span><span class="field-name">folder_id</span><span class="field-type">BIGINT</span><span class="field-null">→ folders.id</span></div>
+        <div class="field-note" style="border-color:var(--red)">
+          Tabel utama sistem. Satu disposisi bisa memiliki banyak penerima (via tabel disposisi_penerima). Status global diperbarui otomatis saat semua penerima menyelesaikan tugasnya.
+        </div>
+      </div>
+    </div>
+
+    <!-- DISPOSISI_PENERIMA -->
+    <div class="tbl-card" onclick="toggleCard(this)">
+      <div class="tbl-header">
+        <div class="tbl-color-bar" style="background:var(--purple)"></div>
+        <div><div class="tbl-name">disposisi_penerima</div><div class="tbl-desc">Penerima & status per orang</div></div>
+        <div class="tbl-badge">7 kolom</div>
+      </div>
+      <div class="tbl-fields">
+        <div class="field-row"><span class="field-key key-pk">PK</span><span class="field-name">id</span><span class="field-type">BIGINT</span></div>
+        <div class="field-row"><span class="field-key key-fk">FK</span><span class="field-name">disposisi_id</span><span class="field-type">BIGINT</span><span class="field-null">→ disposisi.id</span></div>
+        <div class="field-row"><span class="field-key key-fk">FK</span><span class="field-name">user_id</span><span class="field-type">BIGINT</span><span class="field-null">→ users.id</span></div>
+        <div class="field-row"><span class="field-name" style="margin-left:30px">status</span><span class="field-type">ENUM</span><span class="field-null">DITERIMA/PROSES/TUNGGU/SELESAI</span></div>
+        <div class="field-row"><span class="field-name" style="margin-left:30px">tanggal_terima</span><span class="field-type">TIMESTAMP</span></div>
+        <div class="field-row"><span class="field-name" style="margin-left:30px">tanggal_selesai</span><span class="field-type">TIMESTAMP</span><span class="field-null">NULL</span></div>
+        <div class="field-row"><span class="field-name" style="margin-left:30px">catatan_akhir</span><span class="field-type">TEXT</span><span class="field-null">NULL</span></div>
+        <div class="field-note" style="border-color:var(--purple)">
+          Junction table antara disposisi dan penerima. Memungkinkan satu disposisi dikirim ke banyak orang sekaligus, masing-masing dengan status dan catatan independen.
+        </div>
+      </div>
+    </div>
+
+    <!-- PROGRESS_LOG -->
+    <div class="tbl-card" onclick="toggleCard(this)">
+      <div class="tbl-header">
+        <div class="tbl-color-bar" style="background:var(--green)"></div>
+        <div><div class="tbl-name">progress_log</div><div class="tbl-desc">Riwayat update & timeline</div></div>
+        <div class="tbl-badge">6 kolom</div>
+      </div>
+      <div class="tbl-fields">
+        <div class="field-row"><span class="field-key key-pk">PK</span><span class="field-name">id</span><span class="field-type">BIGINT</span></div>
+        <div class="field-row"><span class="field-key key-fk">FK</span><span class="field-name">disposisi_penerima_id</span><span class="field-type">BIGINT</span><span class="field-null">→ disposisi_penerima.id</span></div>
+        <div class="field-row"><span class="field-key key-fk">FK</span><span class="field-name">user_id</span><span class="field-type">BIGINT</span><span class="field-null">→ users.id</span></div>
+        <div class="field-row"><span class="field-name" style="margin-left:30px">status_baru</span><span class="field-type">ENUM</span></div>
+        <div class="field-row"><span class="field-name" style="margin-left:30px">catatan</span><span class="field-type">TEXT</span><span class="field-null">NULL</span></div>
+        <div class="field-row"><span class="field-name" style="margin-left:30px">created_at</span><span class="field-type">TIMESTAMP</span></div>
+        <div class="field-note" style="border-color:var(--green)">
+          Log immutable untuk setiap perubahan status. Digunakan untuk menampilkan timeline progress pada detail disposisi. Tidak ada operasi UPDATE/DELETE pada tabel ini.
+        </div>
+      </div>
+    </div>
+
+    <!-- NOTIFIKASI -->
+    <div class="tbl-card" onclick="toggleCard(this)">
+      <div class="tbl-header">
+        <div class="tbl-color-bar" style="background:var(--teal)"></div>
+        <div><div class="tbl-name">notifikasi</div><div class="tbl-desc">Sistem notifikasi pengguna</div></div>
+        <div class="tbl-badge">7 kolom</div>
+      </div>
+      <div class="tbl-fields">
+        <div class="field-row"><span class="field-key key-pk">PK</span><span class="field-name">id</span><span class="field-type">BIGINT</span></div>
+        <div class="field-row"><span class="field-key key-fk">FK</span><span class="field-name">user_id</span><span class="field-type">BIGINT</span><span class="field-null">→ users.id</span></div>
+        <div class="field-row"><span class="field-name" style="margin-left:30px">jenis</span><span class="field-type">ENUM</span><span class="field-null">DISPOSISI_BARU/UPDATE/DEADLINE/SELESAI</span></div>
+        <div class="field-row"><span class="field-name" style="margin-left:30px">judul</span><span class="field-type">VARCHAR(200)</span></div>
+        <div class="field-row"><span class="field-name" style="margin-left:30px">pesan</span><span class="field-type">TEXT</span></div>
+        <div class="field-row"><span class="field-key key-fk">FK</span><span class="field-name">disposisi_id</span><span class="field-type">BIGINT</span><span class="field-null">NULL → disposisi.id</span></div>
+        <div class="field-row"><span class="field-name" style="margin-left:30px">dibaca_at</span><span class="field-type">TIMESTAMP</span><span class="field-null">NULL = belum dibaca</span></div>
+        <div class="field-note" style="border-color:var(--teal)">
+          dibaca_at NULL berarti notifikasi belum dibaca. Sistem cron job berjalan setiap hari untuk generate notifikasi deadline H-2 dan H-1 secara otomatis.
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end tables-grid -->
+
+  <!-- RELATIONS -->
+  <div class="relations-section" style="margin-top:28px">
+    <div class="rel-header">🔗 Relasi Antar Tabel</div>
+    <div class="rel-grid">
+      <div class="rel-item">
+        <span class="mono">users</span><span class="rel-arrow">→</span><span class="mono">disposisi</span>
+        <span class="rel-type rt-1m">1 : M</span>
+      </div>
+      <div class="rel-item">
+        <span class="mono">surat_masuk</span><span class="rel-arrow">→</span><span class="mono">disposisi</span>
+        <span class="rel-type rt-1m">1 : M</span>
+      </div>
+      <div class="rel-item">
+        <span class="mono">folders</span><span class="rel-arrow">→</span><span class="mono">folders</span>
+        <span class="rel-type rt-1m">Self-ref</span>
+      </div>
+      <div class="rel-item">
+        <span class="mono">disposisi</span><span class="rel-arrow">→</span><span class="mono">disposisi_penerima</span>
+        <span class="rel-type rt-1m">1 : M</span>
+      </div>
+      <div class="rel-item">
+        <span class="mono">users</span><span class="rel-arrow">⟷</span><span class="mono">disposisi</span>
+        <span class="rel-type rt-mm">M : M via penerima</span>
+      </div>
+      <div class="rel-item">
+        <span class="mono">disposisi_penerima</span><span class="rel-arrow">→</span><span class="mono">progress_log</span>
+        <span class="rel-type rt-1m">1 : M</span>
+      </div>
+      <div class="rel-item">
+        <span class="mono">surat_masuk</span><span class="rel-arrow">→</span><span class="mono">dokumen_file</span>
+        <span class="rel-type rt-1m">1 : M</span>
+      </div>
+      <div class="rel-item">
+        <span class="mono">users</span><span class="rel-arrow">→</span><span class="mono">notifikasi</span>
+        <span class="rel-type rt-1m">1 : M</span>
+      </div>
+      <div class="rel-item">
+        <span class="mono">folders</span><span class="rel-arrow">→</span><span class="mono">disposisi</span>
+        <span class="rel-type rt-1m">1 : M</span>
+      </div>
+      <div class="rel-item">
+        <span class="mono">folders</span><span class="rel-arrow">→</span><span class="mono">surat_masuk</span>
+        <span class="rel-type rt-1m">1 : M</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ===================== SECTION 2: FLOW ===================== -->
+<div id="flow" class="section">
+<div class="content fade-up">
+  <div class="flow-title">🔄 Alur Data — Dari Surat Masuk ke Selesai</div>
+
+  <div class="flow-steps">
+    <div class="flow-step">
+      <div class="flow-circle" style="background:#fee2e2;color:var(--red)">📥</div>
+      <div class="flow-step-title">1. Surat Masuk</div>
+      <div class="flow-step-sub">Admin input &<br>upload scan</div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-circle" style="background:#dbeafe;color:var(--blue)">✏️</div>
+      <div class="flow-step-title">2. Disposisi</div>
+      <div class="flow-step-sub">Direktur tulis<br>instruksi & assign</div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-circle" style="background:#ede9fe;color:var(--purple)">📤</div>
+      <div class="flow-step-title">3. Diterima</div>
+      <div class="flow-step-sub">Penerima dapat<br>notifikasi</div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-circle" style="background:#fef3c7;color:var(--amber)">🔄</div>
+      <div class="flow-step-title">4. Diproses</div>
+      <div class="flow-step-sub">Update progress<br>berkala</div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-circle" style="background:#d1fae5;color:var(--green)">✅</div>
+      <div class="flow-step-title">5. Selesai</div>
+      <div class="flow-step-sub">Direktur dapat<br>notifikasi hasil</div>
+    </div>
+  </div>
+
+  <div class="flow-detail-grid">
+    <div class="flow-card">
+      <div class="flow-card-header" style="background:#fee2e2;color:var(--red)">
+        📥 Tahap 1 & 2 — Input & Disposisi
+      </div>
+      <div class="flow-card-body">
+        <div class="flow-row">
+          <div class="flow-icon">1️⃣</div>
+          <div class="flow-text">
+            <strong>Admin</strong> input surat masuk ke tabel <span class="mono">surat_masuk</span><br>
+            <span class="flow-sub">nomor_agenda di-generate otomatis: SM-2026-00001</span>
+          </div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-icon">2️⃣</div>
+          <div class="flow-text">
+            File scan/PDF di-upload → disimpan ke tabel <span class="mono">dokumen_file</span><br>
+            <span class="flow-sub">path file disimpan, bukan file binary-nya</span>
+          </div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-icon">3️⃣</div>
+          <div class="flow-text">
+            <strong>Direktur</strong> buka surat, tulis disposisi → INSERT ke <span class="mono">disposisi</span><br>
+            <span class="flow-sub">nomor_disposisi: D-260001, prioritas, batas waktu</span>
+          </div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-icon">4️⃣</div>
+          <div class="flow-text">
+            Pilih penerima → INSERT ke <span class="mono">disposisi_penerima</span> per orang<br>
+            <span class="flow-sub">bisa multiple penerima sekaligus</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-card">
+      <div class="flow-card-header" style="background:#d1fae5;color:var(--green)">
+        🔄 Tahap 3–5 — Tracking & Selesai
+      </div>
+      <div class="flow-card-body">
+        <div class="flow-row">
+          <div class="flow-icon">5️⃣</div>
+          <div class="flow-text">
+            Sistem INSERT ke <span class="mono">notifikasi</span> untuk setiap penerima<br>
+            <span class="flow-sub">jenis: DISPOSISI_BARU, push notification dikirim</span>
+          </div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-icon">6️⃣</div>
+          <div class="flow-text">
+            Penerima UPDATE status di <span class="mono">disposisi_penerima</span><br>
+            <span class="flow-sub">+ INSERT baris baru ke progress_log (immutable)</span>
+          </div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-icon">7️⃣</div>
+          <div class="flow-text">
+            Cron job harian cek <span class="mono">batas_waktu</span> → kirim notifikasi reminder H-2<br>
+            <span class="flow-sub">jenis: DEADLINE, dikirim ke penerima & pembuat</span>
+          </div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-icon">8️⃣</div>
+          <div class="flow-text">
+            Saat semua penerima SELESAI → <span class="mono">status_global</span> otomatis jadi SELESAI<br>
+            <span class="flow-sub">Direktur dapat notifikasi: jenis SELESAI</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-card">
+      <div class="flow-card-header" style="background:#dbeafe;color:var(--blue)">
+        🔐 Hak Akses per Role
+      </div>
+      <div class="flow-card-body">
+        <div class="flow-row">
+          <div class="flow-icon">👑</div>
+          <div class="flow-text">
+            <strong>DIREKTUR</strong> — Baca semua disposisi, buat disposisi baru, lihat semua progress & laporan<br>
+            <span class="flow-sub">WHERE dibuat_oleh = id OR role = 'DIREKTUR'</span>
+          </div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-icon">🏛️</div>
+          <div class="flow-text">
+            <strong>PEJABAT</strong> — Buat disposisi, lihat disposisi yang dibuat + diterima<br>
+            <span class="flow-sub">WHERE dibuat_oleh = id OR user_id = id</span>
+          </div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-icon">👤</div>
+          <div class="flow-text">
+            <strong>STAF</strong> — Hanya lihat & update disposisi yang ditujukan ke mereka<br>
+            <span class="flow-sub">WHERE user_id = id (via disposisi_penerima)</span>
+          </div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-icon">⚙️</div>
+          <div class="flow-text">
+            <strong>ADMIN</strong> — Input surat masuk, kelola user & folder<br>
+            <span class="flow-sub">Tidak bisa buat atau lihat isi disposisi</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-card">
+      <div class="flow-card-header" style="background:#fef3c7;color:var(--amber)">
+        ⚡ Aturan Bisnis Otomatis
+      </div>
+      <div class="flow-card-body">
+        <div class="flow-row">
+          <div class="flow-icon">🤖</div>
+          <div class="flow-text">
+            <strong>Auto nomor_agenda</strong>: Format SM-YYYY-NNNNN di-generate oleh trigger database saat INSERT ke surat_masuk
+          </div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-icon">🔄</div>
+          <div class="flow-text">
+            <strong>Auto status_global</strong>: Trigger UPDATE disposisi.status_global = 'SELESAI' saat semua baris di disposisi_penerima berstatus SELESAI
+          </div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-icon">⏰</div>
+          <div class="flow-text">
+            <strong>Auto overdue</strong>: Cron job jam 07.00 setiap hari, cek batas_waktu &lt; CURDATE() → tandai overdue di disposisi_penerima
+          </div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-icon">🔔</div>
+          <div class="flow-text">
+            <strong>Auto notifikasi</strong>: Setiap perubahan status INSERT ke notifikasi + kirim push notification via FCM
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ===================== SECTION 3: SQL ===================== -->
+<div id="sql" class="section">
+<div class="content fade-up">
+  <div class="sql-container">
+    <div class="sql-nav">
+      <div class="sql-nav-title">Tabel</div>
+      <div class="sql-nav-item active" onclick="switchSql('sql-users',this)">
+        <div class="sql-nav-dot" style="background:var(--red)"></div>users
+      </div>
+      <div class="sql-nav-item" onclick="switchSql('sql-folders',this)">
+        <div class="sql-nav-dot" style="background:var(--amber)"></div>folders
+      </div>
+      <div class="sql-nav-item" onclick="switchSql('sql-surat',this)">
+        <div class="sql-nav-dot" style="background:var(--blue)"></div>surat_masuk
+      </div>
+      <div class="sql-nav-item" onclick="switchSql('sql-dokumen',this)">
+        <div class="sql-nav-dot" style="background:var(--teal)"></div>dokumen_file
+      </div>
+      <div class="sql-nav-item" onclick="switchSql('sql-disposisi',this)">
+        <div class="sql-nav-dot" style="background:var(--red)"></div>disposisi ⭐
+      </div>
+      <div class="sql-nav-item" onclick="switchSql('sql-penerima',this)">
+        <div class="sql-nav-dot" style="background:var(--purple)"></div>disposisi_penerima
+      </div>
+      <div class="sql-nav-item" onclick="switchSql('sql-log',this)">
+        <div class="sql-nav-dot" style="background:var(--green)"></div>progress_log
+      </div>
+      <div class="sql-nav-item" onclick="switchSql('sql-notif',this)">
+        <div class="sql-nav-dot" style="background:var(--teal)"></div>notifikasi
+      </div>
+      <div class="sql-nav-item" onclick="switchSql('sql-views',this)">
+        <div class="sql-nav-dot" style="background:#888"></div>Views & Indexes
+      </div>
+    </div>
+
+    <div class="sql-panel">
+      <div class="sql-topbar">
+        <div class="sql-dots">
+          <div class="sql-dot" style="background:#ff5f57"></div>
+          <div class="sql-dot" style="background:#febc2e"></div>
+          <div class="sql-dot" style="background:#28c840"></div>
+        </div>
+        <div class="sql-filename" id="sqlFilename">sidispo_users.sql</div>
+        <button class="sql-copy" onclick="copySql()">📋 Copy</button>
+      </div>
+      <div class="sql-code" id="sqlCode">
+
+        <div class="sql-section active" id="sql-users">
+<span class="cm">-- ================================================</span>
+<span class="cm">-- TABEL: users</span>
+<span class="cm">-- Pengguna & autentikasi sistem</span>
+<span class="cm">-- ================================================</span>
+<span class="kw">CREATE TABLE</span> <span class="tb">users</span> (
+  <span class="col">id</span>             <span class="ty">BIGINT UNSIGNED</span>    <span class="kw">NOT NULL AUTO_INCREMENT</span>,
+  <span class="col">nip</span>            <span class="ty">VARCHAR</span>(<span class="nm">20</span>)        <span class="kw">NOT NULL</span>,
+  <span class="col">nama_lengkap</span>   <span class="ty">VARCHAR</span>(<span class="nm">100</span>)       <span class="kw">NOT NULL</span>,
+  <span class="col">email</span>          <span class="ty">VARCHAR</span>(<span class="nm">100</span>)       <span class="kw">NOT NULL</span>,
+  <span class="col">password_hash</span>  <span class="ty">VARCHAR</span>(<span class="nm">255</span>)       <span class="kw">NOT NULL</span>,
+  <span class="col">jabatan</span>        <span class="ty">VARCHAR</span>(<span class="nm">100</span>)       <span class="kw">NOT NULL</span>,
+  <span class="col">unit</span>           <span class="ty">VARCHAR</span>(<span class="nm">100</span>)       <span class="kw">NULL</span>,
+  <span class="col">role</span>           <span class="ty">ENUM</span>(<span class="st">'DIREKTUR'</span>,<span class="st">'PEJABAT'</span>,<span class="st">'STAF'</span>,<span class="st">'ADMIN'</span>)
+                                         <span class="kw">NOT NULL DEFAULT</span> <span class="st">'STAF'</span>,
+  <span class="col">foto_profil</span>    <span class="ty">VARCHAR</span>(<span class="nm">500</span>)       <span class="kw">NULL</span>,
+  <span class="col">is_active</span>      <span class="ty">BOOLEAN</span>            <span class="kw">NOT NULL DEFAULT</span> <span class="nm">TRUE</span>,
+  <span class="col">last_login_at</span>  <span class="ty">TIMESTAMP</span>          <span class="kw">NULL</span>,
+  <span class="col">created_at</span>     <span class="ty">TIMESTAMP</span>          <span class="kw">NOT NULL DEFAULT</span> <span class="nm">CURRENT_TIMESTAMP</span>,
+  <span class="col">updated_at</span>     <span class="ty">TIMESTAMP</span>          <span class="kw">NOT NULL DEFAULT</span> <span class="nm">CURRENT_TIMESTAMP</span>
+                                         <span class="kw">ON UPDATE</span> <span class="nm">CURRENT_TIMESTAMP</span>,
+
+  <span class="kw">PRIMARY KEY</span> (<span class="col">id</span>),
+  <span class="kw">UNIQUE KEY</span> <span class="col">uq_nip</span>   (<span class="col">nip</span>),
+  <span class="kw">UNIQUE KEY</span> <span class="col">uq_email</span> (<span class="col">email</span>),
+  <span class="kw">KEY</span> <span class="col">idx_role</span> (<span class="col">role</span>),
+  <span class="kw">KEY</span> <span class="col">idx_active</span> (<span class="col">is_active</span>)
+) <span class="kw">ENGINE</span>=InnoDB <span class="kw">DEFAULT CHARSET</span>=utf8mb4 <span class="kw">COLLATE</span>=utf8mb4_unicode_ci;
+        </div>
+
+        <div class="sql-section" id="sql-folders">
+<span class="cm">-- ================================================</span>
+<span class="cm">-- TABEL: folders</span>
+<span class="cm">-- Hierarki folder dokumen (self-referencing)</span>
+<span class="cm">-- ================================================</span>
+<span class="kw">CREATE TABLE</span> <span class="tb">folders</span> (
+  <span class="col">id</span>           <span class="ty">BIGINT UNSIGNED</span>  <span class="kw">NOT NULL AUTO_INCREMENT</span>,
+  <span class="col">nama</span>         <span class="ty">VARCHAR</span>(<span class="nm">100</span>)     <span class="kw">NOT NULL</span>,
+  <span class="col">deskripsi</span>    <span class="ty">TEXT</span>             <span class="kw">NULL</span>,
+  <span class="col">parent_id</span>    <span class="ty">BIGINT UNSIGNED</span>  <span class="kw">NULL</span>,   <span class="cm">-- NULL = folder utama</span>
+  <span class="col">warna</span>        <span class="ty">VARCHAR</span>(<span class="nm">7</span>)       <span class="kw">NOT NULL DEFAULT</span> <span class="st">'#2563eb'</span>,
+  <span class="col">urutan</span>       <span class="ty">INT</span>              <span class="kw">NOT NULL DEFAULT</span> <span class="nm">0</span>,
+  <span class="col">created_by</span>   <span class="ty">BIGINT UNSIGNED</span>  <span class="kw">NOT NULL</span>,
+  <span class="col">created_at</span>   <span class="ty">TIMESTAMP</span>        <span class="kw">NOT NULL DEFAULT</span> <span class="nm">CURRENT_TIMESTAMP</span>,
+
+  <span class="kw">PRIMARY KEY</span> (<span class="col">id</span>),
+  <span class="kw">KEY</span> <span class="col">idx_parent</span>  (<span class="col">parent_id</span>),
+  <span class="kw">CONSTRAINT</span> <span class="col">fk_folder_parent</span>
+    <span class="kw">FOREIGN KEY</span> (<span class="col">parent_id</span>) <span class="kw">REFERENCES</span> <span class="tb">folders</span>(<span class="col">id</span>)
+    <span class="kw">ON DELETE SET NULL</span>,
+  <span class="kw">CONSTRAINT</span> <span class="col">fk_folder_creator</span>
+    <span class="kw">FOREIGN KEY</span> (<span class="col">created_by</span>) <span class="kw">REFERENCES</span> <span class="tb">users</span>(<span class="col">id</span>)
+) <span class="kw">ENGINE</span>=InnoDB <span class="kw">DEFAULT CHARSET</span>=utf8mb4;
+
+<span class="cm">-- Seed data folder awal</span>
+<span class="kw">INSERT INTO</span> <span class="tb">folders</span> (<span class="col">nama</span>, <span class="col">warna</span>, <span class="col">created_by</span>) <span class="kw">VALUES</span>
+  (<span class="st">'Edaran BPJS Kesehatan'</span>, <span class="st">'#2563eb'</span>, <span class="nm">1</span>),
+  (<span class="st">'Telaah Staf Bid. Keperawatan'</span>, <span class="st">'#16a34a'</span>, <span class="nm">1</span>),
+  (<span class="st">'SK & Regulasi'</span>, <span class="st">'#7c3aed'</span>, <span class="nm">1</span>),
+  (<span class="st">'Surat Dinas / Dinkes'</span>, <span class="st">'#ca8a04'</span>, <span class="nm">1</span>);
+        </div>
+
+        <div class="sql-section" id="sql-surat">
+<span class="cm">-- ================================================</span>
+<span class="cm">-- TABEL: surat_masuk</span>
+<span class="cm">-- ================================================</span>
+<span class="kw">CREATE TABLE</span> <span class="tb">surat_masuk</span> (
+  <span class="col">id</span>              <span class="ty">BIGINT UNSIGNED</span>  <span class="kw">NOT NULL AUTO_INCREMENT</span>,
+  <span class="col">nomor_agenda</span>    <span class="ty">VARCHAR</span>(<span class="nm">30</span>)      <span class="kw">NOT NULL</span>,  <span class="cm">-- SM-2026-00001</span>
+  <span class="col">nomor_surat</span>     <span class="ty">VARCHAR</span>(<span class="nm">100</span>)     <span class="kw">NOT NULL</span>,
+  <span class="col">tanggal_surat</span>   <span class="ty">DATE</span>             <span class="kw">NOT NULL</span>,
+  <span class="col">tanggal_terima</span>  <span class="ty">DATE</span>             <span class="kw">NOT NULL</span>,
+  <span class="col">asal_surat</span>      <span class="ty">VARCHAR</span>(<span class="nm">200</span>)     <span class="kw">NOT NULL</span>,
+  <span class="col">perihal</span>         <span class="ty">TEXT</span>             <span class="kw">NOT NULL</span>,
+  <span class="col">folder_id</span>       <span class="ty">BIGINT UNSIGNED</span>  <span class="kw">NULL</span>,
+  <span class="col">input_oleh</span>      <span class="ty">BIGINT UNSIGNED</span>  <span class="kw">NOT NULL</span>,
+  <span class="col">keterangan</span>      <span class="ty">TEXT</span>             <span class="kw">NULL</span>,
+  <span class="col">created_at</span>      <span class="ty">TIMESTAMP</span>        <span class="kw">NOT NULL DEFAULT</span> <span class="nm">CURRENT_TIMESTAMP</span>,
+
+  <span class="kw">PRIMARY KEY</span> (<span class="col">id</span>),
+  <span class="kw">UNIQUE KEY</span> <span class="col">uq_nomor_agenda</span> (<span class="col">nomor_agenda</span>),
+  <span class="kw">KEY</span> <span class="col">idx_folder</span> (<span class="col">folder_id</span>),
+  <span class="kw">KEY</span> <span class="col">idx_tgl</span> (<span class="col">tanggal_terima</span>),
+  <span class="kw">CONSTRAINT</span> <span class="col">fk_sm_folder</span>
+    <span class="kw">FOREIGN KEY</span> (<span class="col">folder_id</span>) <span class="kw">REFERENCES</span> <span class="tb">folders</span>(<span class="col">id</span>)
+    <span class="kw">ON DELETE SET NULL</span>,
+  <span class="kw">CONSTRAINT</span> <span class="col">fk_sm_user</span>
+    <span class="kw">FOREIGN KEY</span> (<span class="col">input_oleh</span>) <span class="kw">REFERENCES</span> <span class="tb">users</span>(<span class="col">id</span>)
+) <span class="kw">ENGINE</span>=InnoDB <span class="kw">DEFAULT CHARSET</span>=utf8mb4;
+
+<span class="cm">-- Trigger auto-generate nomor_agenda</span>
+<span class="kw">DELIMITER</span> $$
+<span class="kw">CREATE TRIGGER</span> <span class="col">trg_nomor_agenda</span>
+  <span class="kw">BEFORE INSERT ON</span> <span class="tb">surat_masuk</span>
+  <span class="kw">FOR EACH ROW</span>
+<span class="kw">BEGIN</span>
+  <span class="kw">DECLARE</span> <span class="col">v_seq</span> <span class="ty">INT</span>;
+  <span class="kw">SELECT</span> <span class="nm">COALESCE</span>(<span class="nm">MAX</span>(<span class="nm">CAST</span>(<span class="nm">SUBSTRING</span>(<span class="col">nomor_agenda</span>,<span class="nm">9</span>)<span class="kw"> AS</span> <span class="ty">UNSIGNED</span>)),<span class="nm">0</span>)+<span class="nm">1</span>
+    <span class="kw">INTO</span> <span class="col">v_seq</span>
+    <span class="kw">FROM</span> <span class="tb">surat_masuk</span>
+    <span class="kw">WHERE</span> <span class="col">nomor_agenda</span> <span class="kw">LIKE</span> <span class="nm">CONCAT</span>(<span class="st">'SM-'</span>,<span class="nm">YEAR</span>(<span class="nm">NOW</span>()),<span class="st">'-%'</span>);
+  <span class="kw">SET</span> <span class="nm">NEW</span>.<span class="col">nomor_agenda</span> = <span class="nm">CONCAT</span>(<span class="st">'SM-'</span>,<span class="nm">YEAR</span>(<span class="nm">NOW</span>()),<span class="st">'-'</span>,<span class="nm">LPAD</span>(<span class="col">v_seq</span>,<span class="nm">5</span>,<span class="st">'0'</span>));
+<span class="kw">END</span>$$
+<span class="kw">DELIMITER</span> ;
+        </div>
+
+        <div class="sql-section" id="sql-dokumen">
+<span class="cm">-- ================================================</span>
+<span class="cm">-- TABEL: dokumen_file</span>
+<span class="cm">-- File lampiran surat</span>
+<span class="cm">-- ================================================</span>
+<span class="kw">CREATE TABLE</span> <span class="tb">dokumen_file</span> (
+  <span class="col">id</span>              <span class="ty">BIGINT UNSIGNED</span>  <span class="kw">NOT NULL AUTO_INCREMENT</span>,
+  <span class="col">surat_masuk_id</span>  <span class="ty">BIGINT UNSIGNED</span>  <span class="kw">NOT NULL</span>,
+  <span class="col">nama_asli</span>       <span class="ty">VARCHAR</span>(<span class="nm">255</span>)     <span class="kw">NOT NULL</span>,
+  <span class="col">nama_file</span>       <span class="ty">VARCHAR</span>(<span class="nm">255</span>)     <span class="kw">NOT NULL</span>,  <span class="cm">-- nama di storage</span>
+  <span class="col">path_file</span>       <span class="ty">VARCHAR</span>(<span class="nm">500</span>)     <span class="kw">NOT NULL</span>,
+  <span class="col">mime_type</span>       <span class="ty">VARCHAR</span>(<span class="nm">100</span>)     <span class="kw">NOT NULL</span>,
+  <span class="col">ukuran_bytes</span>    <span class="ty">BIGINT</span>           <span class="kw">NOT NULL</span>,
+  <span class="col">upload_oleh</span>     <span class="ty">BIGINT UNSIGNED</span>  <span class="kw">NOT NULL</span>,
+  <span class="col">created_at</span>      <span class="ty">TIMESTAMP</span>        <span class="kw">NOT NULL DEFAULT</span> <span class="nm">CURRENT_TIMESTAMP</span>,
+
+  <span class="kw">PRIMARY KEY</span> (<span class="col">id</span>),
+  <span class="kw">KEY</span> <span class="col">idx_surat</span> (<span class="col">surat_masuk_id</span>),
+  <span class="kw">CONSTRAINT</span> <span class="col">fk_dok_surat</span>
+    <span class="kw">FOREIGN KEY</span> (<span class="col">surat_masuk_id</span>) <span class="kw">REFERENCES</span> <span class="tb">surat_masuk</span>(<span class="col">id</span>)
+    <span class="kw">ON DELETE CASCADE</span>,
+  <span class="kw">CONSTRAINT</span> <span class="col">fk_dok_user</span>
+    <span class="kw">FOREIGN KEY</span> (<span class="col">upload_oleh</span>) <span class="kw">REFERENCES</span> <span class="tb">users</span>(<span class="col">id</span>)
+) <span class="kw">ENGINE</span>=InnoDB <span class="kw">DEFAULT CHARSET</span>=utf8mb4;
+        </div>
+
+        <div class="sql-section" id="sql-disposisi">
+<span class="cm">-- ================================================</span>
+<span class="cm">-- TABEL: disposisi  ⭐ TABEL UTAMA</span>
+<span class="cm">-- ================================================</span>
+<span class="kw">CREATE TABLE</span> <span class="tb">disposisi</span> (
+  <span class="col">id</span>                <span class="ty">BIGINT UNSIGNED</span>  <span class="kw">NOT NULL AUTO_INCREMENT</span>,
+  <span class="col">nomor_disposisi</span>   <span class="ty">VARCHAR</span>(<span class="nm">20</span>)      <span class="kw">NOT NULL</span>,  <span class="cm">-- D-260001</span>
+  <span class="col">surat_masuk_id</span>    <span class="ty">BIGINT UNSIGNED</span>  <span class="kw">NOT NULL</span>,
+  <span class="col">folder_id</span>         <span class="ty">BIGINT UNSIGNED</span>  <span class="kw">NULL</span>,
+  <span class="col">dibuat_oleh</span>       <span class="ty">BIGINT UNSIGNED</span>  <span class="kw">NOT NULL</span>,
+  <span class="col">isi_disposisi</span>     <span class="ty">TEXT</span>             <span class="kw">NOT NULL</span>,
+  <span class="col">prioritas</span>         <span class="ty">ENUM</span>(<span class="st">'URGENT'</span>,<span class="st">'NORMAL'</span>,<span class="st">'BIASA'</span>)
+                                       <span class="kw">NOT NULL DEFAULT</span> <span class="st">'NORMAL'</span>,
+  <span class="col">batas_waktu</span>       <span class="ty">DATE</span>             <span class="kw">NULL</span>,
+  <span class="col">status_global</span>     <span class="ty">ENUM</span>(<span class="st">'AKTIF'</span>,<span class="st">'SELESAI'</span>,<span class="st">'ARSIP'</span>)
+                                       <span class="kw">NOT NULL DEFAULT</span> <span class="st">'AKTIF'</span>,
+  <span class="col">catatan_direktur</span>  <span class="ty">TEXT</span>             <span class="kw">NULL</span>,
+  <span class="col">tanggal_disposisi</span> <span class="ty">TIMESTAMP</span>        <span class="kw">NOT NULL DEFAULT</span> <span class="nm">CURRENT_TIMESTAMP</span>,
+  <span class="col">updated_at</span>        <span class="ty">TIMESTAMP</span>        <span class="kw">NOT NULL DEFAULT</span> <span class="nm">CURRENT_TIMESTAMP</span>
+                                       <span class="kw">ON UPDATE</span> <span class="nm">CURRENT_TIMESTAMP</span>,
+
+  <span class="kw">PRIMARY KEY</span> (<span class="col">id</span>),
+  <span class="kw">UNIQUE KEY</span> <span class="col">uq_nomor</span> (<span class="col">nomor_disposisi</span>),
+  <span class="kw">KEY</span> <span class="col">idx_status</span> (<span class="col">status_global</span>),
+  <span class="kw">KEY</span> <span class="col">idx_deadline</span> (<span class="col">batas_waktu</span>),
+  <span class="kw">KEY</span> <span class="col">idx_dibuat</span> (<span class="col">dibuat_oleh</span>),
+  <span class="kw">CONSTRAINT</span> <span class="col">fk_disp_surat</span>
+    <span class="kw">FOREIGN KEY</span> (<span class="col">surat_masuk_id</span>) <span class="kw">REFERENCES</span> <span class="tb">surat_masuk</span>(<span class="col">id</span>),
+  <span class="kw">CONSTRAINT</span> <span class="col">fk_disp_folder</span>
+    <span class="kw">FOREIGN KEY</span> (<span class="col">folder_id</span>) <span class="kw">REFERENCES</span> <span class="tb">folders</span>(<span class="col">id</span>)
+    <span class="kw">ON DELETE SET NULL</span>,
+  <span class="kw">CONSTRAINT</span> <span class="col">fk_disp_user</span>
+    <span class="kw">FOREIGN KEY</span> (<span class="col">dibuat_oleh</span>) <span class="kw">REFERENCES</span> <span class="tb">users</span>(<span class="col">id</span>)
+) <span class="kw">ENGINE</span>=InnoDB <span class="kw">DEFAULT CHARSET</span>=utf8mb4;
+        </div>
+
+        <div class="sql-section" id="sql-penerima">
+<span class="cm">-- ================================================</span>
+<span class="cm">-- TABEL: disposisi_penerima</span>
+<span class="cm">-- Status per penerima disposisi</span>
+<span class="cm">-- ================================================</span>
+<span class="kw">CREATE TABLE</span> <span class="tb">disposisi_penerima</span> (
+  <span class="col">id</span>               <span class="ty">BIGINT UNSIGNED</span>  <span class="kw">NOT NULL AUTO_INCREMENT</span>,
+  <span class="col">disposisi_id</span>     <span class="ty">BIGINT UNSIGNED</span>  <span class="kw">NOT NULL</span>,
+  <span class="col">user_id</span>          <span class="ty">BIGINT UNSIGNED</span>  <span class="kw">NOT NULL</span>,
+  <span class="col">status</span>           <span class="ty">ENUM</span>(<span class="st">'DITERIMA'</span>,<span class="st">'PROSES'</span>,<span class="st">'TUNGGU'</span>,<span class="st">'SELESAI'</span>,<span class="st">'OVERDUE'</span>)
+                                      <span class="kw">NOT NULL DEFAULT</span> <span class="st">'DITERIMA'</span>,
+  <span class="col">tanggal_terima</span>   <span class="ty">TIMESTAMP</span>        <span class="kw">NOT NULL DEFAULT</span> <span class="nm">CURRENT_TIMESTAMP</span>,
+  <span class="col">tanggal_selesai</span>  <span class="ty">TIMESTAMP</span>        <span class="kw">NULL</span>,
+  <span class="col">catatan_akhir</span>    <span class="ty">TEXT</span>             <span class="kw">NULL</span>,
+  <span class="col">updated_at</span>       <span class="ty">TIMESTAMP</span>        <span class="kw">NOT NULL DEFAULT</span> <span class="nm">CURRENT_TIMESTAMP</span>
+                                      <span class="kw">ON UPDATE</span> <span class="nm">CURRENT_TIMESTAMP</span>,
+
+  <span class="kw">PRIMARY KEY</span> (<span class="col">id</span>),
+  <span class="kw">UNIQUE KEY</span> <span class="col">uq_disp_user</span> (<span class="col">disposisi_id</span>, <span class="col">user_id</span>),
+  <span class="kw">KEY</span> <span class="col">idx_status</span> (<span class="col">status</span>),
+  <span class="kw">KEY</span> <span class="col">idx_user</span> (<span class="col">user_id</span>),
+  <span class="kw">CONSTRAINT</span> <span class="col">fk_dp_disposisi</span>
+    <span class="kw">FOREIGN KEY</span> (<span class="col">disposisi_id</span>) <span class="kw">REFERENCES</span> <span class="tb">disposisi</span>(<span class="col">id</span>)
+    <span class="kw">ON DELETE CASCADE</span>,
+  <span class="kw">CONSTRAINT</span> <span class="col">fk_dp_user</span>
+    <span class="kw">FOREIGN KEY</span> (<span class="col">user_id</span>) <span class="kw">REFERENCES</span> <span class="tb">users</span>(<span class="col">id</span>)
+) <span class="kw">ENGINE</span>=InnoDB <span class="kw">DEFAULT CHARSET</span>=utf8mb4;
+
+<span class="cm">-- Trigger: auto update status_global disposisi</span>
+<span class="kw">DELIMITER</span> $$
+<span class="kw">CREATE TRIGGER</span> <span class="col">trg_check_selesai</span>
+  <span class="kw">AFTER UPDATE ON</span> <span class="tb">disposisi_penerima</span>
+  <span class="kw">FOR EACH ROW</span>
+<span class="kw">BEGIN</span>
+  <span class="kw">DECLARE</span> <span class="col">v_belum</span> <span class="ty">INT</span>;
+  <span class="kw">IF</span> <span class="nm">NEW</span>.<span class="col">status</span> = <span class="st">'SELESAI'</span> <span class="kw">THEN</span>
+    <span class="kw">SELECT COUNT</span>(*) <span class="kw">INTO</span> <span class="col">v_belum</span>
+      <span class="kw">FROM</span> <span class="tb">disposisi_penerima</span>
+      <span class="kw">WHERE</span> <span class="col">disposisi_id</span> = <span class="nm">NEW</span>.<span class="col">disposisi_id</span>
+        <span class="kw">AND</span> <span class="col">status</span> != <span class="st">'SELESAI'</span>;
+    <span class="kw">IF</span> <span class="col">v_belum</span> = <span class="nm">0</span> <span class="kw">THEN</span>
+      <span class="kw">UPDATE</span> <span class="tb">disposisi</span> <span class="kw">SET</span> <span class="col">status_global</span> = <span class="st">'SELESAI'</span>
+        <span class="kw">WHERE</span> <span class="col">id</span> = <span class="nm">NEW</span>.<span class="col">disposisi_id</span>;
+    <span class="kw">END IF</span>;
+  <span class="kw">END IF</span>;
+<span class="kw">END</span>$$
+<span class="kw">DELIMITER</span> ;
+        </div>
+
+        <div class="sql-section" id="sql-log">
+<span class="cm">-- ================================================</span>
+<span class="cm">-- TABEL: progress_log</span>
+<span class="cm">-- Log immutable riwayat perubahan status</span>
+<span class="cm">-- ================================================</span>
+<span class="kw">CREATE TABLE</span> <span class="tb">progress_log</span> (
+  <span class="col">id</span>                     <span class="ty">BIGINT UNSIGNED</span>  <span class="kw">NOT NULL AUTO_INCREMENT</span>,
+  <span class="col">disposisi_penerima_id</span>  <span class="ty">BIGINT UNSIGNED</span>  <span class="kw">NOT NULL</span>,
+  <span class="col">user_id</span>                <span class="ty">BIGINT UNSIGNED</span>  <span class="kw">NOT NULL</span>,
+  <span class="col">status_lama</span>            <span class="ty">VARCHAR</span>(<span class="nm">20</span>)      <span class="kw">NULL</span>,
+  <span class="col">status_baru</span>            <span class="ty">VARCHAR</span>(<span class="nm">20</span>)      <span class="kw">NOT NULL</span>,
+  <span class="col">catatan</span>                <span class="ty">TEXT</span>             <span class="kw">NULL</span>,
+  <span class="col">created_at</span>             <span class="ty">TIMESTAMP</span>        <span class="kw">NOT NULL DEFAULT</span> <span class="nm">CURRENT_TIMESTAMP</span>,
+
+  <span class="kw">PRIMARY KEY</span> (<span class="col">id</span>),
+  <span class="kw">KEY</span> <span class="col">idx_dp</span> (<span class="col">disposisi_penerima_id</span>),
+  <span class="kw">CONSTRAINT</span> <span class="col">fk_log_dp</span>
+    <span class="kw">FOREIGN KEY</span> (<span class="col">disposisi_penerima_id</span>)
+    <span class="kw">REFERENCES</span> <span class="tb">disposisi_penerima</span>(<span class="col">id</span>)
+    <span class="kw">ON DELETE CASCADE</span>,
+  <span class="kw">CONSTRAINT</span> <span class="col">fk_log_user</span>
+    <span class="kw">FOREIGN KEY</span> (<span class="col">user_id</span>) <span class="kw">REFERENCES</span> <span class="tb">users</span>(<span class="col">id</span>)
+) <span class="kw">ENGINE</span>=InnoDB <span class="kw">DEFAULT CHARSET</span>=utf8mb4;
+
+<span class="cm">-- PENTING: Tabel ini TIDAK boleh di-UPDATE atau DELETE</span>
+<span class="cm">-- Semua operasi hanya INSERT (append-only log)</span>
+        </div>
+
+        <div class="sql-section" id="sql-notif">
+<span class="cm">-- ================================================</span>
+<span class="cm">-- TABEL: notifikasi</span>
+<span class="cm">-- ================================================</span>
+<span class="kw">CREATE TABLE</span> <span class="tb">notifikasi</span> (
+  <span class="col">id</span>            <span class="ty">BIGINT UNSIGNED</span>  <span class="kw">NOT NULL AUTO_INCREMENT</span>,
+  <span class="col">user_id</span>       <span class="ty">BIGINT UNSIGNED</span>  <span class="kw">NOT NULL</span>,
+  <span class="col">jenis</span>         <span class="ty">ENUM</span>(<span class="st">'DISPOSISI_BARU'</span>,<span class="st">'UPDATE_PROGRESS'</span>,
+                      <span class="st">'DEADLINE_REMINDER'</span>,<span class="st">'SELESAI'</span>,<span class="st">'OVERDUE'</span>)
+                                   <span class="kw">NOT NULL</span>,
+  <span class="col">judul</span>         <span class="ty">VARCHAR</span>(<span class="nm">200</span>)     <span class="kw">NOT NULL</span>,
+  <span class="col">pesan</span>         <span class="ty">TEXT</span>             <span class="kw">NOT NULL</span>,
+  <span class="col">disposisi_id</span>  <span class="ty">BIGINT UNSIGNED</span>  <span class="kw">NULL</span>,
+  <span class="col">dibaca_at</span>     <span class="ty">TIMESTAMP</span>        <span class="kw">NULL</span>,  <span class="cm">-- NULL = belum dibaca</span>
+  <span class="col">created_at</span>    <span class="ty">TIMESTAMP</span>        <span class="kw">NOT NULL DEFAULT</span> <span class="nm">CURRENT_TIMESTAMP</span>,
+
+  <span class="kw">PRIMARY KEY</span> (<span class="col">id</span>),
+  <span class="kw">KEY</span> <span class="col">idx_user_baca</span> (<span class="col">user_id</span>, <span class="col">dibaca_at</span>),
+  <span class="kw">KEY</span> <span class="col">idx_disposisi</span> (<span class="col">disposisi_id</span>),
+  <span class="kw">CONSTRAINT</span> <span class="col">fk_notif_user</span>
+    <span class="kw">FOREIGN KEY</span> (<span class="col">user_id</span>) <span class="kw">REFERENCES</span> <span class="tb">users</span>(<span class="col">id</span>)
+    <span class="kw">ON DELETE CASCADE</span>,
+  <span class="kw">CONSTRAINT</span> <span class="col">fk_notif_disp</span>
+    <span class="kw">FOREIGN KEY</span> (<span class="col">disposisi_id</span>) <span class="kw">REFERENCES</span> <span class="tb">disposisi</span>(<span class="col">id</span>)
+    <span class="kw">ON DELETE SET NULL</span>
+) <span class="kw">ENGINE</span>=InnoDB <span class="kw">DEFAULT CHARSET</span>=utf8mb4;
+        </div>
+
+        <div class="sql-section" id="sql-views">
+<span class="cm">-- ================================================</span>
+<span class="cm">-- VIEWS berguna untuk Dashboard Direktur</span>
+<span class="cm">-- ================================================</span>
+
+<span class="cm">-- View: Disposisi aktif dengan info lengkap</span>
+<span class="kw">CREATE VIEW</span> <span class="tb">v_disposisi_aktif</span> <span class="kw">AS</span>
+<span class="kw">SELECT</span>
+  <span class="col">d.id</span>, <span class="col">d.nomor_disposisi</span>,
+  <span class="col">sm.perihal</span>, <span class="col">sm.asal_surat</span>,
+  <span class="col">u.nama_lengkap</span>  <span class="kw">AS</span> <span class="col">pembuat</span>,
+  <span class="col">f.nama</span>          <span class="kw">AS</span> <span class="col">folder</span>,
+  <span class="col">d.prioritas</span>, <span class="col">d.batas_waktu</span>,
+  <span class="col">d.status_global</span>,
+  <span class="nm">COUNT</span>(<span class="col">dp.id</span>)    <span class="kw">AS</span> <span class="col">total_penerima</span>,
+  <span class="nm">SUM</span>(<span class="col">dp.status</span> = <span class="st">'SELESAI'</span>) <span class="kw">AS</span> <span class="col">sudah_selesai</span>,
+  <span class="nm">DATEDIFF</span>(<span class="col">d.batas_waktu</span>, <span class="nm">CURDATE</span>()) <span class="kw">AS</span> <span class="col">sisa_hari</span>
+<span class="kw">FROM</span> <span class="tb">disposisi</span> <span class="col">d</span>
+<span class="kw">JOIN</span> <span class="tb">surat_masuk</span> <span class="col">sm</span> <span class="kw">ON</span> <span class="col">d.surat_masuk_id</span> = <span class="col">sm.id</span>
+<span class="kw">JOIN</span> <span class="tb">users</span> <span class="col">u</span> <span class="kw">ON</span> <span class="col">d.dibuat_oleh</span> = <span class="col">u.id</span>
+<span class="kw">LEFT JOIN</span> <span class="tb">folders</span> <span class="col">f</span> <span class="kw">ON</span> <span class="col">d.folder_id</span> = <span class="col">f.id</span>
+<span class="kw">LEFT JOIN</span> <span class="tb">disposisi_penerima</span> <span class="col">dp</span> <span class="kw">ON</span> <span class="col">d.id</span> = <span class="col">dp.disposisi_id</span>
+<span class="kw">GROUP BY</span> <span class="col">d.id</span>;
+
+<span class="cm">-- View: Progress per unit untuk grafik batang</span>
+<span class="kw">CREATE VIEW</span> <span class="tb">v_progress_per_unit</span> <span class="kw">AS</span>
+<span class="kw">SELECT</span>
+  <span class="col">u.unit</span>,
+  <span class="nm">COUNT</span>(<span class="col">dp.id</span>)                    <span class="kw">AS</span> <span class="col">total</span>,
+  <span class="nm">SUM</span>(<span class="col">dp.status</span>=<span class="st">'SELESAI'</span>)        <span class="kw">AS</span> <span class="col">selesai</span>,
+  <span class="nm">SUM</span>(<span class="col">dp.status</span>=<span class="st">'PROSES'</span>)         <span class="kw">AS</span> <span class="col">proses</span>,
+  <span class="nm">SUM</span>(<span class="col">dp.status</span>=<span class="st">'OVERDUE'</span>)        <span class="kw">AS</span> <span class="col">overdue</span>,
+  <span class="nm">ROUND</span>(<span class="nm">SUM</span>(<span class="col">dp.status</span>=<span class="st">'SELESAI'</span>)*<span class="nm">100.0</span>/<span class="nm">COUNT</span>(*),<span class="nm">1</span>) <span class="kw">AS</span> <span class="col">pct_selesai</span>
+<span class="kw">FROM</span> <span class="tb">disposisi_penerima</span> <span class="col">dp</span>
+<span class="kw">JOIN</span> <span class="tb">users</span> <span class="col">u</span> <span class="kw">ON</span> <span class="col">dp.user_id</span> = <span class="col">u.id</span>
+<span class="kw">GROUP BY</span> <span class="col">u.unit</span>;
+
+<span class="cm">-- Index tambahan untuk performa query dashboard</span>
+<span class="kw">CREATE INDEX</span> <span class="col">idx_disp_tgl</span>
+  <span class="kw">ON</span> <span class="tb">disposisi</span>(<span class="col">tanggal_disposisi</span>);
+<span class="kw">CREATE INDEX</span> <span class="col">idx_disp_prioritas</span>
+  <span class="kw">ON</span> <span class="tb">disposisi</span>(<span class="col">prioritas</span>, <span class="col">status_global</span>);
+<span class="kw">CREATE INDEX</span> <span class="col">idx_notif_unread</span>
+  <span class="kw">ON</span> <span class="tb">notifikasi</span>(<span class="col">user_id</span>) <span class="kw">WHERE</span> <span class="col">dibaca_at</span> <span class="kw">IS NULL</span>;
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ===================== SECTION 4: DICT ===================== -->
+<div id="dict" class="section">
+<div class="content fade-up">
+  <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:24px">📖 Data Dictionary — Panduan Lengkap Kolom</div>
+
+  <div class="dict-section">
+    <table class="dict-table">
+      <div class="dict-tbl-name">
+        <span style="background:var(--red);color:#fff;padding:4px 10px;border-radius:6px;font-size:13px;font-family:'IBM Plex Mono',monospace">users</span>
+        Pengguna & autentikasi sistem
+      </div>
+      <thead><tr>
+        <th>Kolom</th><th>Tipe</th><th>Keterangan</th><th>Contoh</th>
+      </tr></thead>
+      <tbody>
+        <tr><td><span class="mono"><span class="tag" style="background:#fef3c7;color:#92400e">PK</span>id</span></td><td class="mono">BIGINT</td><td>Primary key auto increment</td><td class="mono">1, 2, 3...</td></tr>
+        <tr><td><span class="mono"><span class="tag" style="background:#d1fae5;color:#065f46">UK</span>nip</span></td><td class="mono">VARCHAR(20)</td><td>Nomor Induk Pegawai, unik</td><td class="mono">197801012005011001</td></tr>
+        <tr><td><span class="mono">nama_lengkap</span></td><td class="mono">VARCHAR(100)</td><td>Nama lengkap dengan gelar</td><td class="mono">dr. Rahman, SpPD</td></tr>
+        <tr><td><span class="mono"><span class="tag" style="background:#d1fae5;color:#065f46">UK</span>email</span></td><td class="mono">VARCHAR(100)</td><td>Email untuk login & notifikasi</td><td class="mono">rahman@rsud.go.id</td></tr>
+        <tr><td><span class="mono">role</span></td><td class="mono">ENUM</td><td>DIREKTUR / PEJABAT / STAF / ADMIN — menentukan hak akses</td><td class="mono">DIREKTUR</td></tr>
+        <tr><td><span class="mono">is_active</span></td><td class="mono">BOOLEAN</td><td>Soft delete — false = akun nonaktif, tidak bisa login</td><td class="mono">true</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="dict-section">
+    <table class="dict-table">
+      <div class="dict-tbl-name">
+        <span style="background:var(--red);color:#fff;padding:4px 10px;border-radius:6px;font-size:13px;font-family:'IBM Plex Mono',monospace">disposisi</span>
+        ⭐ Tabel inti sistem disposisi
+      </div>
+      <thead><tr>
+        <th>Kolom</th><th>Tipe</th><th>Keterangan</th><th>Contoh</th>
+      </tr></thead>
+      <tbody>
+        <tr><td><span class="mono"><span class="tag" style="background:#fef3c7;color:#92400e">PK</span>id</span></td><td class="mono">BIGINT</td><td>Primary key</td><td class="mono">1</td></tr>
+        <tr><td><span class="mono"><span class="tag" style="background:#d1fae5;color:#065f46">UK</span>nomor_disposisi</span></td><td class="mono">VARCHAR(20)</td><td>Nomor unik format D-YYYYNNNNN, auto generate</td><td class="mono">D-260001</td></tr>
+        <tr><td><span class="mono"><span class="tag" style="background:#dbeafe;color:#1e40af">FK</span>surat_masuk_id</span></td><td class="mono">BIGINT</td><td>Referensi ke surat asal disposisi</td><td class="mono">5</td></tr>
+        <tr><td><span class="mono">isi_disposisi</span></td><td class="mono">TEXT</td><td>Teks instruksi yang ditulis Direktur/Pejabat</td><td class="mono">Segera tindaklanjuti...</td></tr>
+        <tr><td><span class="mono">prioritas</span></td><td class="mono">ENUM</td><td>URGENT (merah) / NORMAL (kuning) / BIASA (hijau)</td><td class="mono">URGENT</td></tr>
+        <tr><td><span class="mono">batas_waktu</span></td><td class="mono">DATE</td><td>Deadline penyelesaian, NULL = tidak ada batas</td><td class="mono">2026-02-28</td></tr>
+        <tr><td><span class="mono">status_global</span></td><td class="mono">ENUM</td><td>AKTIF / SELESAI (auto oleh trigger) / ARSIP</td><td class="mono">AKTIF</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="dict-section">
+    <table class="dict-table">
+      <div class="dict-tbl-name">
+        <span style="background:var(--purple);color:#fff;padding:4px 10px;border-radius:6px;font-size:13px;font-family:'IBM Plex Mono',monospace">disposisi_penerima</span>
+        Status tracking per penerima
+      </div>
+      <thead><tr>
+        <th>Kolom</th><th>Tipe</th><th>Keterangan</th><th>Contoh</th>
+      </tr></thead>
+      <tbody>
+        <tr><td><span class="mono">status</span></td><td class="mono">ENUM</td><td>DITERIMA → PROSES → TUNGGU → SELESAI (atau OVERDUE)</td><td class="mono">PROSES</td></tr>
+        <tr><td><span class="mono">tanggal_terima</span></td><td class="mono">TIMESTAMP</td><td>Auto-set saat baris dibuat (disposisi dikirim)</td><td class="mono">2026-02-01 09:15:00</td></tr>
+        <tr><td><span class="mono">tanggal_selesai</span></td><td class="mono">TIMESTAMP</td><td>Di-set saat status berubah ke SELESAI, NULL jika belum</td><td class="mono">2026-02-15 10:30:00</td></tr>
+        <tr><td><span class="mono">catatan_akhir</span></td><td class="mono">TEXT</td><td>Laporan hasil akhir dari penerima disposisi</td><td class="mono">Anggaran sudah cair...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div style="background:var(--paper);border:1.5px solid var(--border);border-radius:12px;padding:20px;margin-top:8px">
+    <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:15px;margin-bottom:16px">📌 Catatan Penting untuk Developer</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
+      <div style="background:var(--bg);border-radius:8px;padding:14px;border-left:4px solid var(--red)">
+        <div style="font-weight:700;font-size:13px;margin-bottom:6px">🔒 progress_log adalah append-only</div>
+        <div style="font-size:12.5px;color:var(--ink3);line-height:1.5">Jangan pernah UPDATE atau DELETE baris di tabel ini. Gunakan INSERT saja. Ini adalah audit trail yang harus immutable.</div>
+      </div>
+      <div style="background:var(--bg);border-radius:8px;padding:14px;border-left:4px solid var(--blue)">
+        <div style="font-weight:700;font-size:13px;margin-bottom:6px">⚡ Gunakan Views untuk Dashboard</div>
+        <div style="font-size:12.5px;color:var(--ink3);line-height:1.5">Selalu query v_disposisi_aktif dan v_progress_per_unit untuk dashboard — sudah dioptimasi dengan JOIN yang tepat.</div>
+      </div>
+      <div style="background:var(--bg);border-radius:8px;padding:14px;border-left:4px solid var(--green)">
+        <div style="font-weight:700;font-size:13px;margin-bottom:6px">🤖 Trigger otomatis penting</div>
+        <div style="font-size:12.5px;color:var(--ink3);line-height:1.5">trg_check_selesai akan otomatis mengubah status_global jadi SELESAI saat semua penerima sudah selesai. Jangan duplikasi logika ini di aplikasi.</div>
+      </div>
+      <div style="background:var(--bg);border-radius:8px;padding:14px;border-left:4px solid var(--amber)">
+        <div style="font-weight:700;font-size:13px;margin-bottom:6px">📁 Folder tak terbatas</div>
+        <div style="font-size:12.5px;color:var(--ink3);line-height:1.5">Struktur folder menggunakan Adjacency List (parent_id). Untuk query rekursif (semua subfolder), gunakan WITH RECURSIVE di MySQL 8+.</div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+function switchTab(id, el) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  el.classList.add('active');
+}
+
+function toggleCard(card) {
+  card.classList.toggle('expanded');
+}
+
+function toggleAll() {
+  const cards = document.querySelectorAll('.tbl-card');
+  const anyExpanded = [...cards].some(c => c.classList.contains('expanded'));
+  cards.forEach(c => anyExpanded ? c.classList.remove('expanded') : c.classList.add('expanded'));
+}
+
+const sqlFiles = {
+  'sql-users': 'sidispo_users.sql',
+  'sql-folders': 'sidispo_folders.sql',
+  'sql-surat': 'sidispo_surat_masuk.sql',
+  'sql-dokumen': 'sidispo_dokumen_file.sql',
+  'sql-disposisi': 'sidispo_disposisi.sql',
+  'sql-penerima': 'sidispo_disposisi_penerima.sql',
+  'sql-log': 'sidispo_progress_log.sql',
+  'sql-notif': 'sidispo_notifikasi.sql',
+  'sql-views': 'sidispo_views_indexes.sql',
+};
+
+function switchSql(id, el) {
+  document.querySelectorAll('.sql-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.sql-nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  el.classList.add('active');
+  document.getElementById('sqlFilename').textContent = sqlFiles[id] || id + '.sql';
+}
+
+function copySql() {
+  const active = document.querySelector('.sql-section.active');
+  const text = active ? active.innerText : '';
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.sql-copy');
+    btn.textContent = '✅ Tersalin!';
+    setTimeout(() => btn.textContent = '📋 Copy', 2000);
+  });
+}
+</script>
+</body>
+</html>
