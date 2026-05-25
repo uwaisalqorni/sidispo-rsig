@@ -2,7 +2,7 @@ import axios from 'axios'
 import router from '@/router'
 
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost/SiDispo/api/v1',
+    baseURL: import.meta.env.VITE_API_BASE_URL || 'http://192.168.0.194/SiDispo/api/v1',
     timeout: 15000,
     headers: { 'Content-Type': 'application/json' }
 })

@@ -146,7 +146,7 @@ const handleLogin = () => auth.login(username.value, password.value)
             <img src="/src/assets/logorsi.png" alt="RSI" class="w-8 h-8 opacity-40 object-contain" />
           </div>
           <p class="text-xs text-textDim">
-            Versi 1.0.0 &copy; 2026 RSUD.<br>Dikembangkan oleh IT Internal.
+            Versi 1.0.0 &copy; 2026 RSIG.<br>Dikembangkan oleh IT RSIG.
           </p>
         </div>
       </div>
