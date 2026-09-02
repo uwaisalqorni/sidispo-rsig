@@ -24,6 +24,11 @@ class Surat extends MY_Controller {
     /**
      * GET /surat
      * List all surat masuk
+     * Query params (opsional):
+     *   - tanggal_dari  : YYYY-MM-DD  (batas bawah tanggal_terima)
+     *   - tanggal_sampai: YYYY-MM-DD  (batas atas tanggal_terima)
+     *   - limit         : integer (default 500)
+     *   - offset        : integer (default 0)
      */
     public function index()
     {
@@ -33,14 +38,29 @@ class Surat extends MY_Controller {
 
         $this->require_sekretariat();
 
-        $limit = $this->input->get('limit') ? (int)$this->input->get('limit') : 100;
+        $limit  = $this->input->get('limit')  ? (int)$this->input->get('limit')  : 500;
         $offset = $this->input->get('offset') ? (int)$this->input->get('offset') : 0;
-        
-        $surat = $this->surat->get_all($limit, $offset);
-        
+
+        // Ambil filter tanggal dari query string
+        $filters = [];
+        $tanggal_dari    = $this->input->get('tanggal_dari');
+        $tanggal_sampai  = $this->input->get('tanggal_sampai');
+
+        if ($tanggal_dari && preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal_dari)) {
+            $filters['tanggal_dari'] = $tanggal_dari;
+        }
+        if ($tanggal_sampai && preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal_sampai)) {
+            $filters['tanggal_sampai'] = $tanggal_sampai;
+        }
+
+        $surat = $this->surat->get_all($limit, $offset, $filters);
+        $total = $this->surat->count_filtered($filters);
+
         $this->response([
-            'status' => 'success',
-            'data' => $surat
+            'status'  => 'success',
+            'total'   => $total,
+            'filters' => $filters,
+            'data'    => $surat
         ], 200);
     }
     

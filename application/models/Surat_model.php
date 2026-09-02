@@ -12,15 +12,39 @@ class Surat_model extends CI_Model {
     /**
      * Get all surat masuk
      */
-    public function get_all($limit = 100, $offset = 0)
+    public function get_all($limit = 100, $offset = 0, $filters = [])
     {
         $this->db->select('surat_masuk.*, folders.nama as nama_folder, users.nama_lengkap as nama_penginput');
         $this->db->from('surat_masuk');
         $this->db->join('folders', 'folders.id = surat_masuk.folder_id', 'left');
         $this->db->join('users', 'users.id = surat_masuk.input_oleh', 'left');
+
+        // Filter rentang tanggal terima
+        if (!empty($filters['tanggal_dari'])) {
+            $this->db->where('surat_masuk.tanggal_terima >=', $filters['tanggal_dari']);
+        }
+        if (!empty($filters['tanggal_sampai'])) {
+            $this->db->where('surat_masuk.tanggal_terima <=', $filters['tanggal_sampai']);
+        }
+
         $this->db->order_by('surat_masuk.id', 'DESC');
         $this->db->limit($limit, $offset);
         return $this->db->get()->result_array();
+    }
+
+    /**
+     * Hitung total surat (dipakai untuk info jumlah hasil filter)
+     */
+    public function count_filtered($filters = [])
+    {
+        $this->db->from('surat_masuk');
+        if (!empty($filters['tanggal_dari'])) {
+            $this->db->where('tanggal_terima >=', $filters['tanggal_dari']);
+        }
+        if (!empty($filters['tanggal_sampai'])) {
+            $this->db->where('tanggal_terima <=', $filters['tanggal_sampai']);
+        }
+        return $this->db->count_all_results();
     }
     
     /**

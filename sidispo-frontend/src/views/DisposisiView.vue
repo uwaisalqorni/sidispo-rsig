@@ -2,6 +2,18 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import api from '@/api/axios'
+import Card from 'primevue/card'
+import Button from 'primevue/button'
+import DataTable from 'primevue/datatable'
+import Column from 'primevue/column'
+import Dialog from 'primevue/dialog'
+import InputText from 'primevue/inputtext'
+import Textarea from 'primevue/textarea'
+import Select from 'primevue/select'
+import Tag from 'primevue/tag'
+import Message from 'primevue/message'
+import SelectButton from 'primevue/selectbutton'
+import Checkbox from 'primevue/checkbox'
 
 const router = useRouter()
 const route  = useRoute()
@@ -39,12 +51,20 @@ const formDisposisi = ref({
   catatan_direktur: ''
 })
 
-const statusConfig = {
-  PROSES:  { label: 'Diproses',  cls: 'bg-brandBlueBg text-brandBlue' },
-  TUNGGU:  { label: 'Menunggu',  cls: 'bg-brandYellowBg text-brandYellow' },
-  SELESAI: { label: 'Selesai',   cls: 'bg-brandGreenBg text-brandGreen' },
-  OVERDUE: { label: 'Overdue',   cls: 'bg-brandRedBg text-brandRed' },
-  AKTIF:   { label: 'Aktif',     cls: 'bg-brandBlueBg text-brandBlue' },
+const statusSeverity = {
+  PROSES: 'info',
+  TUNGGU: 'warn',
+  SELESAI: 'success',
+  OVERDUE: 'danger',
+  AKTIF: 'info',
+}
+
+const statusLabel = {
+  PROSES: 'Diproses',
+  TUNGGU: 'Menunggu',
+  SELESAI: 'Selesai',
+  OVERDUE: 'Overdue',
+  AKTIF: 'Aktif',
 }
 
 // status_display adalah field baru dari backend yang sudah di-compute
@@ -142,183 +162,157 @@ function initials(nama) {
 </script>
 
 <template>
-  <div class="flex-1 overflow-y-auto p-6 animate-[fadeIn_0.4s_ease]">
-    <div class="flex items-center justify-between mb-6">
+  <div class="page-container animate-fade-in">
+    <div class="page-hero flex flex-col sm:flex-row sm:items-center justify-between gap-4" style="background: linear-gradient(135deg, #1565c0 0%, #1976d2 50%, #42a5f5 100%);">
       <div>
-        <h1 class="text-2xl font-bold text-textMain mb-1">Disposisi</h1>
-        <p class="text-sm text-textMuted">Buat, lacak, dan kelola disposisi surat dari Direktur.</p>
+        <p class="text-blue-200 text-xs font-bold uppercase tracking-widest mb-1 relative z-10">Manajemen</p>
+        <h2 class="page-hero-title">Disposisi</h2>
+        <p class="page-hero-sub">Buat, lacak, dan kelola disposisi surat dari Direktur.</p>
       </div>
-      <button @click="openModal" class="bg-accent hover:bg-accentHover text-white px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 shadow-sm">
-        <span>✍️</span> Tulis Disposisi
-      </button>
+      <Button label="Tulis Disposisi" icon="pi pi-pencil" class="relative z-10 !bg-white !text-brandBlue !border-0 shadow-glow" @click="openModal" />
     </div>
 
-    <!-- Tab Filters -->
-    <div class="flex gap-1 mb-4 flex-wrap">
-      <button v-for="tab in tabs" :key="tab" @click="activeTab = tab"
-        class="px-3.5 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5"
-        :class="activeTab === tab
-          ? (tab === 'Overdue' ? 'bg-brandRed text-white shadow-sm' : tab === 'Selesai' ? 'bg-brandGreen text-white shadow-sm' : 'bg-accent text-white shadow-sm')
-          : 'bg-surface border border-border text-textMuted hover:text-textMain'">
-        {{ tab }}
-        <span v-if="!loading && tabCounts[tab] > 0"
-          class="text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center"
-          :class="activeTab === tab ? 'bg-white/25 text-white' : (tab === 'Overdue' ? 'bg-brandRedBg text-brandRed' : tab === 'Selesai' ? 'bg-brandGreenBg text-brandGreen' : 'bg-accentGlow text-accent')">
-          {{ tabCounts[tab] }}
-        </span>
-      </button>
-    </div>
+    <SelectButton v-model="activeTab" :options="tabs" class="mb-4 flex-wrap" />
 
-    <!-- Table -->
-    <div class="bg-surface border border-border rounded-xl overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm text-left whitespace-nowrap">
-          <thead class="text-xs text-textMuted uppercase bg-surface3 border-b border-border">
-            <tr>
-              <th class="px-5 py-3">Nomor</th>
-              <th class="px-5 py-3">Perihal</th>
-              <th class="px-5 py-3">Asal Surat</th>
-              <th class="px-5 py-3">Prioritas</th>
-              <th class="px-5 py-3">Status</th>
-              <th class="px-5 py-3">Batas Waktu</th>
-              <th class="px-5 py-3 text-right">Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- Loading skeleton -->
-            <tr v-if="loading" v-for="i in 5" :key="i" class="border-b border-border">
-              <td colspan="7" class="px-5 py-4">
-                <div class="h-3 bg-surface3 rounded animate-pulse w-full"></div>
-              </td>
-            </tr>
-            <tr v-else v-for="item in filteredList" :key="item.id"
-              class="border-b border-border hover:bg-surface2 transition-all cursor-pointer"
-              @click="goDetail(item.id)">
-              <td class="px-5 py-3 font-mono text-accent text-xs">{{ item.nomor_disposisi }}</td>
-              <td class="px-5 py-3 font-medium max-w-[260px] truncate" :title="item.perihal">{{ item.perihal }}</td>
-              <td class="px-5 py-3 text-textMuted text-xs">{{ item.asal_surat || '—' }}</td>
-              <td class="px-5 py-3">
-                <span class="px-2 py-0.5 rounded-full text-xs font-semibold"
-                  :class="(item.prioritas === 'URGENT' || item.prioritas === 'TINGGI') ? 'bg-brandRedBg text-brandRed' : 'bg-surface3 text-textMuted'">
-                  {{ item.prioritas }}
-                </span>
-              </td>
-              <td class="px-5 py-3">
-                <span class="px-2.5 py-1 rounded-full text-xs font-semibold"
-                  :class="statusConfig[item.status_global]?.cls ?? 'bg-surface3 text-textMuted'">
-                  {{ statusConfig[item.status_global]?.label ?? item.status_global }}
-                </span>
-              </td>
-              <td class="px-5 py-3 text-textMuted text-xs">{{ item.batas_waktu || '—' }}</td>
-              <td class="px-5 py-3 text-right">
-                <button @click.stop="goDetail(item.id)"
-                  class="text-xs bg-accentGlow text-accent px-3 py-1.5 rounded-md font-semibold hover:bg-accent hover:text-white transition-all">
-                  Detail →
-                </button>
-              </td>
-            </tr>
-            <tr v-if="!loading && filteredList.length === 0">
-              <td colspan="7" class="px-5 py-10 text-center text-textMuted">Tidak ada data dengan filter ini.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Modal Tulis Disposisi -->
-    <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div class="bg-surface border border-border rounded-xl w-full max-w-2xl shadow-2xl overflow-hidden animate-[fadeIn_0.2s_ease] flex flex-col max-h-[90vh]">
-        <div class="p-5 border-b border-border flex justify-between items-center bg-surface2 shrink-0">
-          <h3 class="text-lg font-bold">✍️ Tulis Disposisi</h3>
-          <button @click="showModal = false" class="text-textMuted hover:text-textMain text-xl leading-none">&times;</button>
+    <Card class="color-panel glass-card">
+      <template #title>
+        <div class="flex items-center gap-2 font-bold">
+          <div class="w-8 h-8 rounded-lg bg-brandPurpleBg flex items-center justify-center">
+            <i class="pi pi-send text-brandPurple"></i>
+          </div>
+          Daftar Disposisi
+          <Tag v-if="!loading" :value="`${filteredList.length} data`" severity="info" />
         </div>
-        <form @submit.prevent="handleSubmit" class="p-6 overflow-y-auto flex flex-col gap-5">
-
-          <div v-if="submitError" class="p-3 rounded-lg bg-brandRedBg border border-brandRed/20 text-sm text-brandRed">{{ submitError }}</div>
-
-          <!-- Pilih Surat Masuk -->
-          <div>
-            <label class="block text-xs font-bold text-textMuted uppercase mb-1.5">Pilih Surat Masuk *</label>
-            <input v-model="suratSearch" type="text" placeholder="🔍 Cari nomor agenda, perihal, atau pengirim..."
-              class="w-full bg-surface2 border border-border rounded-lg px-3 py-2 text-sm text-textMain focus:border-accent focus:outline-none mb-1.5" />
-            <select v-model="formDisposisi.surat_masuk_id"
-              class="w-full bg-surface2 border border-border rounded-lg px-3 py-2.5 text-sm text-textMain focus:border-accent focus:outline-none" required size="4">
-              <option value="" disabled>-- Pilih surat masuk --</option>
-              <option v-for="s in filteredSurat" :key="s.id" :value="s.id">
-                [{{ s.nomor_agenda }}] {{ s.perihal }} — {{ s.asal_surat }}
-              </option>
-            </select>
-            <p v-if="suratList.length === 0" class="text-xs text-brandYellow mt-1">⚠️ Belum ada surat masuk. Registrasi surat dulu di menu Surat Masuk.</p>
-            <p v-else class="text-xs text-textMuted mt-1">{{ filteredSurat.length }} surat masuk tersedia. Ketik untuk menyaring.</p>
-          </div>
-
-          <!-- Isi Disposisi -->
-          <div>
-            <label class="block text-xs font-bold text-textMuted uppercase mb-1.5">Isi Disposisi *</label>
-            <textarea v-model="formDisposisi.isi_disposisi" rows="3"
-              placeholder="Tuliskan instruksi disposisi dari Direktur..."
-              class="w-full bg-surface2 border border-border rounded-lg px-3 py-2.5 text-sm text-textMain focus:border-accent" required></textarea>
-          </div>
-
-          <!-- Prioritas & Batas Waktu -->
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-bold text-textMuted uppercase mb-1.5">Prioritas</label>
-              <select v-model="formDisposisi.prioritas" class="w-full bg-surface2 border border-border rounded-lg px-3 py-2.5 text-sm text-textMain focus:border-accent focus:outline-none">
-                <option value="BIASA">Biasa</option>
-                <option value="NORMAL">Normal</option>
-                <option value="URGENT">Segera / Urgent</option>
-              </select>
+      </template>
+      <template #content>
+        <DataTable
+          :value="filteredList"
+          :loading="loading"
+          striped-rows
+          row-hover
+          paginator
+          :rows="10"
+          class="text-sm"
+          @row-click="(e) => goDetail(e.data.id)"
+        >
+          <template #empty>
+            <div class="text-center py-14">
+              <div class="w-16 h-16 rounded-2xl bg-surface2 flex items-center justify-center mx-auto mb-3">
+                <i class="pi pi-send text-3xl text-textDim"></i>
+              </div>
+              <p class="text-textMuted text-sm">Tidak ada data dengan filter ini.</p>
             </div>
-            <div>
-              <label class="block text-xs font-bold text-textMuted uppercase mb-1.5">Batas Waktu</label>
-              <input v-model="formDisposisi.batas_waktu" type="date"
-                class="w-full bg-surface2 border border-border rounded-lg px-3 py-2.5 text-sm text-textMain focus:border-accent" />
-            </div>
-          </div>
+          </template>
+          <Column field="nomor_disposisi" header="Nomor">
+            <template #body="{ data }">
+              <span class="font-mono text-xs font-bold text-brandPurple bg-brandPurpleBg px-2 py-0.5 rounded-md">{{ data.nomor_disposisi }}</span>
+            </template>
+          </Column>
+          <Column field="perihal" header="Perihal">
+            <template #body="{ data }">
+              <span class="font-medium max-w-[260px] truncate block">{{ data.perihal }}</span>
+            </template>
+          </Column>
+          <Column field="asal_surat" header="Asal Surat" />
+          <Column header="Prioritas">
+            <template #body="{ data }">
+              <Tag
+                :value="data.prioritas"
+                :severity="(data.prioritas === 'URGENT' || data.prioritas === 'TINGGI') ? 'danger' : 'secondary'"
+              />
+            </template>
+          </Column>
+          <Column header="Status">
+            <template #body="{ data }">
+              <Tag
+                :value="statusLabel[data.status_global] || data.status_global"
+                :severity="statusSeverity[data.status_global] || 'secondary'"
+              />
+            </template>
+          </Column>
+          <Column field="batas_waktu" header="Batas Waktu" />
+          <Column header="Aksi" style="width: 100px">
+            <template #body="{ data }">
+              <Button label="Detail" icon="pi pi-arrow-right" icon-pos="right" size="small" class="!bg-brandBlueBg !text-brandBlue" @click.stop="goDetail(data.id)" />
+            </template>
+          </Column>
+        </DataTable>
+      </template>
+    </Card>
 
-          <!-- Penerima – checkboxes dari daftar user -->
-          <div>
-            <label class="block text-xs font-bold text-textMuted uppercase mb-2">Penerima Disposisi *</label>
-            <div v-if="usersList.length === 0" class="text-xs text-brandYellow py-2">
-              ⚠️ Daftar pengguna belum tersedia. Pastikan Anda login sebagai Admin atau hubungi administrator.
-            </div>
-            <div v-else class="flex flex-col gap-1.5 max-h-40 overflow-y-auto border border-border rounded-lg p-2 bg-surface2">
-              <label v-for="u in usersList" :key="u.id"
-                class="flex items-center gap-3 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-surface3 transition-all"
-                :class="selectedPenerima.includes(u.id) ? 'bg-accentGlow border border-accent/20' : ''">
-                <input type="checkbox" :value="u.id" :checked="selectedPenerima.includes(u.id)"
-                  @change="togglePenerima(u.id)" class="accent-accent" />
-                <div class="flex-1 min-w-0">
-                  <div class="text-[13px] font-semibold text-textMain truncate">{{ u.nama_lengkap }}</div>
-                  <div class="text-[11px] text-textMuted">{{ u.jabatan || u.role }}</div>
-                </div>
+    <Dialog v-model:visible="showModal" modal header="Tulis Disposisi" :style="{ width: 'min(640px, 95vw)' }" :draggable="false">
+      <form @submit.prevent="handleSubmit" class="flex flex-col gap-4">
+        <Message v-if="submitError" severity="error" :closable="false">{{ submitError }}</Message>
+
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs font-bold text-textMuted uppercase">Pilih Surat Masuk *</label>
+          <InputText v-model="suratSearch" placeholder="Cari nomor agenda, perihal, atau pengirim..." class="w-full mb-2" />
+          <Select
+            v-model="formDisposisi.surat_masuk_id"
+            :options="filteredSurat"
+            option-label="perihal"
+            option-value="id"
+            placeholder="Pilih surat masuk"
+            class="w-full"
+            filter
+          >
+            <template #option="{ option }">
+              [{{ option.nomor_agenda }}] {{ option.perihal }} — {{ option.asal_surat }}
+            </template>
+          </Select>
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs font-bold text-textMuted uppercase">Isi Disposisi *</label>
+          <Textarea v-model="formDisposisi.isi_disposisi" rows="3" placeholder="Tuliskan instruksi disposisi..." class="w-full" required />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-bold text-textMuted uppercase">Prioritas</label>
+            <Select
+              v-model="formDisposisi.prioritas"
+              :options="[
+                { label: 'Biasa', value: 'BIASA' },
+                { label: 'Normal', value: 'NORMAL' },
+                { label: 'Segera / Urgent', value: 'URGENT' },
+              ]"
+              option-label="label"
+              option-value="value"
+              class="w-full"
+            />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-bold text-textMuted uppercase">Batas Waktu</label>
+            <InputText v-model="formDisposisi.batas_waktu" type="date" class="w-full" />
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <label class="text-xs font-bold text-textMuted uppercase">Penerima Disposisi *</label>
+          <div v-if="usersList.length === 0" class="text-xs text-orange-600">Daftar pengguna belum tersedia.</div>
+          <div v-else class="flex flex-col gap-2 max-h-40 overflow-y-auto border border-surface-200 rounded-lg p-3">
+            <div v-for="u in usersList" :key="u.id" class="flex items-center gap-3">
+              <Checkbox :input-id="`user-${u.id}`" :value="u.id" v-model="selectedPenerima" />
+              <label :for="`user-${u.id}`" class="flex-1 cursor-pointer">
+                <div class="text-sm font-semibold">{{ u.nama_lengkap }}</div>
+                <div class="text-xs text-textMuted">{{ u.jabatan || u.role }}</div>
               </label>
             </div>
-            <p class="text-xs text-textMuted mt-1">{{ selectedPenerima.length }} penerima dipilih</p>
           </div>
+          <p class="text-xs text-textMuted">{{ selectedPenerima.length }} penerima dipilih</p>
+        </div>
 
-          <!-- Catatan Tambahan -->
-          <div>
-            <label class="block text-xs font-bold text-textMuted uppercase mb-1.5">Catatan Tambahan</label>
-            <textarea v-model="formDisposisi.catatan_direktur" rows="2"
-              class="w-full bg-surface2 border border-border rounded-lg px-3 py-2.5 text-sm text-textMain focus:border-accent"
-              placeholder="(Opsional)"></textarea>
-          </div>
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs font-bold text-textMuted uppercase">Catatan Tambahan</label>
+          <Textarea v-model="formDisposisi.catatan_direktur" rows="2" placeholder="(Opsional)" class="w-full" />
+        </div>
 
-          <div class="flex justify-end gap-3 pt-4 border-t border-border">
-            <button type="button" @click="showModal = false"
-              class="px-5 py-2.5 text-sm font-semibold rounded-lg border border-border text-textMuted hover:bg-surface2 hover:text-textMain">
-              Batal
-            </button>
-            <button type="submit" :disabled="submitting"
-              class="px-5 py-2.5 text-sm font-semibold rounded-lg bg-accent text-white hover:bg-accentHover shadow-[0_0_15px_var(--accentGlow)] disabled:opacity-60">
-              <span v-if="submitting" class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></span>
-              {{ submitting ? 'Mengirim...' : 'Kirim Disposisi' }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div class="flex justify-end gap-2 pt-4 border-t border-surface-200">
+          <Button label="Batal" severity="secondary" outlined type="button" @click="showModal = false" />
+          <Button type="submit" label="Kirim Disposisi" icon="pi pi-send" class="btn-gradient" :loading="submitting" />
+        </div>
+      </form>
+    </Dialog>
   </div>
 </template>

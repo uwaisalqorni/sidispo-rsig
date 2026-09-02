@@ -11,35 +11,51 @@ export default {
         mono: ['"JetBrains Mono"', 'monospace'],
       },
       colors: {
-        // ── Light White-Green Theme (RSI Brand) ──────────────────
-        bg: '#f0f7f0',          // Latar halaman — hijau sangat muda
-        surface: '#ffffff',          // Card / sidebar — putih bersih
-        surface2: '#f4f9f4',          // Card secondary — hijau susu
-        surface3: '#e8f2e8',          // Input / hover — hijau pucat
-        border: '#c8e0c8',          // Border — hijau abu
-        textMain: '#1a2e1a',          // Teks utama — hijau sangat gelap
-        textMuted: '#4a6e4a',          // Teks sekunder — hijau sedang
-        textDim: '#8aab8a',          // Teks tersier — hijau muda
-
-        // ── Accent = Hijau RSI Brand ──────────────────────────────
-        accent: '#4a9e4a',          // Hijau utama RSI (#4a9e4a)
-        accentHover: '#3d883d',          // Hover lebih gelap
-        accentGlow: 'rgba(74,158,74,0.15)',
-
-        // ── Status Colors (adjusted for light theme) ──────────────
+        bg: '#eef6ee',
+        surface: '#ffffff',
+        surface2: '#f4faf4',
+        surface3: '#e3f2e3',
+        border: '#b8d4b8',
+        textMain: '#1a2e1a',
+        textMuted: '#3d6b3d',
+        textDim: '#7a9e7a',
+        accent: '#4a9e4a',
+        accentHover: '#3d883d',
+        accentGlow: 'rgba(74,158,74,0.18)',
         brandGreen: '#2e7d32',
-        brandGreenBg: 'rgba(46,125,50,0.10)',
+        brandGreenBg: 'rgba(46,125,50,0.12)',
         brandYellow: '#e65100',
-        brandYellowBg: 'rgba(230,81,0,0.09)',
+        brandYellowBg: 'rgba(230,81,0,0.10)',
         brandRed: '#c62828',
-        brandRedBg: 'rgba(198,40,40,0.09)',
+        brandRedBg: 'rgba(198,40,40,0.10)',
         brandBlue: '#1565c0',
-        brandBlueBg: 'rgba(21,101,192,0.10)',
+        brandBlueBg: 'rgba(21,101,192,0.12)',
         brandPurple: '#6a1b9a',
-        brandPurpleBg: 'rgba(106,27,154,0.09)',
+        brandPurpleBg: 'rgba(106,27,154,0.10)',
         brandCyan: '#00838f',
-        brandCyanBg: 'rgba(0,131,143,0.09)',
-      }
+        brandCyanBg: 'rgba(0,131,143,0.10)',
+        sidebar: {
+          DEFAULT: '#1b4332',
+          light: '#2d6a4f',
+          dark: '#081c15',
+          accent: '#52b788',
+        },
+      },
+      backgroundImage: {
+        'mesh-green': 'radial-gradient(at 0% 0%, rgba(74,158,74,0.15) 0%, transparent 50%), radial-gradient(at 100% 0%, rgba(0,131,143,0.10) 0%, transparent 50%), radial-gradient(at 50% 100%, rgba(46,125,50,0.08) 0%, transparent 50%)',
+        'gradient-rsi': 'linear-gradient(135deg, #1b4332 0%, #2d6a4f 40%, #40916c 70%, #52b788 100%)',
+        'gradient-card-blue': 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
+        'gradient-card-green': 'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)',
+        'gradient-card-orange': 'linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%)',
+        'gradient-card-red': 'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)',
+        'gradient-hero': 'linear-gradient(135deg, #1b4332 0%, #2d6a4f 50%, #40916c 100%)',
+      },
+      boxShadow: {
+        card: '0 4px 24px -4px rgba(27,67,50,0.12), 0 2px 8px -2px rgba(27,67,50,0.06)',
+        'card-hover': '0 8px 32px -4px rgba(27,67,50,0.18), 0 4px 12px -2px rgba(27,67,50,0.08)',
+        sidebar: '4px 0 24px -4px rgba(8,28,21,0.25)',
+        glow: '0 0 20px rgba(74,158,74,0.35)',
+      },
     },
   },
   plugins: [],

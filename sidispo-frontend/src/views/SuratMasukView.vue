@@ -1,7 +1,20 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
+import Card from 'primevue/card'
+import Button from 'primevue/button'
+import DataTable from 'primevue/datatable'
+import Column from 'primevue/column'
+import Dialog from 'primevue/dialog'
+import Drawer from 'primevue/drawer'
+import InputText from 'primevue/inputtext'
+import Textarea from 'primevue/textarea'
+import Select from 'primevue/select'
+import DatePicker from 'primevue/datepicker'
+import Tag from 'primevue/tag'
+import Message from 'primevue/message'
+import AutoComplete from 'primevue/autocomplete'
 
 const suratList = ref([])
 const loading   = ref(true)
@@ -9,11 +22,23 @@ const showModal = ref(false)
 const submitting = ref(false)
 const submitMsg  = ref({ type: '', text: '' })
 const preview   = ref(null)
+const showPreview = computed({
+  get: () => !!preview.value,
+  set: (v) => { if (!v) preview.value = null },
+})
 const route  = useRoute()
 const router = useRouter()
 
 // Folders list – loaded from API
 const folders   = ref([])
+// Master Perihal list – loaded from API
+const perihalList = ref([])
+
+// Filter tanggal
+const filterDari    = ref('')
+const filterSampai  = ref('')
+const filterActive  = ref(false)  // true bila sedang ada filter tanggal aktif
+const totalFiltered = ref(0)
 
 // Filtered list berdasarkan ?folder= query param
 const activeFolder = computed(() => {
@@ -40,15 +65,41 @@ const form = ref({
 })
 const files = ref([])
 
+// ── Fungsi load data (dengan/tanpa filter) ──────────────────────────────
+const loadSurat = async () => {
+  loading.value = true
+  try {
+    const params = {}
+    if (filterDari.value)   params.tanggal_dari    = filterDari.value
+    if (filterSampai.value) params.tanggal_sampai  = filterSampai.value
+    const { data } = await api.get('/surat', { params })
+    suratList.value  = data.data  || []
+    totalFiltered.value = data.total ?? suratList.value.length
+  } catch { /* silent */ } finally { loading.value = false }
+}
+
+const applyFilter = () => {
+  filterActive.value = !!(filterDari.value || filterSampai.value)
+  loadSurat()
+}
+
+const resetFilter = () => {
+  filterDari.value   = ''
+  filterSampai.value = ''
+  filterActive.value = false
+  loadSurat()
+}
+
 onMounted(async () => {
   try {
-    const [suratRes, folderRes] = await Promise.all([
-      api.get('/surat'),
-      api.get('/folder')
+    const [folderRes, perihalRes] = await Promise.all([
+      api.get('/folder'),
+      api.get('/perihal?active=1')
     ])
-    suratList.value = suratRes.data.data || []
-    folders.value   = folderRes.data.data || []
-  } catch (e) { /* silent */ } finally { loading.value = false }
+    folders.value     = folderRes.data.data  || []
+    perihalList.value = perihalRes.data.data || []
+  } catch { /* silent */ }
+  await loadSurat()
 })
 
 const onFileChange = (e) => {
@@ -70,9 +121,8 @@ const handleSubmit = async () => {
   try {
     await api.post('/surat', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
     submitMsg.value = { type: 'success', text: 'Surat masuk berhasil diregistrasi!' }
-    // Refresh list
-    const { data } = await api.get('/surat')
-    suratList.value = data.data || []
+    // Refresh list dengan filter yang sedang aktif
+    await loadSurat()
     // Reset form
     Object.keys(form.value).forEach(k => form.value[k] = '')
     files.value = []
@@ -102,200 +152,216 @@ function fileUrl(path) {
 </script>
 
 <template>
-  <div class="flex-1 overflow-y-auto p-6 animate-[fadeIn_0.4s_ease]">
-    <div class="flex items-center justify-between mb-6">
+  <div class="page-container animate-fade-in">
+    <div class="page-hero flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
-        <div class="flex items-center gap-2 mb-1">
-          <h1 class="text-2xl font-bold text-textMain">Surat Masuk</h1>
-          <!-- Filter folder chip -->
-          <span v-if="activeFolder"
-            class="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border"
-            :style="{ background: activeFolder.warna + '22', borderColor: activeFolder.warna, color: activeFolder.warna }">
+        <div class="flex items-center gap-2 flex-wrap relative z-10">
+          <h2 class="page-hero-title">Surat Masuk</h2>
+          <span
+            v-if="activeFolder"
+            class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full border border-white/30 bg-white/15"
+            :style="{ color: activeFolder.warna }"
+          >
             <span class="w-2 h-2 rounded-full" :style="{ background: activeFolder.warna }"></span>
             {{ activeFolder.nama }}
-            <button @click="router.push('/surat-masuk')" class="ml-1 hover:opacity-70 text-sm leading-none">×</button>
+            <button class="ml-1 hover:opacity-70" @click="router.push('/surat-masuk')">×</button>
           </span>
         </div>
-        <p class="text-sm text-textMuted">
+        <p class="page-hero-sub">
           <template v-if="activeFolder">{{ displayList.length }} surat di folder ini.</template>
           <template v-else>Registrasi dan arsip surat masuk ke sistem.</template>
         </p>
       </div>
-      <button @click="showModal = true"
-        class="bg-accent hover:bg-accentHover text-white px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 shadow-sm">
-        <span>📥</span> Registrasi Surat
-      </button>
+      <Button label="Registrasi Surat" icon="pi pi-inbox" class="relative z-10 !bg-white !text-sidebar !border-0 shadow-glow" @click="showModal = true" />
     </div>
 
-    <!-- Table -->
-    <div class="bg-surface border border-border rounded-xl overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm text-left whitespace-nowrap">
-          <thead class="text-xs text-textMuted uppercase bg-surface3 border-b border-border">
-            <tr>
-              <th class="px-5 py-3">No. Agenda</th>
-              <th class="px-5 py-3">No. Surat</th>
-              <th class="px-5 py-3">Perihal</th>
-              <th class="px-5 py-3">Asal Surat</th>
-              <th class="px-5 py-3">Tgl Terima</th>
-              <th class="px-5 py-3">Lampiran</th>
-              <th class="px-5 py-3 text-right">Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="loading" v-for="i in 5" :key="i" class="border-b border-border">
-              <td colspan="7" class="px-5 py-4">
-                <div class="h-3 bg-surface3 rounded animate-pulse w-full"></div>
-              </td>
-            </tr>
-            <tr v-else v-for="surat in suratList" :key="surat.id"
-              class="border-b border-border hover:bg-surface2 transition-all cursor-pointer"
-              @click="openDetail(surat.id)">
-              <td class="px-5 py-3 font-mono text-accent text-xs">{{ surat.nomor_agenda }}</td>
-              <td class="px-5 py-3 text-xs text-textMuted">{{ surat.nomor_surat }}</td>
-              <td class="px-5 py-3 font-medium max-w-[240px] truncate" :title="surat.perihal">{{ surat.perihal }}</td>
-              <td class="px-5 py-3 text-xs text-textMuted">{{ surat.asal_surat }}</td>
-              <td class="px-5 py-3 text-xs text-textMuted">{{ formatDate(surat.tanggal_terima) }}</td>
-              <td class="px-5 py-3 text-xs">
-                <span v-if="surat.jumlah_file > 0" class="text-accent">📎 {{ surat.jumlah_file }}</span>
-                <span v-else class="text-textDim">—</span>
-              </td>
-              <td class="px-5 py-3 text-right">
-                <button @click.stop="openDetail(surat.id)"
-                  class="text-xs bg-accentGlow text-accent px-3 py-1.5 rounded-md font-semibold hover:bg-accent hover:text-white transition-all">
-                  Lihat →
-                </button>
-              </td>
-            </tr>
-            <tr v-if="!loading && suratList.length === 0">
-              <td colspan="7" class="px-5 py-10 text-center text-textMuted">Belum ada surat masuk.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Preview Drawer -->
-    <div v-if="preview" class="fixed inset-0 z-50 flex" @click.self="preview = null">
-      <div class="ml-auto w-full max-w-lg bg-surface border-l border-border h-full overflow-y-auto shadow-2xl animate-[slideInRight_0.25s_ease]">
-        <div class="p-5 border-b border-border flex justify-between items-center bg-surface2">
-          <h3 class="font-bold text-base">Detail Surat</h3>
-          <button @click="preview = null" class="text-textMuted hover:text-textMain text-xl">&times;</button>
-        </div>
-        <div class="p-5 flex flex-col gap-4">
-          <div class="grid grid-cols-2 gap-3 text-sm">
-            <div><span class="text-textMuted text-xs block mb-1">No. Agenda</span><span class="font-mono text-accent">{{ preview.nomor_agenda }}</span></div>
-            <div><span class="text-textMuted text-xs block mb-1">No. Surat</span><span>{{ preview.nomor_surat }}</span></div>
-            <div class="col-span-2"><span class="text-textMuted text-xs block mb-1">Perihal</span><span class="font-semibold">{{ preview.perihal }}</span></div>
-            <div><span class="text-textMuted text-xs block mb-1">Asal Surat</span><span>{{ preview.asal_surat }}</span></div>
-            <div><span class="text-textMuted text-xs block mb-1">Tgl Surat</span><span>{{ formatDate(preview.tanggal_surat) }}</span></div>
-            <div><span class="text-textMuted text-xs block mb-1">Tgl Terima</span><span>{{ formatDate(preview.tanggal_terima) }}</span></div>
-            <div v-if="preview.keterangan" class="col-span-2"><span class="text-textMuted text-xs block mb-1">Keterangan</span><span>{{ preview.keterangan }}</span></div>
+    <div class="filter-panel">
+        <div class="flex flex-wrap items-end gap-4">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg bg-brandCyanBg flex items-center justify-center">
+              <i class="pi pi-calendar text-brandCyan"></i>
+            </div>
+            <span class="text-sm font-bold text-textMain">Filter Tanggal Terima</span>
+            <Tag v-if="filterActive" value="AKTIF" severity="success" />
           </div>
-          <div v-if="preview.files?.length" class="border-t border-border pt-4">
-            <div class="text-xs font-bold text-textMuted uppercase mb-2">Lampiran ({{ preview.files.length }})</div>
-            <a v-for="f in preview.files" :key="f.id"
-              :href="fileUrl(f.path_file)" target="_blank"
-              class="flex items-center gap-3 p-2.5 mb-2 rounded-lg border border-border hover:border-accent hover:bg-surface2 transition-all">
-              <span class="text-xl">📄</span>
-              <div class="flex-1 min-w-0">
-                <div class="text-sm font-medium truncate">{{ f.nama_asli }}</div>
-                <div class="text-xs text-textMuted">{{ Math.round(f.ukuran_bytes / 1024) }} KB</div>
+          <div class="flex flex-col gap-1">
+            <label class="text-xs font-bold text-textMuted uppercase">Dari</label>
+            <InputText v-model="filterDari" type="date" class="w-full" size="small" />
+          </div>
+          <div class="flex flex-col gap-1">
+            <label class="text-xs font-bold text-textMuted uppercase">Sampai</label>
+            <InputText v-model="filterSampai" type="date" class="w-full" size="small" />
+          </div>
+          <div class="flex gap-2">
+            <Button label="Terapkan" icon="pi pi-search" size="small" class="btn-gradient" @click="applyFilter" />
+            <Button v-if="filterActive" label="Reset" icon="pi pi-times" severity="secondary" outlined size="small" @click="resetFilter" />
+          </div>
+          <div v-if="!loading" class="ml-auto text-xs text-textMuted">
+            <strong class="text-accent text-base">{{ totalFiltered }}</strong> surat ditemukan
+          </div>
+        </div>
+    </div>
+
+    <Card class="color-panel glass-card">
+      <template #title>
+        <div class="flex items-center gap-2 font-bold">
+          <div class="w-8 h-8 rounded-lg bg-brandBlueBg flex items-center justify-center">
+            <i class="pi pi-table text-brandBlue"></i>
+          </div>
+          Daftar Surat Masuk
+        </div>
+      </template>
+      <template #content>
+        <DataTable
+          :value="displayList"
+          :loading="loading"
+          striped-rows
+          row-hover
+          paginator
+          :rows="10"
+          :rows-per-page-options="[10, 25, 50]"
+          class="text-sm"
+          @row-click="(e) => openDetail(e.data.id)"
+        >
+          <template #empty>
+            <div class="text-center py-14">
+              <div class="w-16 h-16 rounded-2xl bg-surface2 flex items-center justify-center mx-auto mb-3">
+                <i class="pi pi-inbox text-3xl text-textDim"></i>
               </div>
-            </a>
-          </div>
+              <p class="text-textMuted text-sm">{{ filterActive ? 'Tidak ada surat dalam rentang tanggal ini.' : 'Belum ada surat masuk.' }}</p>
+            </div>
+          </template>
+          <Column field="nomor_agenda" header="No. Agenda">
+            <template #body="{ data }">
+              <span class="font-mono text-xs font-bold text-brandBlue bg-brandBlueBg px-2 py-0.5 rounded-md">{{ data.nomor_agenda }}</span>
+            </template>
+          </Column>
+          <Column field="nomor_surat" header="No. Surat" />
+          <Column field="perihal" header="Perihal">
+            <template #body="{ data }">
+              <span class="font-medium max-w-[240px] truncate block" :title="data.perihal">{{ data.perihal }}</span>
+            </template>
+          </Column>
+          <Column field="asal_surat" header="Asal Surat" />
+          <Column header="Tgl Terima">
+            <template #body="{ data }">{{ formatDate(data.tanggal_terima) }}</template>
+          </Column>
+          <Column header="Lampiran">
+            <template #body="{ data }">
+              <Tag v-if="data.jumlah_file > 0" :value="String(data.jumlah_file)" icon="pi pi-paperclip" severity="info" />
+              <span v-else class="text-textDim">—</span>
+            </template>
+          </Column>
+          <Column header="Aksi" style="width: 100px">
+            <template #body="{ data }">
+              <Button label="Lihat" icon="pi pi-eye" size="small" class="!bg-accentGlow !text-accent !border-accent/20" @click.stop="openDetail(data.id)" />
+            </template>
+          </Column>
+        </DataTable>
+      </template>
+    </Card>
+
+    <Drawer v-model:visible="showPreview" position="right" header="Detail Surat" class="w-full max-w-lg">
+      <div v-if="preview" class="flex flex-col gap-4">
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          <div><span class="text-textMuted text-xs block mb-1">No. Agenda</span><span class="font-mono text-primary">{{ preview.nomor_agenda }}</span></div>
+          <div><span class="text-textMuted text-xs block mb-1">No. Surat</span><span>{{ preview.nomor_surat }}</span></div>
+          <div class="col-span-2"><span class="text-textMuted text-xs block mb-1">Perihal</span><span class="font-semibold">{{ preview.perihal }}</span></div>
+          <div><span class="text-textMuted text-xs block mb-1">Asal Surat</span><span>{{ preview.asal_surat }}</span></div>
+          <div><span class="text-textMuted text-xs block mb-1">Tgl Surat</span><span>{{ formatDate(preview.tanggal_surat) }}</span></div>
+          <div><span class="text-textMuted text-xs block mb-1">Tgl Terima</span><span>{{ formatDate(preview.tanggal_terima) }}</span></div>
+          <div v-if="preview.keterangan" class="col-span-2"><span class="text-textMuted text-xs block mb-1">Keterangan</span><span>{{ preview.keterangan }}</span></div>
+        </div>
+        <div v-if="preview.files?.length">
+          <div class="text-xs font-bold text-textMuted uppercase mb-2">Lampiran ({{ preview.files.length }})</div>
+          <a
+            v-for="f in preview.files"
+            :key="f.id"
+            :href="fileUrl(f.path_file)"
+            target="_blank"
+            class="flex items-center gap-3 p-3 mb-2 rounded-lg border border-surface-200 hover:border-primary hover:bg-surface-50 transition-all no-underline text-inherit"
+          >
+            <i class="pi pi-file text-xl text-primary"></i>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium truncate">{{ f.nama_asli }}</div>
+              <div class="text-xs text-textMuted">{{ Math.round(f.ukuran_bytes / 1024) }} KB</div>
+            </div>
+          </a>
         </div>
       </div>
-    </div>
+    </Drawer>
 
-    <!-- Modal Registrasi Surat -->
-    <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div class="bg-surface border border-border rounded-xl w-full max-w-2xl shadow-2xl overflow-hidden animate-[fadeIn_0.2s_ease] flex flex-col max-h-[90vh]">
-        <div class="p-5 border-b border-border flex justify-between items-center bg-surface2 shrink-0">
-          <h3 class="text-lg font-bold">📥 Registrasi Surat Masuk</h3>
-          <button @click="showModal = false" class="text-textMuted hover:text-textMain text-xl leading-none">&times;</button>
+    <Dialog v-model:visible="showModal" modal header="Registrasi Surat Masuk" :style="{ width: 'min(640px, 95vw)' }" :draggable="false">
+      <form @submit.prevent="handleSubmit" class="flex flex-col gap-4">
+        <Message v-if="submitMsg.text" :severity="submitMsg.type === 'success' ? 'success' : 'error'" :closable="false">{{ submitMsg.text }}</Message>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-bold text-textMuted uppercase">No. Agenda</label>
+            <InputText v-model="form.nomor_agenda" placeholder="SM-2026-00001" class="w-full" />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-bold text-textMuted uppercase">No. Surat *</label>
+            <InputText v-model="form.nomor_surat" placeholder="BPJS/KES/2026/001" class="w-full" required />
+          </div>
         </div>
-        <form @submit.prevent="handleSubmit" class="p-6 overflow-y-auto flex flex-col gap-4">
-          <div v-if="submitMsg.text" class="p-3 rounded-lg text-sm"
-            :class="submitMsg.type === 'success' ? 'bg-brandGreenBg text-brandGreen' : 'bg-brandRedBg text-brandRed'">
-            {{ submitMsg.text }}
-          </div>
 
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-bold text-textMuted uppercase mb-1.5">No. Agenda</label>
-              <input v-model="form.nomor_agenda" type="text" placeholder="SM-2026-00001"
-                class="w-full bg-surface2 border border-border rounded-lg px-3 py-2.5 text-sm text-textMain focus:border-accent" />
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-textMuted uppercase mb-1.5">No. Surat *</label>
-              <input v-model="form.nomor_surat" type="text" placeholder="BPJS/KES/2026/001"
-                class="w-full bg-surface2 border border-border rounded-lg px-3 py-2.5 text-sm text-textMain focus:border-accent" required />
-            </div>
-          </div>
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs font-bold text-textMuted uppercase">Perihal *</label>
+          <AutoComplete
+            v-model="form.perihal"
+            :suggestions="perihalList.map(p => p.nama)"
+            placeholder="Pilih dari daftar atau ketik perihal..."
+            class="w-full"
+            :complete-on-focus="true"
+            @complete="(e) => e.suggestions = perihalList.map(p => p.nama).filter(n => n.toLowerCase().includes((e.query || '').toLowerCase()))"
+          />
+        </div>
 
-          <div>
-            <label class="block text-xs font-bold text-textMuted uppercase mb-1.5">Perihal *</label>
-            <input v-model="form.perihal" type="text" placeholder="Perihal surat..."
-              class="w-full bg-surface2 border border-border rounded-lg px-3 py-2.5 text-sm text-textMain focus:border-accent" required />
-          </div>
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs font-bold text-textMuted uppercase">Asal Surat *</label>
+          <InputText v-model="form.asal_surat" placeholder="Nama instansi / pengirim" class="w-full" required />
+        </div>
 
-          <div>
-            <label class="block text-xs font-bold text-textMuted uppercase mb-1.5">Asal Surat *</label>
-            <input v-model="form.asal_surat" type="text" placeholder="Nama instansi / pengirim"
-              class="w-full bg-surface2 border border-border rounded-lg px-3 py-2.5 text-sm text-textMain focus:border-accent" required />
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-bold text-textMuted uppercase">Tanggal Surat</label>
+            <InputText v-model="form.tanggal_surat" type="date" class="w-full" />
           </div>
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-bold text-textMuted uppercase">Tanggal Terima</label>
+            <InputText v-model="form.tanggal_terima" type="date" class="w-full" />
+          </div>
+        </div>
 
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-bold text-textMuted uppercase mb-1.5">Tanggal Surat</label>
-              <input v-model="form.tanggal_surat" type="date"
-                class="w-full bg-surface2 border border-border rounded-lg px-3 py-2.5 text-sm text-textMain focus:border-accent" />
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-textMuted uppercase mb-1.5">Tanggal Terima</label>
-              <input v-model="form.tanggal_terima" type="date"
-                class="w-full bg-surface2 border border-border rounded-lg px-3 py-2.5 text-sm text-textMain focus:border-accent" />
-            </div>
-          </div>
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs font-bold text-textMuted uppercase">Folder / Kategori</label>
+          <Select
+            v-model="form.folder_id"
+            :options="folders"
+            option-label="nama"
+            option-value="id"
+            placeholder="Pilih folder (opsional)"
+            class="w-full"
+            show-clear
+          />
+        </div>
 
-          <!-- Folder dropdown – loaded from API, no longer hardcoded -->
-          <div>
-            <label class="block text-xs font-bold text-textMuted uppercase mb-1.5">Folder / Kategori</label>
-            <select v-model="form.folder_id"
-              class="w-full bg-surface2 border border-border rounded-lg px-3 py-2.5 text-sm text-textMain focus:border-accent focus:outline-none">
-              <option value="">— Pilih folder (opsional) —</option>
-              <option v-for="f in folders" :key="f.id" :value="f.id">
-                {{ f.parent_id ? '↳ ' : '' }}{{ f.nama }}
-              </option>
-            </select>
-          </div>
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs font-bold text-textMuted uppercase">Keterangan</label>
+          <Textarea v-model="form.keterangan" rows="2" placeholder="(Opsional)" class="w-full" />
+        </div>
 
-          <div>
-            <label class="block text-xs font-bold text-textMuted uppercase mb-1.5">Keterangan</label>
-            <textarea v-model="form.keterangan" rows="2"
-              class="w-full bg-surface2 border border-border rounded-lg px-3 py-2.5 text-sm text-textMain focus:border-accent"
-              placeholder="(Opsional)"></textarea>
-          </div>
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs font-bold text-textMuted uppercase">Lampiran</label>
+          <input type="file" multiple accept=".pdf,.doc,.docx,.jpg,.png" class="text-sm" @change="onFileChange" />
+        </div>
 
-          <div>
-            <label class="block text-xs font-bold text-textMuted uppercase mb-1.5">Lampiran</label>
-            <input @change="onFileChange" type="file" multiple accept=".pdf,.doc,.docx,.jpg,.png"
-              class="w-full text-sm text-textMuted file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:font-semibold file:bg-accentGlow file:text-accent hover:file:cursor-pointer" />
-            <p class="text-xs text-textMuted mt-1">PDF, DOC, DOCX, JPG, PNG — maks 10MB per file</p>
-          </div>
-
-          <div class="flex justify-end gap-3 pt-4 border-t border-border">
-            <button type="button" @click="showModal = false"
-              class="px-5 py-2.5 text-sm font-semibold rounded-lg border border-border text-textMuted hover:bg-surface2 hover:text-textMain">Batal</button>
-            <button type="submit" :disabled="submitting"
-              class="px-5 py-2.5 text-sm font-semibold rounded-lg bg-accent text-white hover:bg-accentHover shadow-[0_0_15px_var(--accentGlow)] disabled:opacity-60">
-              <span v-if="submitting" class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-1"></span>
-              {{ submitting ? 'Menyimpan...' : 'Simpan Surat' }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div class="flex justify-end gap-2 pt-4 border-t border-surface-200">
+          <Button label="Batal" severity="secondary" outlined @click="showModal = false" type="button" />
+          <Button type="submit" label="Simpan Surat" icon="pi pi-save" class="btn-gradient" :loading="submitting" />
+        </div>
+      </form>
+    </Dialog>
   </div>
 </template>

@@ -97,6 +97,14 @@ $route['api/v1/surat']['get']                              = 'Surat/index';     
 $route['api/v1/surat']['post']                             = 'Surat/create';            // POST   – Input surat + upload file
 $route['api/v1/surat/(:num)']['get']                       = 'Surat/detail/$1';         // GET    – Detail surat + lampiran
 
+// ── MASTER PERIHAL ────────────────────────────────────────────────────────
+$route['api/v1/perihal']['get']                            = 'Perihal/index';                // GET    – List perihal (semua role)
+$route['api/v1/perihal/(:num)']['get']                     = 'Perihal/show/$1';              // GET    – Detail perihal
+$route['api/v1/admin/perihal']['post']                     = 'Perihal/create';               // POST   – Buat perihal (ADMIN)
+$route['api/v1/admin/perihal/(:num)']['put']               = 'Perihal/update/$1';            // PUT    – Update perihal (ADMIN)
+$route['api/v1/admin/perihal/(:num)']['delete']            = 'Perihal/destroy/$1';           // DELETE – Hapus perihal (ADMIN)
+$route['api/v1/admin/perihal/(:num)/toggle']['put']        = 'Perihal/toggle/$1';            // PUT    – Toggle aktif/nonaktif (ADMIN)
+
 // ── NOTIFIKASI ────────────────────────────────────────────────────────────
 $route['api/v1/notifikasi']['get']                         = 'Notifikasi/index';        // GET    – List notifikasi
 $route['api/v1/notifikasi/(:num)/baca']['put']             = 'Notifikasi/read/$1';      // PUT    – Tandai 1 notifikasi dibaca

@@ -9,74 +9,162 @@
     color-scheme: light;
   }
 
-  * {
-    box-sizing: border-box;
-  }
+  * { box-sizing: border-box; }
 
   body {
     @apply bg-bg text-textMain font-sans antialiased min-h-screen flex;
     overflow: hidden;
+    margin: 0;
   }
 
-  #app {
-    @apply flex-1 w-full h-screen;
+  #app { @apply flex-1 w-full h-screen; }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { @apply bg-border rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-accent opacity-70; }
+}
+
+@layer components {
+  /* ── App shell ─────────────────────────────────────────── */
+  .app-main-bg {
+    @apply relative flex-1 flex flex-col overflow-hidden bg-bg bg-mesh-green;
   }
 
-  /* Scrollbar custom — hijau tipis */
-  ::-webkit-scrollbar {
-    width: 5px;
-    height: 5px;
+  .app-main-bg::before {
+    content: '';
+    @apply absolute inset-0 pointer-events-none opacity-40;
+    background-image: radial-gradient(circle at 2px 2px, rgba(74,158,74,0.12) 1px, transparent 0);
+    background-size: 28px 28px;
   }
 
-  ::-webkit-scrollbar-track {
-    background: transparent;
+  /* ── Page layout ───────────────────────────────────────── */
+  .page-container {
+    @apply relative z-10 flex-1 overflow-y-auto p-4 md:p-6;
   }
 
-  ::-webkit-scrollbar-thumb {
-    @apply bg-border rounded-full;
+  .page-header {
+    @apply flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6;
   }
 
-  ::-webkit-scrollbar-thumb:hover {
-    @apply bg-accent opacity-60;
+  .page-title {
+    @apply text-2xl font-extrabold text-textMain m-0 tracking-tight;
+  }
+
+  .page-subtitle {
+    @apply text-sm text-textMuted mt-1 m-0;
+  }
+
+  /* Hero banner di atas halaman */
+  .page-hero {
+    @apply relative overflow-hidden rounded-2xl p-5 md:p-6 mb-6 text-white shadow-card;
+    background: linear-gradient(135deg, #1b4332 0%, #2d6a4f 45%, #40916c 100%);
+  }
+
+  .page-hero::before {
+    content: '';
+    @apply absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/10;
+  }
+
+  .page-hero::after {
+    content: '';
+    @apply absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-white/5;
+  }
+
+  .page-hero-title {
+    @apply text-xl md:text-2xl font-extrabold m-0 relative z-10;
+  }
+
+  .page-hero-sub {
+    @apply text-sm text-white/75 mt-1 m-0 relative z-10;
+  }
+
+  /* ── Cards ─────────────────────────────────────────────── */
+  .glass-card {
+    @apply bg-white/90 backdrop-blur-sm border border-border/60 rounded-2xl shadow-card;
+  }
+
+  .color-card {
+    @apply relative overflow-hidden rounded-2xl border-0 shadow-card hover:shadow-card-hover transition-all duration-300 hover:-translate-y-0.5;
+  }
+
+  .color-card-blue   { @apply bg-gradient-card-blue; }
+  .color-card-green  { @apply bg-gradient-card-green; }
+  .color-card-orange { @apply bg-gradient-card-orange; }
+  .color-card-red    { @apply bg-gradient-card-red; }
+
+  .color-card::before {
+    content: '';
+    @apply absolute top-0 left-0 w-1 h-full rounded-l-2xl;
+  }
+  .color-card-blue::before   { @apply bg-brandBlue; }
+  .color-card-green::before  { @apply bg-brandGreen; }
+  .color-card-orange::before { @apply bg-brandYellow; }
+  .color-card-red::before    { @apply bg-brandRed; }
+
+  .stat-icon-wrap {
+    @apply w-12 h-12 rounded-xl flex items-center justify-center shadow-sm;
+  }
+  .stat-icon-blue   { @apply bg-brandBlue text-white; }
+  .stat-icon-green  { @apply bg-brandGreen text-white; }
+  .stat-icon-orange { @apply bg-brandYellow text-white; }
+  .stat-icon-red    { @apply bg-brandRed text-white; }
+
+  .section-label {
+    @apply text-[10px] font-bold tracking-widest uppercase px-3 mb-2;
+    @apply text-sidebar-accent;
+  }
+
+  /* ── PrimeVue overrides ────────────────────────────────── */
+  .p-card.glass-card,
+  .p-card.color-panel {
+    @apply shadow-card border border-border/50 rounded-2xl overflow-hidden;
+  }
+
+  .p-card.color-panel .p-card-title {
+    @apply bg-gradient-to-r from-surface2 to-white border-b border-border/40 px-5 py-3 -mx-5 -mt-5 mb-4;
+  }
+
+  .p-card.color-panel .p-card-body { @apply p-5; }
+
+  .p-datatable .p-datatable-thead > tr > th {
+    @apply bg-surface3 text-textMuted text-xs uppercase font-bold tracking-wide border-border/50;
+  }
+
+  .p-datatable .p-datatable-tbody > tr:hover {
+    @apply bg-accentGlow/30;
+  }
+
+  .p-datatable .p-datatable-tbody > tr.p-row-odd {
+    @apply bg-surface2/50;
+  }
+
+  .p-selectbutton .p-togglebutton.p-togglebutton-checked {
+    @apply bg-accent border-accent shadow-glow;
+  }
+
+  .p-toolbar {
+    @apply border-0;
+  }
+
+  .filter-panel {
+    @apply glass-card p-4 md:p-5 mb-4 border-l-4 border-l-accent;
+  }
+
+  .btn-gradient {
+    @apply !bg-gradient-to-r !from-brandGreen !to-accent !border-0 !shadow-glow hover:!shadow-card-hover;
   }
 }
 
 @layer utilities {
-
-  /* Slide-in dari kanan untuk detail drawer */
-  @keyframes slideInRight {
-    from {
-      transform: translateX(100%);
-      opacity: 0;
-    }
-
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
-  }
-
   @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(4px);
-    }
-
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
   }
-
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 5px;
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
   }
-
-  .scrollbar-thin::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    @apply bg-border rounded-full;
-  }
+  .animate-fade-in { animation: fadeIn 0.4s ease; }
+  .animate-float { animation: float 4s ease-in-out infinite; }
 }
