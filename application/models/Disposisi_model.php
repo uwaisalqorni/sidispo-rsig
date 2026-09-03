@@ -14,12 +14,52 @@ class Disposisi_model extends CI_Model {
      * Get all active disposisi (ADMIN/DIREKTUR view)
      * Returns computed status_display based on penerima statuses and deadline
      */
-    public function get_aktif($limit = 100, $offset = 0)
+    public function get_aktif($limit = 100, $offset = 0, $filters = [])
     {
+        $where_clauses = ["d.status_global != 'ARSIP'"];
+        $params = [];
+
+        if (!empty($filters['q'])) {
+            $q = '%' . trim($filters['q']) . '%';
+            $where_clauses[] = "(d.nomor_disposisi LIKE ? OR sm.perihal LIKE ? OR sm.asal_surat LIKE ? OR sm.nomor_surat LIKE ? OR d.isi_disposisi LIKE ? OR u.nama_lengkap LIKE ?)";
+            $params[] = $q;
+            $params[] = $q;
+            $params[] = $q;
+            $params[] = $q;
+            $params[] = $q;
+            $params[] = $q;
+        }
+
+        if (!empty($filters['prioritas'])) {
+            $where_clauses[] = "d.prioritas = ?";
+            $params[] = $filters['prioritas'];
+        }
+
+        if (!empty($filters['folder_id'])) {
+            $where_clauses[] = "d.folder_id = ?";
+            $params[] = (int)$filters['folder_id'];
+        }
+
+        if (!empty($filters['tanggal_dari'])) {
+            $where_clauses[] = "DATE(d.tanggal_disposisi) >= ?";
+            $params[] = $filters['tanggal_dari'];
+        }
+
+        if (!empty($filters['tanggal_sampai'])) {
+            $where_clauses[] = "DATE(d.tanggal_disposisi) <= ?";
+            $params[] = $filters['tanggal_sampai'];
+        }
+
+        $where_sql = implode(' AND ', $where_clauses);
+        $params[] = $limit;
+        $params[] = $offset;
+
         $sql = "
             SELECT
                 d.id,
                 d.nomor_disposisi,
+                d.isi_disposisi,
+                d.catatan_direktur,
                 sm.perihal,
                 sm.asal_surat,
                 sm.nomor_surat,
@@ -29,6 +69,8 @@ class Disposisi_model extends CI_Model {
                 d.batas_waktu,
                 d.status_global,
                 d.tanggal_disposisi,
+                d.surat_masuk_id,
+                d.folder_id,
                 -- Hitung status granular dari penerima
                 CASE
                     WHEN d.status_global = 'SELESAI' THEN 'SELESAI'
@@ -37,28 +79,69 @@ class Disposisi_model extends CI_Model {
                     WHEN EXISTS (SELECT 1 FROM disposisi_penerima dp2 WHERE dp2.disposisi_id = d.id AND dp2.status='TUNGGU') THEN 'TUNGGU'
                     WHEN EXISTS (SELECT 1 FROM disposisi_penerima dp2 WHERE dp2.disposisi_id = d.id AND dp2.status='OVERDUE') THEN 'OVERDUE'
                     ELSE 'AKTIF'
-                END AS status_display
+                END AS status_display,
+                (SELECT GROUP_CONCAT(u2.nama_lengkap SEPARATOR ', ') FROM disposisi_penerima dp3 JOIN users u2 ON u2.id = dp3.user_id WHERE dp3.disposisi_id = d.id) AS nama_penerima_list
             FROM disposisi d
             JOIN surat_masuk sm ON d.surat_masuk_id = sm.id
             JOIN users u ON d.dibuat_oleh = u.id
             LEFT JOIN folders f ON d.folder_id = f.id
-            WHERE d.status_global != 'ARSIP'
+            WHERE {$where_sql}
             GROUP BY d.id
             ORDER BY d.id DESC
             LIMIT ? OFFSET ?
         ";
-        return $this->db->query($sql, [$limit, $offset])->result_array();
+        return $this->db->query($sql, $params)->result_array();
     }
 
     /**
      * Get disposisi assigned to a specific user (STAF/PEJABAT view)
      */
-    public function get_by_user($user_id, $limit = 100, $offset = 0)
+    public function get_by_user($user_id, $limit = 100, $offset = 0, $filters = [])
     {
+        $where_clauses = ["dp.user_id = ?", "d.status_global != 'ARSIP'"];
+        $params = [$user_id];
+
+        if (!empty($filters['q'])) {
+            $q = '%' . trim($filters['q']) . '%';
+            $where_clauses[] = "(d.nomor_disposisi LIKE ? OR sm.perihal LIKE ? OR sm.asal_surat LIKE ? OR sm.nomor_surat LIKE ? OR d.isi_disposisi LIKE ? OR u.nama_lengkap LIKE ?)";
+            $params[] = $q;
+            $params[] = $q;
+            $params[] = $q;
+            $params[] = $q;
+            $params[] = $q;
+            $params[] = $q;
+        }
+
+        if (!empty($filters['prioritas'])) {
+            $where_clauses[] = "d.prioritas = ?";
+            $params[] = $filters['prioritas'];
+        }
+
+        if (!empty($filters['folder_id'])) {
+            $where_clauses[] = "d.folder_id = ?";
+            $params[] = (int)$filters['folder_id'];
+        }
+
+        if (!empty($filters['tanggal_dari'])) {
+            $where_clauses[] = "DATE(d.tanggal_disposisi) >= ?";
+            $params[] = $filters['tanggal_dari'];
+        }
+
+        if (!empty($filters['tanggal_sampai'])) {
+            $where_clauses[] = "DATE(d.tanggal_disposisi) <= ?";
+            $params[] = $filters['tanggal_sampai'];
+        }
+
+        $where_sql = implode(' AND ', $where_clauses);
+        $params[] = $limit;
+        $params[] = $offset;
+
         $sql = "
             SELECT
                 d.id,
                 d.nomor_disposisi,
+                d.isi_disposisi,
+                d.catatan_direktur,
                 sm.perihal,
                 sm.asal_surat,
                 sm.nomor_surat,
@@ -68,6 +151,8 @@ class Disposisi_model extends CI_Model {
                 d.batas_waktu,
                 d.status_global,
                 d.tanggal_disposisi,
+                d.surat_masuk_id,
+                d.folder_id,
                 dp.status AS status_penerima,
                 dp.id AS disposisi_penerima_id,
                 -- Status display untuk filter tab
@@ -84,12 +169,11 @@ class Disposisi_model extends CI_Model {
             JOIN surat_masuk sm ON sm.id = d.surat_masuk_id
             JOIN users u ON u.id = d.dibuat_oleh
             LEFT JOIN folders f ON f.id = d.folder_id
-            WHERE dp.user_id = ?
-              AND d.status_global != 'ARSIP'
+            WHERE {$where_sql}
             ORDER BY d.id DESC
             LIMIT ? OFFSET ?
         ";
-        return $this->db->query($sql, [$user_id, $limit, $offset])->result_array();
+        return $this->db->query($sql, $params)->result_array();
     }
 
     /**
@@ -232,5 +316,79 @@ class Disposisi_model extends CI_Model {
         $this->db->trans_complete();
 
         return $this->db->trans_status();
+    }
+
+    /**
+     * Update disposisi details and assignees
+     */
+    public function update($id, $data, $penerima_ids = null)
+    {
+        $this->db->trans_start();
+
+        $this->db->where('id', $id);
+        $this->db->update('disposisi', $data);
+
+        // Jika penerima_ids di-update
+        if ($penerima_ids !== null && is_array($penerima_ids)) {
+            // Ambil penerima yang sudah ada
+            $existing_penerima = $this->db->get_where('disposisi_penerima', ['disposisi_id' => $id])->result_array();
+            $existing_uids = array_map('intval', array_column($existing_penerima, 'user_id'));
+            $new_uids_input = array_map('intval', $penerima_ids);
+
+            // Penerima baru yang belum ada di daftar
+            $new_uids = array_diff($new_uids_input, $existing_uids);
+            
+            // Penerima yang dihapus (hanya hapus yang statusnya masih DITERIMA / belum ada progress)
+            $removed_uids = array_diff($existing_uids, $new_uids_input);
+            if (!empty($removed_uids)) {
+                $this->db->where('disposisi_id', $id);
+                $this->db->where_in('user_id', $removed_uids);
+                $this->db->where('status', 'DITERIMA');
+                $this->db->delete('disposisi_penerima');
+            }
+
+            // Tambahkan penerima baru
+            if (!empty($new_uids)) {
+                $penerima_batch = [];
+                $notif_batch = [];
+
+                $disp = $this->db->get_where('disposisi', ['id' => $id])->row_array();
+                $sm = $disp ? $this->db->get_where('surat_masuk', ['id' => $disp['surat_masuk_id']])->row() : null;
+                $pesan = "Disposisi Masuk: " . ($sm ? $sm->perihal : "Surat Masuk");
+
+                foreach ($new_uids as $uid) {
+                    $penerima_batch[] = [
+                        'disposisi_id' => $id,
+                        'user_id' => $uid,
+                        'status' => 'DITERIMA'
+                    ];
+                    $notif_batch[] = [
+                        'user_id' => $uid,
+                        'jenis' => 'DISPOSISI_BARU',
+                        'judul' => 'Disposisi Masuk',
+                        'pesan' => $pesan,
+                        'disposisi_id' => $id
+                    ];
+                }
+                $this->db->insert_batch('disposisi_penerima', $penerima_batch);
+
+                if (!empty($notif_batch)) {
+                    $this->notifikasi->insert_batch($notif_batch);
+                }
+            }
+        }
+
+        $this->db->trans_complete();
+
+        return $this->db->trans_status();
+    }
+
+    /**
+     * Delete disposisi
+     */
+    public function delete($id)
+    {
+        $this->db->where('id', $id);
+        return $this->db->delete('disposisi');
     }
 }

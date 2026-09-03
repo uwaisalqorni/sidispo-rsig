@@ -75,8 +75,9 @@ $route['api/v1/dashboard']['get']           = 'Dashboard/index';  // GET   – S
 $route['api/v1/disposisi']['get']                          = 'Disposisi/index';        // GET    – List (role-aware)
 $route['api/v1/disposisi']['post']                         = 'Disposisi/create';       // POST   – Buat disposisi + assign penerima
 $route['api/v1/disposisi/(:num)']['get']                   = 'Disposisi/detail/$1';    // GET    – Detail + penerima + files
-$route['api/v1/disposisi/(:num)']['put']                   = 'Disposisi/update/$1';    // PUT    – Edit (sebelum ada progress)
-$route['api/v1/disposisi/(:num)']['delete']                = 'Disposisi/destroy/$1';   // DELETE – Arsipkan disposisi
+$route['api/v1/disposisi/(:num)']['put']                   = 'Disposisi/update/$1';    // PUT    – Edit disposisi
+$route['api/v1/disposisi/(:num)']['post']                  = 'Disposisi/update/$1';    // POST   – Edit disposisi
+$route['api/v1/disposisi/(:num)']['delete']                = 'Disposisi/destroy/$1';   // DELETE – Hapus disposisi
 $route['api/v1/disposisi/stats']['get']                    = 'Disposisi/stats';        // GET    – Statistik global
 $route['api/v1/disposisi/overdue']['get']                  = 'Disposisi/overdue';      // GET    – Daftar overdue
 
