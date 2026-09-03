@@ -9,6 +9,7 @@ import Message from 'primevue/message'
 import Divider from 'primevue/divider'
 import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
+import Dialog from 'primevue/dialog'
 
 const auth = useAuthStore()
 const { loading, error } = storeToRefs(auth)
@@ -17,6 +18,8 @@ const username = ref('')
 const password = ref('')
 
 const handleLogin = () => auth.login(username.value, password.value)
+
+const forgotVisible = ref(false)
 
 const features = [
   { icon: 'pi pi-bolt', color: 'from-yellow-400 to-orange-500', title: 'Cepat & Responsif', desc: 'Disposisi langsung terkirim ke unit terkait tanpa kertas.' },
@@ -114,7 +117,7 @@ const features = [
             <div class="flex flex-col gap-2">
               <div class="flex justify-between items-center">
                 <label for="password" class="text-xs font-bold text-textMuted uppercase tracking-wide">Password</label>
-                <a href="#" class="text-xs font-semibold text-accent hover:underline">Lupa Password?</a>
+                <a href="#" class="text-xs font-semibold text-accent hover:underline" @click.prevent="forgotVisible = true">Lupa Password?</a>
               </div>
               <Password
                 id="password"
@@ -149,5 +152,28 @@ const features = [
         </div>
       </div>
     </div>
+
+    <!-- Forgot Password Dialog -->
+    <Dialog
+      v-model:visible="forgotVisible"
+      header="Lupa Password?"
+      :modal="true"
+      :closable="true"
+      :style="{ width: '400px' }"
+      class="!rounded-2xl"
+    >
+      <div class="flex flex-col items-center text-center gap-4 py-2">
+        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-glow">
+          <i class="pi pi-info-circle text-white text-3xl"></i>
+        </div>
+        <div>
+          <p class="text-sm text-textMain font-semibold mb-2">Silakan hubungi Admin IT untuk mereset password Anda.</p>
+          <p class="text-xs text-textMuted">Admin akan mereset password Anda ke default, kemudian Anda bisa mengubahnya melalui menu <strong>Profil</strong> setelah login.</p>
+        </div>
+      </div>
+      <template #footer>
+        <Button label="Mengerti" icon="pi pi-check" class="btn-gradient w-full" @click="forgotVisible = false" />
+      </template>
+    </Dialog>
   </div>
 </template>

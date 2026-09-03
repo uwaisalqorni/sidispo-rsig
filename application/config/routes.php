@@ -62,8 +62,11 @@ $route['translate_uri_dashes'] = FALSE;
 */
 
 // ── AUTH ──────────────────────────────────────────────────────────────────
-$route['api/v1/auth/login']['post']         = 'Auth/login';       // POST  – Login → JWT
-$route['api/v1/auth/me']['get']             = 'Auth/me';           // GET   – Data user login
+$route['api/v1/auth/login']['post']              = 'Auth/login';            // POST  – Login → JWT
+$route['api/v1/auth/me']['get']                  = 'Auth/me';              // GET   – Data user login
+$route['api/v1/auth/profile']['post']            = 'Auth/update_profile';  // POST  – Update profil + foto (multipart)
+$route['api/v1/auth/change-password']['put']     = 'Auth/change_password'; // PUT   – Ganti password
+
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────
 $route['api/v1/dashboard']['get']           = 'Dashboard/index';  // GET   – Stats + activity + unit progress

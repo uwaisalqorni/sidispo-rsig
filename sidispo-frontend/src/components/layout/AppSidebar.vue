@@ -36,6 +36,8 @@ const userInitials = computed(() => {
   return parts.slice(0, 2).map(p => p[0]?.toUpperCase()).join('')
 })
 
+const fotoProfilUrl = computed(() => auth.fotoProfilUrl)
+
 const isMenuActive = (item) => {
   if (item.id === 'selesai') return route.path === '/disposisi' && route.query.tab === 'Selesai'
   if (item.id === 'overdue') return route.path === '/disposisi' && route.query.tab === 'Overdue'
@@ -174,12 +176,25 @@ const goFolder = (id) => router.push({ path: '/surat-masuk', query: { folder: id
 
     <!-- User footer -->
     <div class="p-4 border-t border-white/10 bg-black/20">
-      <div class="flex items-center gap-3 mb-3 p-2 rounded-xl bg-white/5">
-        <Avatar :label="userInitials" shape="circle" class="!bg-gradient-to-br from-sidebar-accent to-emerald-400 !text-sidebar-dark font-bold" />
+      <div
+        class="flex items-center gap-3 mb-3 p-2 rounded-xl bg-white/5 cursor-pointer hover:bg-white/10 transition-all"
+        @click="router.push({ name: 'profile' })"
+        title="Profil Saya"
+      >
+        <div class="w-9 h-9 rounded-full overflow-hidden shrink-0">
+          <img
+            v-if="fotoProfilUrl"
+            :src="fotoProfilUrl"
+            alt="Foto Profil"
+            class="w-full h-full object-cover"
+          />
+          <Avatar v-else :label="userInitials" shape="circle" class="!bg-gradient-to-br from-sidebar-accent to-emerald-400 !text-sidebar-dark font-bold !w-9 !h-9" />
+        </div>
         <div class="flex-1 min-w-0">
           <div class="text-sm font-semibold truncate text-white">{{ user?.nama_lengkap }}</div>
           <div class="text-[11px] text-sidebar-accent font-medium">{{ user?.jabatan ?? user?.role }}</div>
         </div>
+        <i class="pi pi-chevron-right text-white/30 text-xs"></i>
       </div>
       <Button
         label="Keluar"

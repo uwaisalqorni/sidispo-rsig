@@ -38,4 +38,21 @@ class User_model extends CI_Model {
         }
         return password_verify($password, $hash);
     }
+
+    /**
+     * Update user data by ID
+     */
+    public function update_user($id, $data)
+    {
+        $this->db->where('id', $id);
+        return $this->db->update('users', $data);
+    }
+
+    /**
+     * Update profile photo path
+     */
+    public function update_profile_photo($id, $path)
+    {
+        return $this->update_user($id, ['foto_profil' => $path]);
+    }
 }

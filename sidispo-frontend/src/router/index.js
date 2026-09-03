@@ -11,6 +11,7 @@ import AdminPerihalView from '../views/AdminPerihalView.vue'
 import RtlView from '../views/RtlView.vue'
 import RtlDetailView from '../views/RtlDetailView.vue'
 import DashboardRtlView from '../views/DashboardRtlView.vue'
+import ProfileView from '../views/ProfileView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -68,6 +69,12 @@ const router = createRouter({
       path: '/dashboard-rtl',
       name: 'dashboard-rtl',
       component: DashboardRtlView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/profile',
+      name: 'profile',
+      component: ProfileView,
       meta: { requiresAuth: true }
     },
 

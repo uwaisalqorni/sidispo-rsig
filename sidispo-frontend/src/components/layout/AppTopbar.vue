@@ -28,6 +28,7 @@ const pageMeta = computed(() => {
     rtl:             { title: 'Daftar RTL', icon: 'pi pi-list', color: 'from-orange-500 to-amber-600' },
     'rtl-detail':    { title: 'Detail RTL', icon: 'pi pi-file-edit', color: 'from-orange-500 to-amber-600' },
     'dashboard-rtl': { title: 'Dashboard RTL', icon: 'pi pi-chart-bar', color: 'from-pink-500 to-rose-600' },
+    profile:         { title: 'Profil Saya', icon: 'pi pi-user', color: 'from-teal-500 to-cyan-600' },
     'admin-users':   { title: 'Kelola Pengguna', icon: 'pi pi-users', color: 'from-slate-500 to-gray-600' },
     'admin-folders': { title: 'Kelola Folder', icon: 'pi pi-folder', color: 'from-yellow-500 to-orange-500' },
     'admin-perihal': { title: 'Master Perihal', icon: 'pi pi-book', color: 'from-indigo-500 to-blue-600' },
@@ -65,6 +66,8 @@ const userInitials = computed(() => {
   const parts = (user.value?.nama_lengkap || '').split(' ')
   return parts.slice(0, 2).map(p => p[0]?.toUpperCase()).join('')
 })
+
+const fotoProfilUrl = computed(() => authStore.fotoProfilUrl)
 </script>
 
 <template>
@@ -110,11 +113,24 @@ const userInitials = computed(() => {
             </span>
           </div>
 
-          <Avatar
-            :label="userInitials"
-            shape="circle"
-            class="!hidden sm:!flex !bg-gradient-to-br !from-accent !to-brandGreen !text-white font-bold cursor-default"
-          />
+          <div
+            class="!hidden sm:!flex cursor-pointer rounded-full overflow-hidden hover:ring-2 hover:ring-accent/50 transition-all"
+            @click="router.push({ name: 'profile' })"
+            title="Profil Saya"
+          >
+            <img
+              v-if="fotoProfilUrl"
+              :src="fotoProfilUrl"
+              alt="Foto Profil"
+              class="w-10 h-10 rounded-full object-cover"
+            />
+            <Avatar
+              v-else
+              :label="userInitials"
+              shape="circle"
+              class="!bg-gradient-to-br !from-accent !to-brandGreen !text-white font-bold"
+            />
+          </div>
 
           <OverlayPanel ref="notifPanel" class="w-[min(380px,92vw)] !rounded-2xl !shadow-card-hover">
             <div class="flex justify-between items-center mb-3 pb-3 border-b border-border/50">

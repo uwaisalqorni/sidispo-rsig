@@ -1,0 +1,16 @@
+-- ============================================================
+-- SiDispo — Profile Feature Migration
+-- Tanggal: 2026-09-03
+-- ============================================================
+-- 
+-- Catatan: Tabel `users` sudah memiliki kolom:
+--   - `foto_profil` VARCHAR(500) NULL
+--   - `email` VARCHAR(100) NOT NULL UNIQUE
+--   - `nama_lengkap` VARCHAR(100) NOT NULL
+-- 
+-- Sehingga TIDAK diperlukan ALTER TABLE untuk fitur profil ini.
+-- File ini dibuat sebagai dokumentasi saja.
+--
+-- Jika foto_profil belum ada di tabel Anda, jalankan query berikut:
+-- ALTER TABLE `users` ADD COLUMN `foto_profil` VARCHAR(500) NULL AFTER `role`;
+-- ============================================================
