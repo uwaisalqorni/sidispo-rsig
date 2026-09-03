@@ -99,6 +99,9 @@ $route['api/v1/folder/(:num)']['delete']                   = 'Folder/delete/$1';
 $route['api/v1/surat']['get']                              = 'Surat/index';             // GET    – List surat masuk
 $route['api/v1/surat']['post']                             = 'Surat/create';            // POST   – Input surat + upload file
 $route['api/v1/surat/(:num)']['get']                       = 'Surat/detail/$1';         // GET    – Detail surat + lampiran
+$route['api/v1/surat/(:num)']['post']                      = 'Surat/update/$1';         // POST   – Edit surat masuk + file baru
+$route['api/v1/surat/(:num)']['delete']                    = 'Surat/destroy/$1';        // DELETE – Hapus surat masuk
+$route['api/v1/surat/file/(:num)']['delete']               = 'Surat/delete_file/$1';    // DELETE – Hapus 1 lampiran file surat
 
 // ── MASTER PERIHAL ────────────────────────────────────────────────────────
 $route['api/v1/perihal']['get']                            = 'Perihal/index';                // GET    – List perihal (semua role)

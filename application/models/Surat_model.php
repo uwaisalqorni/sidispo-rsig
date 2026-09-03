@@ -14,10 +14,34 @@ class Surat_model extends CI_Model {
      */
     public function get_all($limit = 100, $offset = 0, $filters = [])
     {
-        $this->db->select('surat_masuk.*, folders.nama as nama_folder, users.nama_lengkap as nama_penginput');
+        $this->db->select('
+            surat_masuk.*, 
+            folders.nama as nama_folder, 
+            folders.warna as warna_folder,
+            users.nama_lengkap as nama_penginput,
+            (SELECT COUNT(*) FROM dokumen_file WHERE surat_masuk_id = surat_masuk.id) as jumlah_file,
+            (SELECT COUNT(*) FROM disposisi WHERE surat_masuk_id = surat_masuk.id) as jumlah_disposisi
+        ');
         $this->db->from('surat_masuk');
         $this->db->join('folders', 'folders.id = surat_masuk.folder_id', 'left');
         $this->db->join('users', 'users.id = surat_masuk.input_oleh', 'left');
+
+        // Filter pencarian teks (No. Surat, No. Agenda, Perihal, Asal Surat, Keterangan)
+        if (!empty($filters['q'])) {
+            $q = trim($filters['q']);
+            $this->db->group_start();
+            $this->db->like('surat_masuk.nomor_surat', $q);
+            $this->db->or_like('surat_masuk.nomor_agenda', $q);
+            $this->db->or_like('surat_masuk.perihal', $q);
+            $this->db->or_like('surat_masuk.asal_surat', $q);
+            $this->db->or_like('surat_masuk.keterangan', $q);
+            $this->db->group_end();
+        }
+
+        // Filter folder/kategori
+        if (!empty($filters['folder_id'])) {
+            $this->db->where('surat_masuk.folder_id', $filters['folder_id']);
+        }
 
         // Filter rentang tanggal terima
         if (!empty($filters['tanggal_dari'])) {
@@ -38,6 +62,22 @@ class Surat_model extends CI_Model {
     public function count_filtered($filters = [])
     {
         $this->db->from('surat_masuk');
+
+        if (!empty($filters['q'])) {
+            $q = trim($filters['q']);
+            $this->db->group_start();
+            $this->db->like('surat_masuk.nomor_surat', $q);
+            $this->db->or_like('surat_masuk.nomor_agenda', $q);
+            $this->db->or_like('surat_masuk.perihal', $q);
+            $this->db->or_like('surat_masuk.asal_surat', $q);
+            $this->db->or_like('surat_masuk.keterangan', $q);
+            $this->db->group_end();
+        }
+
+        if (!empty($filters['folder_id'])) {
+            $this->db->where('surat_masuk.folder_id', $filters['folder_id']);
+        }
+
         if (!empty($filters['tanggal_dari'])) {
             $this->db->where('tanggal_terima >=', $filters['tanggal_dari']);
         }
@@ -109,5 +149,20 @@ class Surat_model extends CI_Model {
     public function get_files($surat_id)
     {
         return $this->db->get_where('dokumen_file', ['surat_masuk_id' => $surat_id])->result_array();
+    }
+
+    /**
+     * Delete single file
+     */
+    public function delete_file($file_id)
+    {
+        $file = $this->db->get_where('dokumen_file', ['id' => $file_id])->row_array();
+        if ($file) {
+            if (!empty($file['path_file']) && file_exists(FCPATH . $file['path_file'])) {
+                @unlink(FCPATH . $file['path_file']);
+            }
+            return $this->db->delete('dokumen_file', ['id' => $file_id]);
+        }
+        return false;
     }
 }

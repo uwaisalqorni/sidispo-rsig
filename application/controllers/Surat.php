@@ -41,11 +41,19 @@ class Surat extends MY_Controller {
         $limit  = $this->input->get('limit')  ? (int)$this->input->get('limit')  : 500;
         $offset = $this->input->get('offset') ? (int)$this->input->get('offset') : 0;
 
-        // Ambil filter tanggal dari query string
+        // Ambil filter tanggal dan kata kunci dari query string
         $filters = [];
+        $q               = $this->input->get('q');
+        $folder_id       = $this->input->get('folder_id');
         $tanggal_dari    = $this->input->get('tanggal_dari');
         $tanggal_sampai  = $this->input->get('tanggal_sampai');
 
+        if (!empty($q)) {
+            $filters['q'] = trim($q);
+        }
+        if (!empty($folder_id)) {
+            $filters['folder_id'] = (int)$folder_id;
+        }
         if ($tanggal_dari && preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal_dari)) {
             $filters['tanggal_dari'] = $tanggal_dari;
         }
@@ -182,6 +190,195 @@ class Surat extends MY_Controller {
                 'message' => 'Surat berhasil disimpan',
                 'data' => $suratData
             ], 201);
+        }
+    }
+
+    /**
+     * POST /surat/{id} or /surat/update/{id}
+     * Update existing surat + optional new file uploads
+     */
+    public function update($id = null)
+    {
+        $this->require_sekretariat();
+
+        if (!$id) {
+            return $this->response(['status' => 'error', 'message' => 'ID surat dibutuhkan'], 400);
+        }
+
+        $existing = $this->surat->get_by_id($id);
+        if (!$existing) {
+            return $this->response(['status' => 'error', 'message' => 'Surat tidak ditemukan'], 404);
+        }
+
+        // Support both multipart/form-data and JSON input
+        $content_type = $this->input->get_request_header('Content-Type');
+        if ($content_type && strpos($content_type, 'multipart/form-data') !== false) {
+            $nomor_surat   = $this->input->post('nomor_surat');
+            $tanggal_surat = $this->input->post('tanggal_surat');
+            $tanggal_terima= $this->input->post('tanggal_terima');
+            $asal_surat    = $this->input->post('asal_surat');
+            $perihal       = $this->input->post('perihal');
+            $folder_id     = $this->input->post('folder_id');
+            $keterangan    = $this->input->post('keterangan');
+        } else {
+            $input = json_decode(file_get_contents('php://input'), true) ?? [];
+            $nomor_surat   = $input['nomor_surat'] ?? $this->input->post('nomor_surat');
+            $tanggal_surat = $input['tanggal_surat'] ?? $this->input->post('tanggal_surat');
+            $tanggal_terima= $input['tanggal_terima'] ?? $this->input->post('tanggal_terima');
+            $asal_surat    = $input['asal_surat'] ?? $this->input->post('asal_surat');
+            $perihal       = $input['perihal'] ?? $this->input->post('perihal');
+            $folder_id     = $input['folder_id'] ?? $this->input->post('folder_id');
+            $keterangan    = $input['keterangan'] ?? $this->input->post('keterangan');
+        }
+
+        $update_data = [];
+        if (!empty($nomor_surat))    $update_data['nomor_surat']    = trim($nomor_surat);
+        if (!empty($tanggal_surat))  $update_data['tanggal_surat']  = $tanggal_surat;
+        if (!empty($tanggal_terima)) $update_data['tanggal_terima'] = $tanggal_terima;
+        if (!empty($asal_surat))     $update_data['asal_surat']     = trim($asal_surat);
+        if (!empty($perihal))        $update_data['perihal']        = trim($perihal);
+        $update_data['folder_id']  = !empty($folder_id) ? (int)$folder_id : null;
+        if ($keterangan !== null)    $update_data['keterangan']     = trim($keterangan);
+
+        if (empty($update_data)) {
+            return $this->response(['status' => 'error', 'message' => 'Tidak ada data yang diubah.'], 400);
+        }
+
+        $this->db->trans_start();
+        $this->surat->update($id, $update_data);
+
+        // Handle additional file uploads if provided
+        $upload_path = FCPATH . 'uploads/surat/';
+        if (!is_dir($upload_path)) {
+            mkdir($upload_path, 0777, true);
+        }
+
+        if (!empty($_FILES['files']['name'][0])) {
+            $filesCount = count($_FILES['files']['name']);
+            for ($i = 0; $i < $filesCount; $i++) {
+                if (empty($_FILES['files']['name'][$i])) continue;
+                
+                $_FILES['file']['name']     = $_FILES['files']['name'][$i];
+                $_FILES['file']['type']     = $_FILES['files']['type'][$i];
+                $_FILES['file']['tmp_name'] = $_FILES['files']['tmp_name'][$i];
+                $_FILES['file']['error']    = $_FILES['files']['error'][$i];
+                $_FILES['file']['size']     = $_FILES['files']['size'][$i];
+                
+                $ext = pathinfo($_FILES['file']['name'], PATHINFO_EXTENSION);
+                $new_name = time() . '_' . substr(md5(uniqid(rand(), true)), 0, 8) . '.' . $ext;
+
+                $config['upload_path']   = $upload_path;
+                $config['allowed_types'] = 'pdf|doc|docx|jpg|jpeg|png';
+                $config['max_size']      = 10240; // 10MB
+                $config['file_name']     = $new_name;
+
+                $this->load->library('upload', $config);
+                $this->upload->initialize($config);
+
+                if ($this->upload->do_upload('file')) {
+                    $fileData = $this->upload->data();
+                    $file_db = [
+                        'surat_masuk_id' => $id,
+                        'nama_asli'      => $fileData['orig_name'],
+                        'nama_file'      => $fileData['file_name'],
+                        'path_file'      => 'uploads/surat/' . $fileData['file_name'],
+                        'mime_type'      => $fileData['file_type'],
+                        'ukuran_bytes'   => $fileData['file_size'] * 1024,
+                        'upload_oleh'    => $this->current_user->id
+                    ];
+                    $this->surat->insert_file($file_db);
+                } else {
+                    $this->db->trans_rollback();
+                    return $this->response(['status' => 'error', 'message' => 'Upload error: ' . $this->upload->display_errors('', '')], 400);
+                }
+            }
+        }
+
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            return $this->response(['status' => 'error', 'message' => 'Gagal memperbarui surat masuk.'], 500);
+        }
+
+        $suratData = $this->surat->get_by_id($id);
+        $this->response([
+            'status'  => 'success',
+            'message' => 'Surat masuk berhasil diperbarui.',
+            'data'    => $suratData
+        ], 200);
+    }
+
+    /**
+     * DELETE /surat/{id}
+     * Hapus surat masuk jika belum memiliki disposisi
+     */
+    public function destroy($id = null)
+    {
+        $this->require_sekretariat();
+
+        if (!$id) {
+            return $this->response(['status' => 'error', 'message' => 'ID surat dibutuhkan'], 400);
+        }
+
+        $surat = $this->surat->get_by_id($id);
+        if (!$surat) {
+            return $this->response(['status' => 'error', 'message' => 'Surat tidak ditemukan'], 404);
+        }
+
+        // Cek apakah surat sudah dibuatkan disposisi
+        $has_disposisi = $this->db->where('surat_masuk_id', $id)->count_all_results('disposisi') > 0;
+        if ($has_disposisi) {
+            return $this->response([
+                'status'  => 'error',
+                'message' => 'Surat tidak dapat dihapus karena sudah memiliki disposisi terkait.'
+            ], 400);
+        }
+
+        // Hapus file fisik lampiran
+        $files = $this->surat->get_files($id);
+        foreach ($files as $f) {
+            if (!empty($f['path_file']) && file_exists(FCPATH . $f['path_file'])) {
+                @unlink(FCPATH . $f['path_file']);
+            }
+        }
+
+        $deleted = $this->surat->delete($id);
+        if ($deleted) {
+            return $this->response([
+                'status'  => 'success',
+                'message' => 'Surat masuk berhasil dihapus.'
+            ], 200);
+        } else {
+            return $this->response([
+                'status'  => 'error',
+                'message' => 'Gagal menghapus surat masuk dari database.'
+            ], 500);
+        }
+    }
+
+    /**
+     * DELETE /surat/file/{file_id}
+     * Hapus 1 file lampiran surat
+     */
+    public function delete_file($file_id = null)
+    {
+        $this->require_sekretariat();
+
+        if (!$file_id) {
+            return $this->response(['status' => 'error', 'message' => 'ID file dibutuhkan'], 400);
+        }
+
+        $deleted = $this->surat->delete_file($file_id);
+        if ($deleted) {
+            return $this->response([
+                'status'  => 'success',
+                'message' => 'Lampiran file berhasil dihapus.'
+            ], 200);
+        } else {
+            return $this->response([
+                'status'  => 'error',
+                'message' => 'File tidak ditemukan atau gagal dihapus.'
+            ], 404);
         }
     }
 }
