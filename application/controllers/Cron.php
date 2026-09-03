@@ -51,8 +51,9 @@ class Cron extends CI_Controller {
                 'catatan' => 'Auto-flagged by System due to missed deadline'
             ]);
 
-            // 3. Insert notification
-            $this->db->insert('notifikasi', [
+            // 3. Insert notification & send email
+            $this->load->model('Notifikasi_model', 'notifikasi');
+            $this->notifikasi->insert([
                 'user_id' => $item['user_id'],
                 'jenis' => 'OVERDUE',
                 'judul' => 'Disposisi Overdue',

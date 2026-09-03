@@ -134,6 +134,7 @@ $route['api/v1/admin/folders/(:num)']['delete']            = 'Admin/folders_dele
 // ── ADMIN — Settings ──────────────────────────────────────────────────────
 $route['api/v1/admin/settings']['get']                     = 'Admin/settings_index';        // GET    – Semua konfigurasi
 $route['api/v1/admin/settings']['put']                     = 'Admin/settings_update';       // PUT    – Update konfigurasi (bulk)
+$route['api/v1/admin/settings/test-email']['post']          = 'Admin/settings_test_email';   // POST   – Uji coba kirim email SMTP
 
 // ── USERS (general – accessible by all authenticated users) ──────────────
 $route['api/v1/users']['get']                              = 'Admin/users_active';          // GET    – Daftar user aktif (untuk pilih penerima disposisi)

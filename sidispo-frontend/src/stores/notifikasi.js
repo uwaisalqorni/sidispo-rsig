@@ -33,5 +33,10 @@ export const useNotifikasiStore = defineStore('notifikasi', () => {
         unread.value = 0
     }
 
-    return { list, unread, loading, fetchList, markRead, markAllRead }
+    async function testSendEmail(targetEmail = '') {
+        const { data } = await api.post('/admin/settings/test-email', { target_email: targetEmail })
+        return data
+    }
+
+    return { list, unread, loading, fetchList, markRead, markAllRead, testSendEmail }
 })

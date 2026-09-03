@@ -281,6 +281,138 @@ class Admin extends MY_Controller {
         $this->response(['status' => 'success', 'message' => 'Konfigurasi berhasil disimpan.', 'data' => $settings]);
     }
 
+    /** POST /api/v1/admin/settings/test-email — Kirim email uji coba SMTP */
+    public function settings_test_email() {
+        $this->require_admin();
+
+        $data = json_decode(file_get_contents('php://input'), true) ?? [];
+        $settings = $this->Admin_model->get_all_settings();
+
+        $smtp_host   = $data['smtp_host'] ?? $settings['smtp_host'] ?? 'smtp.gmail.com';
+        $smtp_port   = (int)($data['smtp_port'] ?? $settings['smtp_port'] ?? 587);
+        $smtp_user   = $data['smtp_user'] ?? $settings['smtp_user'] ?? 'oktaimtiziliffa@gmail.com';
+        $smtp_pass   = $data['smtp_pass'] ?? $settings['smtp_pass'] ?? 'zzua ooyl opsq kdqi';
+        $smtp_crypto = $data['smtp_crypto'] ?? $settings['smtp_crypto'] ?? 'tls';
+        $target_email= !empty($data['target_email']) ? trim($data['target_email']) : $smtp_user;
+
+        if (empty($smtp_user) || empty($smtp_pass)) {
+            $this->response(['status' => 'error', 'message' => 'Username dan Password SMTP wajib diisi.'], 422);
+            return;
+        }
+
+        if (empty($target_email)) {
+            $this->response(['status' => 'error', 'message' => 'Email tujuan wajib diisi.'], 422);
+            return;
+        }
+
+        $config = [
+            'protocol'    => 'smtp',
+            'smtp_host'   => $smtp_host,
+            'smtp_port'   => $smtp_port,
+            'smtp_user'   => $smtp_user,
+            'smtp_pass'   => $smtp_pass,
+            'smtp_crypto' => $smtp_crypto,
+            'mailtype'    => 'html',
+            'charset'     => 'utf-8',
+            'newline'     => "\r\n",
+            'crlf'        => "\r\n"
+        ];
+
+        $this->load->library('email');
+        $this->email->initialize($config);
+        $this->email->from($smtp_user, $settings['nama_rs'] ?? 'SiDispo RSI Gondanglegi');
+        $this->email->to($target_email);
+        $this->email->subject('[SiDispo] Uji Coba Konfigurasi Notifikasi Email SMTP');
+        $app_url = base_url('rsig');
+        $sample_deadline = date('d F Y', strtotime('+7 days'));
+
+        $this->email->message('
+            <div style="font-family: Arial, Helvetica, sans-serif; max-width: 620px; margin: 0 auto; padding: 28px; border: 1px solid #cbd5e1; border-radius: 14px; background: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.04);">
+                <div style="border-bottom: 2px solid #52b788; padding-bottom: 14px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+                    <div>
+                        <h2 style="color: #2d6a4f; margin: 0; font-size: 20px; font-weight: 800;">Uji Coba Notifikasi Email SMTP</h2>
+                        <span style="font-size: 12px; color: #52b788; font-weight: 600;">SiDispo &bull; RSI Gondanglegi</span>
+                    </div>
+                </div>
+
+                <p style="color: #334155; font-size: 14px; margin: 0 0 12px 0;">Halo,</p>
+                <div style="background: #f0fdf4; border-left: 4px solid #52b788; padding: 14px 18px; margin: 16px 0; border-radius: 0 8px 8px 0;">
+                    <p style="color: #166534; font-size: 14px; margin: 0; line-height: 1.6; font-weight: 500;">
+                        Koneksi SMTP berhasil terhubung! Berikut ini adalah contoh tampilan notifikasi email disposisi yang akan diterima oleh pengguna.
+                    </p>
+                </div>
+
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; margin: 20px 0 24px 0;">
+                    <div style="background: #f8fafc; padding: 10px 16px; border-bottom: 1px solid #e2e8f0; font-size: 12px; font-weight: bold; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;">
+                        📋 Contoh Rincian Dokumen Disposisi
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                            <td style="padding: 10px 16px; color: #64748b; width: 30%; vertical-align: top; font-weight: 600;">Asal Surat</td>
+                            <td style="padding: 10px 16px; color: #0f172a; font-weight: 700;">Dinas Kesehatan Provinsi Jawa Timur</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #f1f5f9; background: #fbfcfd;">
+                            <td style="padding: 10px 16px; color: #64748b; vertical-align: top; font-weight: 600;">Perihal</td>
+                            <td style="padding: 10px 16px; color: #0f172a; font-weight: 600; line-height: 1.5;">Pemberitahuan Akreditasi &amp; Layanan Digital Terpadu RS 2026</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                            <td style="padding: 10px 16px; color: #64748b; vertical-align: top; font-weight: 600;">Nomor Surat</td>
+                            <td style="padding: 10px 16px; color: #334155;">440/1284/102.1/2026</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #f1f5f9; background: #fbfcfd;">
+                            <td style="padding: 10px 16px; color: #64748b; vertical-align: top; font-weight: 600;">Nomor Disposisi</td>
+                            <td style="padding: 10px 16px; color: #334155; font-weight: 600;">DSP/2026/09/001</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                            <td style="padding: 10px 16px; color: #64748b; vertical-align: top; font-weight: 600;">Prioritas</td>
+                            <td style="padding: 10px 16px;">
+                                <span style="display:inline-block; padding:4px 12px; border-radius:20px; font-size:11px; font-weight:bold; background:#ffebee; color:#c62828; border:1px solid #ffcdd2;">🔴 URGENT</span>
+                            </td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #f1f5f9; background: #fbfcfd;">
+                            <td style="padding: 10px 16px; color: #64748b; vertical-align: top; font-weight: 600;">Status</td>
+                            <td style="padding: 10px 16px;">
+                                <span style="display:inline-block; padding:4px 12px; border-radius:20px; font-size:11px; font-weight:bold; background:#e0f2f1; color:#00695c; border:1px solid #b2dfdb;">📩 DITERIMA</span>
+                            </td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                            <td style="padding: 10px 16px; color: #64748b; vertical-align: top; font-weight: 600;">Batas Waktu</td>
+                            <td style="padding: 10px 16px; color: #0f172a; font-weight: 600;">' . $sample_deadline . ' <span style="color:#2e7d32; font-weight:bold; font-size:11px;">(7 hari lagi)</span></td>
+                        </tr>
+                        <tr style="background: #fbfcfd;">
+                            <td style="padding: 10px 16px; color: #64748b; vertical-align: top; font-weight: 600;">Instruksi Disposisi</td>
+                            <td style="padding: 10px 16px; color: #1e293b; font-style: italic; line-height: 1.5;">Mohon dipelajari dan dipersiapkan berkas pendukung segera.</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div style="text-align: center; margin: 28px 0 20px 0;">
+                    <a href="' . $app_url . '" style="background: linear-gradient(135deg, #2d6a4f 0%, #52b788 100%); color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 700; font-size: 13px; display: inline-block; box-shadow: 0 4px 12px rgba(45, 106, 79, 0.25);">
+                        Buka Aplikasi SiDispo &rarr;
+                    </a>
+                </div>
+
+                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 24px 0 16px 0;">
+                <p style="font-size: 11px; color: #94a3b8; margin: 0; line-height: 1.5; text-align: center;">
+                    Host: ' . htmlspecialchars($smtp_host) . ':' . $smtp_port . ' (' . htmlspecialchars($smtp_crypto) . ') &bull; Waktu Uji Coba: ' . date('d-m-Y H:i:s') . ' WIB
+                </p>
+            </div>
+        ');
+
+        if ($this->email->send()) {
+            $this->response([
+                'status' => 'success',
+                'message' => 'Email uji coba berhasil dikirim ke ' . $target_email
+            ]);
+        } else {
+            $debug = $this->email->print_debugger(['headers', 'subject', 'body']);
+            $this->response([
+                'status' => 'error',
+                'message' => 'Gagal mengirim email: ' . strip_tags($debug)
+            ], 500);
+        }
+    }
+
     /** GET /api/v1/admin/stats — Statistik sistem untuk admin */
     public function system_stats() {
         $this->require_admin();

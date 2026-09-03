@@ -7,6 +7,7 @@ class Disposisi_model extends CI_Model {
     {
         parent::__construct();
         $this->load->database();
+        $this->load->model('Notifikasi_model', 'notifikasi');
     }
 
     /**
@@ -164,9 +165,9 @@ class Disposisi_model extends CI_Model {
             }
             $this->db->insert_batch('disposisi_penerima', $penerima_batch);
             
-            // Insert Notifikasi Batch
+            // Insert Notifikasi Batch & send emails
             if (!empty($notif_batch)) {
-                $this->db->insert_batch('notifikasi', $notif_batch);
+                $this->notifikasi->insert_batch($notif_batch);
             }
         }
 
@@ -217,7 +218,7 @@ class Disposisi_model extends CI_Model {
         $creator_info = $this->db->get()->row();
 
         if ($creator_info && $creator_info->dibuat_oleh != $user_id) {
-            $this->db->insert('notifikasi', [
+            $this->notifikasi->insert([
                 'user_id' => $creator_info->dibuat_oleh,
                 'jenis' => $status_baru == 'SELESAI' ? 'SELESAI' : 'UPDATE_PROGRESS',
                 'judul' => 'Update Progress: ' . $creator_info->nomor_disposisi,

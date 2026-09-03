@@ -114,8 +114,13 @@ class Admin_model extends CI_Model {
             'email_rs'            => '',
             'logo_rs'             => '',
             'batas_waktu_default' => '7',    // hari
-            'notif_email'         => '0',    // 0=off,1=on
+            'notif_email'         => '1',    // 0=off,1=on
             'notif_system'        => '1',
+            'smtp_host'           => 'smtp.gmail.com',
+            'smtp_port'           => '587',
+            'smtp_user'           => 'oktaimtiziliffa@gmail.com',
+            'smtp_pass'           => 'zzua ooyl opsq kdqi',
+            'smtp_crypto'         => 'tls',
             'jwt_expired_hours'   => '24',
             'max_upload_mb'       => '10',
             'versi_aplikasi'      => '1.0.0',
