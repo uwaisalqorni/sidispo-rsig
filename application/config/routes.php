@@ -166,3 +166,8 @@ $route['api/v1/rtl/progress/(:num)']['post']               = 'Rtl/progress/$1';
 $route['api/v1/rtl/progress/log/(:num)']['put']            = 'Rtl/update_log/$1';
 $route['api/v1/rtl/progress/log/(:num)']['post']           = 'Rtl/update_log/$1';
 $route['api/v1/rtl/progress/log/(:num)']['delete']         = 'Rtl/delete_log/$1';
+$route['api/v1/rtl/(:num)']['put']                         = 'Rtl/update/$1';
+$route['api/v1/rtl/(:num)']['post']                        = 'Rtl/update/$1';
+$route['api/v1/rtl/(:num)']['delete']                      = 'Rtl/delete/$1';
+$route['api/v1/rtl/delete/(:num)']['post']                 = 'Rtl/delete/$1';
+

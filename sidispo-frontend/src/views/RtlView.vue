@@ -9,13 +9,17 @@ import Card from 'primevue/card'
 import Button from 'primevue/button'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
+import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
 import Tag from 'primevue/tag'
 import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
 import Paginator from 'primevue/paginator'
+import { useToast } from 'primevue/usetoast'
+import Toast from 'primevue/toast'
 
+const toast = useToast()
 const router = useRouter()
 const auth = useAuthStore()
 const { user } = storeToRefs(auth)
@@ -30,10 +34,17 @@ const disposisiList = ref([])
 const usersList = ref([])
 const selectedPenerima = ref([])
 const showModal = ref(false)
+const isEditing = ref(false)
+const editId = ref(null)
 const submitting = ref(false)
 const submitMsg = ref({ type: '', text: '' })
 
-// Role Checks
+// Delete Dialog State
+const showDeleteDialog = ref(false)
+const deleteTarget = ref(null)
+const deleting = ref(false)
+
+// Role Checks: Hanya ADMIN yang boleh edit dan delete
 const isAdmin = computed(() => user.value?.role === 'ADMIN')
 
 const form = ref({
@@ -266,7 +277,9 @@ const togglePenerima = (userId) => {
   else selectedPenerima.value.splice(idx, 1)
 }
 
-const openModal = async () => {
+const openCreate = async () => {
+  isEditing.value = false
+  editId.value = null
   form.value = { disposisi_id: '', prioritas: 'Biasa', deskripsi_rtl: '', batas_waktu: '' }
   selectedPenerima.value = []
   submitMsg.value = { type: '', text: '' }
@@ -279,6 +292,81 @@ const openModal = async () => {
     } catch (e) {
       console.error('Failed to fetch users', e)
     }
+  }
+
+  if (disposisiList.value.length === 0) {
+    await fetchDisposisiSelesai()
+  }
+}
+
+const openEdit = async (item) => {
+  if (!isAdmin.value) return
+  isEditing.value = true
+  editId.value = item.id
+  form.value = {
+    disposisi_id: item.disposisi_id,
+    prioritas: item.prioritas || 'Biasa',
+    deskripsi_rtl: item.deskripsi_rtl || '',
+    batas_waktu: item.batas_waktu && item.batas_waktu !== '0000-00-00' ? item.batas_waktu.slice(0, 10) : ''
+  }
+  selectedPenerima.value = []
+  submitMsg.value = { type: '', text: '' }
+  showModal.value = true
+
+  if (usersList.value.length === 0) {
+    try {
+      const { data } = await api.get('/users')
+      usersList.value = data.data || []
+    } catch (e) {
+      console.error('Failed to fetch users', e)
+    }
+  }
+
+  if (disposisiList.value.length === 0) {
+    await fetchDisposisiSelesai()
+  }
+
+  // Pastikan opsi disposisi yang diedit tersedia di dropdown
+  if (item.disposisi_id && !disposisiList.value.some(d => d.id == item.disposisi_id)) {
+    disposisiList.value.unshift({
+      id: item.disposisi_id,
+      nomor_disposisi: item.nomor_disposisi,
+      perihal: item.perihal_surat
+    })
+  }
+
+  // Ambil data penerima yang sudah terpilih
+  try {
+    const { data } = await api.get(`/rtl/${item.id}`)
+    if (data.data?.penerima) {
+      selectedPenerima.value = data.data.penerima.map(p => Number(p.user_id))
+    }
+  } catch (err) {
+    if (item.penerima_list) {
+      selectedPenerima.value = item.penerima_list.map(p => Number(p.user_id))
+    }
+  }
+}
+
+const confirmDelete = (item) => {
+  if (!isAdmin.value) return
+  deleteTarget.value = item
+  showDeleteDialog.value = true
+}
+
+const handleDelete = async () => {
+  if (!deleteTarget.value || !isAdmin.value) return
+  deleting.value = true
+  try {
+    await api.delete(`/rtl/${deleteTarget.value.id}`)
+    toast.add({ severity: 'success', summary: 'Terhapus', detail: 'Data RTL berhasil dihapus.', life: 3000 })
+    showDeleteDialog.value = false
+    deleteTarget.value = null
+    await fetchData()
+  } catch (err) {
+    toast.add({ severity: 'error', summary: 'Gagal', detail: err.response?.data?.message || 'Gagal menghapus RTL.', life: 3000 })
+  } finally {
+    deleting.value = false
   }
 }
 
@@ -297,11 +385,17 @@ const handleSubmit = async () => {
 
   try {
     const payload = { ...form.value, penerima: selectedPenerima.value }
-    const { data } = await api.post('/rtl', payload)
-    submitMsg.value = { type: 'success', text: 'RTL berhasil dibuat!' }
-    rtlList.value.unshift(data.data)
-    totalFiltered.value++
-    setTimeout(() => { showModal.value = false }, 1500)
+    if (isEditing.value && editId.value) {
+      await api.put(`/rtl/${editId.value}`, payload)
+      toast.add({ severity: 'success', summary: 'Sukses', detail: 'RTL berhasil diperbarui!', life: 3000 })
+      submitMsg.value = { type: 'success', text: 'RTL berhasil diperbarui!' }
+    } else {
+      await api.post('/rtl', payload)
+      toast.add({ severity: 'success', summary: 'Sukses', detail: 'RTL berhasil dibuat!', life: 3000 })
+      submitMsg.value = { type: 'success', text: 'RTL berhasil dibuat!' }
+    }
+    await fetchData()
+    setTimeout(() => { showModal.value = false }, 1000)
   } catch (err) {
     submitMsg.value = { type: 'error', text: err.response?.data?.message || 'Gagal menyimpan RTL.' }
   } finally {
@@ -316,6 +410,8 @@ const goDetail = (id) => {
 
 <template>
   <div class="page-container animate-fade-in">
+    <Toast />
+
     <!-- Header Hero Banner -->
     <div class="page-hero flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
@@ -331,7 +427,7 @@ const goDetail = (id) => {
         label="Buat RTL"
         icon="pi pi-plus"
         class="relative z-10 !bg-white !text-sidebar !border-0 shadow-glow"
-        @click="openModal"
+        @click="openCreate"
       />
     </div>
 
@@ -557,17 +653,39 @@ const goDetail = (id) => {
             </template>
           </Column>
 
-          <Column header="Aksi" style="width: 100px" class="text-center">
+          <Column header="Aksi" style="width: 135px" class="text-center">
             <template #body="{ data }">
-              <Button
-                icon="pi pi-arrow-right"
-                label="Detail"
-                size="small"
-                severity="secondary"
-                outlined
-                class="!py-1 !px-2.5 !text-xs hover:!bg-accent hover:!text-white hover:!border-accent transition-colors"
-                @click.stop="goDetail(data.id)"
-              />
+              <div class="flex items-center justify-center gap-1.5">
+                <Button
+                  icon="pi pi-eye"
+                  size="small"
+                  severity="secondary"
+                  outlined
+                  class="!p-1.5 !w-7 !h-7 hover:!bg-accent hover:!text-white hover:!border-accent transition-colors"
+                  v-tooltip.top="'Lihat Detail'"
+                  @click.stop="goDetail(data.id)"
+                />
+                <Button
+                  v-if="isAdmin"
+                  icon="pi pi-pencil"
+                  size="small"
+                  severity="info"
+                  outlined
+                  class="!p-1.5 !w-7 !h-7 hover:!bg-brandBlue hover:!text-white hover:!border-brandBlue transition-colors"
+                  v-tooltip.top="'Edit RTL'"
+                  @click.stop="openEdit(data)"
+                />
+                <Button
+                  v-if="isAdmin"
+                  icon="pi pi-trash"
+                  size="small"
+                  severity="danger"
+                  outlined
+                  class="!p-1.5 !w-7 !h-7 hover:!bg-brandRed hover:!text-white hover:!border-brandRed transition-colors"
+                  v-tooltip.top="'Hapus RTL'"
+                  @click.stop="confirmDelete(data)"
+                />
+              </div>
             </template>
           </Column>
         </DataTable>
@@ -623,13 +741,29 @@ const goDetail = (id) => {
               </div>
             </div>
 
-            <!-- Tombol Detail -->
-            <div class="mt-4 pt-3 border-t border-border/50">
+            <!-- Tombol Aksi Grid Card -->
+            <div class="mt-4 pt-3 border-t border-border/50 flex items-center gap-2">
               <button
                 @click.stop="goDetail(rtl.id)"
-                class="w-full py-1.5 text-xs font-bold rounded-lg border border-border/50 text-textMain hover:bg-surface2 hover:border-accent hover:text-accent transition-all flex items-center justify-center gap-1.5"
+                class="flex-1 py-1.5 text-xs font-bold rounded-lg border border-border/50 text-textMain hover:bg-surface2 hover:border-accent hover:text-accent transition-all flex items-center justify-center gap-1.5"
               >
-                <i class="pi pi-eye text-xs"></i> Lihat Detail
+                <i class="pi pi-eye text-xs"></i> Detail
+              </button>
+              <button
+                v-if="isAdmin"
+                @click.stop="openEdit(rtl)"
+                class="p-1.5 px-2.5 text-xs font-semibold rounded-lg border border-border/50 text-brandBlue hover:bg-brandBlueBg hover:border-brandBlue/30 transition-all flex items-center justify-center gap-1"
+                title="Edit RTL"
+              >
+                <i class="pi pi-pencil text-xs"></i>
+              </button>
+              <button
+                v-if="isAdmin"
+                @click.stop="confirmDelete(rtl)"
+                class="p-1.5 px-2.5 text-xs font-semibold rounded-lg border border-border/50 text-brandRed hover:bg-brandRedBg hover:border-brandRed/30 transition-all flex items-center justify-center gap-1"
+                title="Hapus RTL"
+              >
+                <i class="pi pi-trash text-xs"></i>
               </button>
             </div>
           </div>
@@ -650,14 +784,14 @@ const goDetail = (id) => {
     </div>
   </div>
 
-  <!-- Modal Buat RTL -->
+  <!-- Modal Buat / Edit RTL -->
   <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
     <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="showModal = false"></div>
     <div class="bg-surface w-full max-w-2xl rounded-2xl shadow-2xl relative flex flex-col max-h-[90vh] animate-[fadeIn_0.2s_ease]">
       
       <div class="p-5 px-6 border-b border-border flex justify-between items-center bg-surface2/50 rounded-t-2xl">
         <h3 class="text-lg font-bold text-textMain flex items-center gap-2">
-          <span>📋</span> Buat Rencana Tindak Lanjut
+          <span>{{ isEditing ? '✏️ Edit Rencana Tindak Lanjut' : '📋 Buat Rencana Tindak Lanjut' }}</span>
         </h3>
         <button @click="showModal = false" class="text-textMuted hover:text-brandRed text-2xl leading-none">&times;</button>
       </div>
@@ -730,11 +864,58 @@ const goDetail = (id) => {
         <button type="button" @click="handleSubmit" :disabled="submitting"
           class="px-6 py-2 text-sm font-bold text-white bg-brandGreen hover:bg-brandGreen/90 disabled:opacity-50 rounded-lg shadow-sm transition-all flex items-center gap-2">
           <span v-if="submitting" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-          Simpan RTL
+          {{ submitting ? 'Menyimpan...' : (isEditing ? 'Simpan Perubahan' : 'Simpan RTL') }}
         </button>
       </div>
     </div>
   </div>
+
+  <!-- Modal Konfirmasi Hapus RTL -->
+  <Dialog
+    v-model:visible="showDeleteDialog"
+    modal
+    header="Konfirmasi Hapus RTL"
+    :style="{ width: '440px' }"
+    :closable="!deleting"
+  >
+    <div class="flex items-start gap-3 py-2">
+      <div class="w-10 h-10 rounded-full bg-brandRedBg text-brandRed flex items-center justify-center shrink-0">
+        <i class="pi pi-exclamation-triangle text-lg"></i>
+      </div>
+      <div>
+        <p class="text-sm font-semibold text-textMain">
+          Apakah Anda yakin ingin menghapus RTL ini?
+        </p>
+        <div v-if="deleteTarget" class="mt-2 p-2.5 rounded-lg bg-surface2 border border-border text-xs">
+          <div class="font-mono font-bold text-accent">{{ deleteTarget.nomor_disposisi }}</div>
+          <div class="font-semibold text-textMain mt-0.5 line-clamp-2">{{ deleteTarget.deskripsi_rtl }}</div>
+        </div>
+        <p class="text-xs text-brandRed mt-2 font-medium">
+          Seluruh riwayat progress dan data penerima tugas terkait RTL ini akan dihapus permanen.
+        </p>
+      </div>
+    </div>
+    <template #footer>
+      <div class="flex justify-end gap-2 pt-2">
+        <Button
+          label="Batal"
+          severity="secondary"
+          outlined
+          size="small"
+          :disabled="deleting"
+          @click="showDeleteDialog = false"
+        />
+        <Button
+          label="Ya, Hapus"
+          icon="pi pi-trash"
+          severity="danger"
+          size="small"
+          :loading="deleting"
+          @click="handleDelete"
+        />
+      </div>
+    </template>
+  </Dialog>
 </template>
 
 <style scoped>

@@ -288,9 +288,51 @@ class Rtl_model extends CI_Model {
         return $this->db->trans_status();
     }
 
+    public function update($id, $data, $penerima_ids = null)
+    {
+        $this->db->trans_start();
+        $this->db->where('id', $id)->update('rtl', $data);
+
+        if ($penerima_ids !== null && is_array($penerima_ids)) {
+            // Ambil penerima yang sudah terdaftar sebelumnya
+            $existing = $this->db->where('rtl_id', $id)->get('rtl_penerima')->result_array();
+            $existing_uids = array_map(function($p) { return (int)$p['user_id']; }, $existing);
+            $new_uids = array_map('intval', $penerima_ids);
+
+            // Hapus penerima yang di-uncheck
+            foreach ($existing as $ex) {
+                if (!in_array((int)$ex['user_id'], $new_uids)) {
+                    $this->db->where('rtl_penerima_id', $ex['id'])->delete('rtl_progress');
+                    $this->db->where('id', $ex['id'])->delete('rtl_penerima');
+                }
+            }
+
+            // Tambah penerima baru yang belum ada
+            $batch = [];
+            foreach ($new_uids as $uid) {
+                if (!in_array($uid, $existing_uids)) {
+                    $batch[] = ['rtl_id' => $id, 'user_id' => $uid, 'status' => 'TO_DO'];
+                }
+            }
+            if (!empty($batch)) {
+                $this->db->insert_batch('rtl_penerima', $batch);
+            }
+
+            // Hitung ulang status master RTL jika perlu
+            $this->update_master_status($id);
+        }
+
+        $this->db->trans_complete();
+        return $this->db->trans_status();
+    }
+
     public function delete($id)
     {
-        $this->db->where('id', $id);
-        return $this->db->delete('rtl');
+        $this->db->trans_start();
+        $this->db->where('rtl_id', $id)->delete('rtl_progress');
+        $this->db->where('rtl_id', $id)->delete('rtl_penerima');
+        $this->db->where('id', $id)->delete('rtl');
+        $this->db->trans_complete();
+        return $this->db->trans_status();
     }
 }

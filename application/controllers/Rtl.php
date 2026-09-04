@@ -152,6 +152,93 @@ class Rtl extends MY_Controller {
     }
 
     /**
+     * PUT or POST /rtl/{id}
+     * Update RTL record. Only Admin.
+     */
+    public function update($id = null)
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'PUT' && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+            return $this->response(['status' => 'error', 'message' => 'Method not allowed'], 405);
+        }
+
+        // Only ADMIN can update RTL
+        if ($this->current_user->role !== 'ADMIN') {
+            return $this->response(['status' => 'error', 'message' => 'Akses ditolak. Hanya Admin yang dapat mengedit RTL.'], 403);
+        }
+
+        if (!$id) {
+            return $this->response(['status' => 'error', 'message' => 'ID RTL dibutuhkan'], 400);
+        }
+
+        $rtl = $this->rtl->get_by_id($id);
+        if (!$rtl) {
+            return $this->response(['status' => 'error', 'message' => 'Data RTL tidak ditemukan'], 404);
+        }
+
+        $input = json_decode(file_get_contents('php://input'), true);
+        if (!$input) {
+            $input = $this->input->post();
+        }
+
+        if (empty($input['disposisi_id']) || empty($input['deskripsi_rtl'])) {
+            return $this->response(['status' => 'error', 'message' => 'Disposisi dan Deskripsi RTL wajib diisi'], 400);
+        }
+
+        if (empty($input['penerima']) || !is_array($input['penerima'])) {
+            return $this->response(['status' => 'error', 'message' => 'Minimal satu Penerima wajib dipilih'], 400);
+        }
+
+        $data = [
+            'disposisi_id'  => $input['disposisi_id'],
+            'prioritas'     => $input['prioritas'] ?? $rtl['prioritas'],
+            'deskripsi_rtl' => $input['deskripsi_rtl'],
+            'batas_waktu'   => !empty($input['batas_waktu']) ? $input['batas_waktu'] : null
+        ];
+
+        $success = $this->rtl->update($id, $data, $input['penerima']);
+
+        if ($success) {
+            $updatedRtl = $this->rtl->get_by_id($id);
+            $this->response(['status' => 'success', 'message' => 'RTL berhasil diperbarui', 'data' => $updatedRtl], 200);
+        } else {
+            $this->response(['status' => 'error', 'message' => 'Gagal memperbarui RTL'], 500);
+        }
+    }
+
+    /**
+     * DELETE or POST /rtl/delete/{id}
+     * Delete RTL record. Only Admin.
+     */
+    public function delete($id = null)
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'DELETE' && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+            return $this->response(['status' => 'error', 'message' => 'Method not allowed'], 405);
+        }
+
+        // Only ADMIN can delete RTL
+        if ($this->current_user->role !== 'ADMIN') {
+            return $this->response(['status' => 'error', 'message' => 'Akses ditolak. Hanya Admin yang dapat menghapus RTL.'], 403);
+        }
+
+        if (!$id) {
+            return $this->response(['status' => 'error', 'message' => 'ID RTL dibutuhkan'], 400);
+        }
+
+        $rtl = $this->rtl->get_by_id($id);
+        if (!$rtl) {
+            return $this->response(['status' => 'error', 'message' => 'Data RTL tidak ditemukan'], 404);
+        }
+
+        $success = $this->rtl->delete($id);
+
+        if ($success) {
+            $this->response(['status' => 'success', 'message' => 'RTL berhasil dihapus'], 200);
+        } else {
+            $this->response(['status' => 'error', 'message' => 'Gagal menghapus RTL'], 500);
+        }
+    }
+
+    /**
      * PUT or POST /rtl/progress/{id}
      * Update progress status of RTL penerima.
      * Accessible by the assigned user OR Admin/Direktur.
