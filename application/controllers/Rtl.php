@@ -122,39 +122,140 @@ class Rtl extends MY_Controller {
     }
 
     /**
-     * PUT /rtl/progress/{id}
-     * Update progress status of RTL. Only Admin or Director.
+     * PUT or POST /rtl/progress/{id}
+     * Update progress status of RTL penerima.
+     * Accessible by the assigned user OR Admin/Direktur.
      */
     public function progress($id)
     {
-        if ($_SERVER['REQUEST_METHOD'] !== 'PUT') {
+        if ($_SERVER['REQUEST_METHOD'] !== 'PUT' && $_SERVER['REQUEST_METHOD'] !== 'POST') {
             return $this->response(['status' => 'error', 'message' => 'Method not allowed'], 405);
         }
 
-        // Only ADMIN or DIREKTUR can update RTL progress
-        if (!in_array($this->current_user->role, ['ADMIN', 'DIREKTUR'])) {
-            return $this->response(['status' => 'error', 'message' => 'Akses ditolak. Hanya Admin dan Direktur yang dapat update progress RTL.'], 403);
+        $penerima = $this->db->get_where('rtl_penerima', ['id' => $id])->row_array();
+        if (!$penerima) {
+            return $this->response(['status' => 'error', 'message' => 'Penerima RTL tidak ditemukan'], 404);
+        }
+
+        // Hanya penerima tugas itu sendiri yang boleh menambah / mengupdate progress miliknya
+        if ((int)$penerima['user_id'] !== (int)$this->current_user->id) {
+            return $this->response(['status' => 'error', 'message' => 'Akses ditolak. Anda hanya berhak mencatat progress untuk tugas Anda sendiri.'], 403);
         }
 
         $input = json_decode(file_get_contents('php://input'), true);
         $status_baru = $input['status'] ?? null;
-        $catatan = $input['catatan'] ?? '';
+        $catatan = trim($input['catatan'] ?? '');
 
         $valid_statuses = ['TO_DO', 'ON_PROGRESS', 'REVIEW', 'DONE'];
         if (!$status_baru || !in_array($status_baru, $valid_statuses)) {
             return $this->response(['status' => 'error', 'message' => 'Status tidak valid'], 400);
         }
         
-        if (empty(trim($catatan))) {
+        if (empty($catatan)) {
             return $this->response(['status' => 'error', 'message' => 'Catatan progress wajib diisi.'], 400);
         }
 
-        $success = $this->rtl->update_progress_penerima($id, $status_baru, trim($catatan), $this->current_user->id);
+        $success = $this->rtl->update_progress_penerima($id, $status_baru, $catatan, $this->current_user->id);
 
         if ($success) {
-            $this->response(['status' => 'success', 'message' => 'Progress RTL berhasil diupdate'], 200);
+            $this->response(['status' => 'success', 'message' => 'Progress RTL berhasil dicatat'], 200);
         } else {
-            $this->response(['status' => 'error', 'message' => 'Gagal mengupdate progress RTL'], 500);
+            $this->response(['status' => 'error', 'message' => 'Gagal mencatat progress RTL'], 500);
+        }
+    }
+
+    /**
+     * PUT or POST /rtl/progress/log/{id}
+     * Update catatan dan status log progress RTL milik sendiri
+     */
+    public function update_log($id = null)
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'PUT' && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+            return $this->response(['status' => 'error', 'message' => 'Method not allowed'], 405);
+        }
+
+        if (!$id) {
+            return $this->response(['status' => 'error', 'message' => 'ID progress dibutuhkan'], 400);
+        }
+
+        $log = $this->rtl->get_progress_log_by_id($id);
+        if (!$log) {
+            return $this->response(['status' => 'error', 'message' => 'Catatan progress RTL tidak ditemukan'], 404);
+        }
+
+        $uid = (int)$this->current_user->id;
+
+        // Validasi ketat hak akses:
+        // 1. Jika terikat dengan penerima tugas, pastikan user adalah penerima tugas tersebut
+        if (!empty($log['penerima_user_id']) && (int)$log['penerima_user_id'] !== $uid) {
+            return $this->response(['status' => 'error', 'message' => 'Akses ditolak. Anda tidak dapat mengubah progress pengguna lain.'], 403);
+        }
+
+        // 2. Pembuat progress harus user yang sedang login
+        if ((int)$log['dibuat_oleh'] !== $uid) {
+            return $this->response(['status' => 'error', 'message' => 'Akses ditolak. Anda hanya dapat mengubah progress Anda sendiri.'], 403);
+        }
+
+        $input = json_decode(file_get_contents('php://input'), true);
+        $status_baru = $input['status'] ?? $log['status_baru'];
+        $catatan = trim($input['catatan'] ?? '');
+
+        $valid_statuses = ['TO_DO', 'ON_PROGRESS', 'REVIEW', 'DONE'];
+        if (!$status_baru || !in_array($status_baru, $valid_statuses)) {
+            return $this->response(['status' => 'error', 'message' => 'Status tidak valid'], 400);
+        }
+
+        if (empty($catatan)) {
+            return $this->response(['status' => 'error', 'message' => 'Catatan progress wajib diisi.'], 400);
+        }
+
+        $success = $this->rtl->update_progress_log($id, $status_baru, $catatan);
+
+        if ($success) {
+            $this->response(['status' => 'success', 'message' => 'Progress RTL berhasil diperbarui'], 200);
+        } else {
+            $this->response(['status' => 'error', 'message' => 'Gagal memperbarui progress RTL'], 500);
+        }
+    }
+
+    /**
+     * DELETE or POST /rtl/progress/log/{id}
+     * Hapus catatan log progress RTL milik sendiri
+     */
+    public function delete_log($id = null)
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'DELETE' && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+            return $this->response(['status' => 'error', 'message' => 'Method not allowed'], 405);
+        }
+
+        if (!$id) {
+            return $this->response(['status' => 'error', 'message' => 'ID progress dibutuhkan'], 400);
+        }
+
+        $log = $this->rtl->get_progress_log_by_id($id);
+        if (!$log) {
+            return $this->response(['status' => 'error', 'message' => 'Catatan progress RTL tidak ditemukan'], 404);
+        }
+
+        $uid = (int)$this->current_user->id;
+
+        // Validasi ketat hak akses:
+        // 1. Jika terikat dengan penerima tugas, pastikan user adalah penerima tugas tersebut
+        if (!empty($log['penerima_user_id']) && (int)$log['penerima_user_id'] !== $uid) {
+            return $this->response(['status' => 'error', 'message' => 'Akses ditolak. Anda tidak dapat menghapus progress pengguna lain.'], 403);
+        }
+
+        // 2. Pembuat progress harus user yang sedang login
+        if ((int)$log['dibuat_oleh'] !== $uid) {
+            return $this->response(['status' => 'error', 'message' => 'Akses ditolak. Anda tidak dapat menghapus progress pengguna lain.'], 403);
+        }
+
+        $success = $this->rtl->delete_progress_log($id);
+
+        if ($success) {
+            $this->response(['status' => 'success', 'message' => 'Progress RTL berhasil dihapus'], 200);
+        } else {
+            $this->response(['status' => 'error', 'message' => 'Gagal menghapus progress RTL'], 500);
         }
     }
 }

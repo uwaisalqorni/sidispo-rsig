@@ -160,6 +160,80 @@ class Rtl_model extends CI_Model {
         $this->db->update('rtl', ['status_progress' => $status]);
     }
 
+    public function get_progress_log_by_id($id)
+    {
+        $this->db->select('rp.*, p.user_id as penerima_user_id');
+        $this->db->from('rtl_progress rp');
+        $this->db->join('rtl_penerima p', 'p.id = rp.rtl_penerima_id', 'left');
+        $this->db->where('rp.id', $id);
+        return $this->db->get()->row_array();
+    }
+
+    public function update_progress_log($id, $status_baru, $catatan)
+    {
+        $log = $this->get_progress_log_by_id($id);
+        if (!$log) return false;
+
+        $this->db->trans_start();
+
+        // 1. Update baris rtl_progress
+        $this->db->where('id', $id)->update('rtl_progress', [
+            'status_baru' => $status_baru,
+            'catatan'     => $catatan
+        ]);
+
+        // 2. Jika log ini adalah log paling baru untuk penerima ini, selaraskan status penerima
+        if (!empty($log['rtl_penerima_id'])) {
+            $latest = $this->db->where('rtl_penerima_id', $log['rtl_penerima_id'])
+                               ->order_by('id', 'DESC')
+                               ->limit(1)
+                               ->get('rtl_progress')
+                               ->row_array();
+            if ($latest && (int)$latest['id'] === (int)$id) {
+                $this->db->where('id', $log['rtl_penerima_id'])->update('rtl_penerima', [
+                    'status' => $status_baru
+                ]);
+                $this->update_master_status($log['rtl_id']);
+            }
+        }
+
+        $this->db->trans_complete();
+        return $this->db->trans_status();
+    }
+
+    public function delete_progress_log($id)
+    {
+        $log = $this->get_progress_log_by_id($id);
+        if (!$log) return false;
+
+        $this->db->trans_start();
+
+        // 1. Hapus catatan log
+        $this->db->where('id', $id)->delete('rtl_progress');
+
+        // 2. Ambil log terbaru yang tersisa untuk penerima ini
+        if (!empty($log['rtl_penerima_id'])) {
+            $remaining = $this->db->where('rtl_penerima_id', $log['rtl_penerima_id'])
+                                  ->order_by('id', 'DESC')
+                                  ->limit(1)
+                                  ->get('rtl_progress')
+                                  ->row_array();
+            if ($remaining) {
+                $this->db->where('id', $log['rtl_penerima_id'])->update('rtl_penerima', [
+                    'status' => $remaining['status_baru']
+                ]);
+            } else {
+                $this->db->where('id', $log['rtl_penerima_id'])->update('rtl_penerima', [
+                    'status' => 'TO_DO'
+                ]);
+            }
+            $this->update_master_status($log['rtl_id']);
+        }
+
+        $this->db->trans_complete();
+        return $this->db->trans_status();
+    }
+
     public function delete($id)
     {
         $this->db->where('id', $id);

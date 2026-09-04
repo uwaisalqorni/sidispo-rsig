@@ -162,3 +162,7 @@ $route['api/v1/rtl/disposisi-selesai']['get']              = 'Rtl/disposisi_sele
 $route['api/v1/rtl/(:num)']['get']                         = 'Rtl/detail/$1';
 $route['api/v1/dashboard-rtl']['get']                      = 'DashboardRtl/index';
 $route['api/v1/rtl/progress/(:num)']['put']                = 'Rtl/progress/$1';
+$route['api/v1/rtl/progress/(:num)']['post']               = 'Rtl/progress/$1';
+$route['api/v1/rtl/progress/log/(:num)']['put']            = 'Rtl/update_log/$1';
+$route['api/v1/rtl/progress/log/(:num)']['post']           = 'Rtl/update_log/$1';
+$route['api/v1/rtl/progress/log/(:num)']['delete']         = 'Rtl/delete_log/$1';
