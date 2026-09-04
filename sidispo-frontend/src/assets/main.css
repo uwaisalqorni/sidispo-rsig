@@ -91,6 +91,7 @@
   .color-card-blue   { @apply bg-gradient-card-blue; }
   .color-card-green  { @apply bg-gradient-card-green; }
   .color-card-orange { @apply bg-gradient-card-orange; }
+  .color-card-purple { @apply bg-gradient-card-purple; }
   .color-card-red    { @apply bg-gradient-card-red; }
 
   .color-card::before {
@@ -100,6 +101,7 @@
   .color-card-blue::before   { @apply bg-brandBlue; }
   .color-card-green::before  { @apply bg-brandGreen; }
   .color-card-orange::before { @apply bg-brandYellow; }
+  .color-card-purple::before { @apply bg-brandPurple; }
   .color-card-red::before    { @apply bg-brandRed; }
 
   .stat-icon-wrap {
@@ -108,6 +110,7 @@
   .stat-icon-blue   { @apply bg-brandBlue text-white; }
   .stat-icon-green  { @apply bg-brandGreen text-white; }
   .stat-icon-orange { @apply bg-brandYellow text-white; }
+  .stat-icon-purple { @apply bg-brandPurple text-white; }
   .stat-icon-red    { @apply bg-brandRed text-white; }
 
   .section-label {

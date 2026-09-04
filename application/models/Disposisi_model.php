@@ -75,9 +75,9 @@ class Disposisi_model extends CI_Model {
                 CASE
                     WHEN d.status_global = 'SELESAI' THEN 'SELESAI'
                     WHEN d.batas_waktu IS NOT NULL AND d.batas_waktu < CURDATE() AND d.status_global = 'AKTIF' THEN 'OVERDUE'
-                    WHEN EXISTS (SELECT 1 FROM disposisi_penerima dp2 WHERE dp2.disposisi_id = d.id AND dp2.status='PROSES') THEN 'PROSES'
-                    WHEN EXISTS (SELECT 1 FROM disposisi_penerima dp2 WHERE dp2.disposisi_id = d.id AND dp2.status='TUNGGU') THEN 'TUNGGU'
                     WHEN EXISTS (SELECT 1 FROM disposisi_penerima dp2 WHERE dp2.disposisi_id = d.id AND dp2.status='OVERDUE') THEN 'OVERDUE'
+                    WHEN EXISTS (SELECT 1 FROM disposisi_penerima dp2 WHERE dp2.disposisi_id = d.id AND dp2.status='PROSES') THEN 'PROSES'
+                    WHEN EXISTS (SELECT 1 FROM disposisi_penerima dp2 WHERE dp2.disposisi_id = d.id AND dp2.status IN ('TUNGGU', 'DITERIMA')) THEN 'TUNGGU'
                     ELSE 'AKTIF'
                 END AS status_display,
                 (SELECT GROUP_CONCAT(u2.nama_lengkap SEPARATOR ', ') FROM disposisi_penerima dp3 JOIN users u2 ON u2.id = dp3.user_id WHERE dp3.disposisi_id = d.id) AS nama_penerima_list
@@ -161,7 +161,7 @@ class Disposisi_model extends CI_Model {
                     WHEN dp.status = 'OVERDUE' THEN 'OVERDUE'
                     WHEN d.batas_waktu IS NOT NULL AND d.batas_waktu < CURDATE() THEN 'OVERDUE'
                     WHEN dp.status = 'PROSES' THEN 'PROSES'
-                    WHEN dp.status = 'TUNGGU' THEN 'TUNGGU'
+                    WHEN dp.status IN ('TUNGGU', 'DITERIMA') THEN 'TUNGGU'
                     ELSE 'AKTIF'
                 END AS status_display
             FROM disposisi_penerima dp

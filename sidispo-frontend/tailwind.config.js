@@ -47,6 +47,7 @@ export default {
         'gradient-card-blue': 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
         'gradient-card-green': 'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)',
         'gradient-card-orange': 'linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%)',
+        'gradient-card-purple': 'linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%)',
         'gradient-card-red': 'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)',
         'gradient-hero': 'linear-gradient(135deg, #1b4332 0%, #2d6a4f 50%, #40916c 100%)',
       },

@@ -79,6 +79,7 @@ const formDisposisi = ref({
 const statusSeverity = {
   PROSES: 'info',
   TUNGGU: 'warn',
+  DITERIMA: 'warn',
   SELESAI: 'success',
   OVERDUE: 'danger',
   AKTIF: 'info',
@@ -87,6 +88,7 @@ const statusSeverity = {
 const statusLabel = {
   PROSES: 'Diproses',
   TUNGGU: 'Menunggu',
+  DITERIMA: 'Menunggu',
   SELESAI: 'Selesai',
   OVERDUE: 'Overdue',
   AKTIF: 'Aktif',
@@ -109,7 +111,11 @@ const filteredList = computed(() => {
   const map = { 'Diproses': 'PROSES', 'Menunggu': 'TUNGGU', 'Selesai': 'SELESAI', 'Overdue': 'OVERDUE' }
   if (activeTab.value !== 'Semua') {
     const key = map[activeTab.value]
-    list = list.filter(d => (d.status_display || d.status_global) === key)
+    list = list.filter(d => {
+      const st = d.status_display || d.status_global
+      if (key === 'TUNGGU') return st === 'TUNGGU' || st === 'DITERIMA' || st === 'AKTIF'
+      return st === key
+    })
   }
 
   // 2. Filter Prioritas
@@ -156,7 +162,11 @@ const tabCounts = computed(() => {
   const counts = { Semua: disposisiList.value.length }
   const map = { 'Diproses': 'PROSES', 'Menunggu': 'TUNGGU', 'Selesai': 'SELESAI', 'Overdue': 'OVERDUE' }
   for (const [label, key] of Object.entries(map)) {
-    counts[label] = disposisiList.value.filter(d => (d.status_display || d.status_global) === key).length
+    counts[label] = disposisiList.value.filter(d => {
+      const st = d.status_display || d.status_global
+      if (key === 'TUNGGU') return st === 'TUNGGU' || st === 'DITERIMA' || st === 'AKTIF'
+      return st === key
+    }).length
   }
   return counts
 })
