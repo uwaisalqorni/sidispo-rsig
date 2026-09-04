@@ -160,6 +160,7 @@ $route['api/v1/users']['get']                              = 'Admin/users_active
 $route['api/v1/rtl']['get']                                = 'Rtl/index';
 $route['api/v1/rtl']['post']                               = 'Rtl/create';
 $route['api/v1/rtl/disposisi-selesai']['get']              = 'Rtl/disposisi_selesai';
+$route['api/v1/rtl/penerima-options']['get']                = 'Rtl/penerima_options';
 $route['api/v1/rtl/(:num)']['get']                         = 'Rtl/detail/$1';
 $route['api/v1/dashboard-rtl']['get']                      = 'DashboardRtl/index';
 $route['api/v1/rtl/progress/(:num)']['put']                = 'Rtl/progress/$1';

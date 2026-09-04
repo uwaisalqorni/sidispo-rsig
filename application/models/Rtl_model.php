@@ -335,4 +335,32 @@ class Rtl_model extends CI_Model {
         $this->db->trans_complete();
         return $this->db->trans_status();
     }
+
+    /**
+     * Get active users / staff for recipient selection in RTL with optional search and role filter
+     */
+    public function get_penerima_options($search = null, $role = null)
+    {
+        $this->db->select('id, nip, nama_lengkap, email, jabatan, unit, role');
+        $this->db->where('is_active', 1);
+
+        if (!empty($role) && $role !== 'SEMUA') {
+            $this->db->where('role', $role);
+        }
+
+        if (!empty($search)) {
+            $search = trim($search);
+            $this->db->group_start();
+            $this->db->like('nama_lengkap', $search);
+            $this->db->or_like('nip', $search);
+            $this->db->or_like('jabatan', $search);
+            $this->db->or_like('unit', $search);
+            $this->db->or_like('email', $search);
+            $this->db->group_end();
+        }
+
+        $this->db->order_by('role', 'ASC');
+        $this->db->order_by('nama_lengkap', 'ASC');
+        return $this->db->get('users')->result_array();
+    }
 }

@@ -375,4 +375,21 @@ class Rtl extends MY_Controller {
             $this->response(['status' => 'error', 'message' => 'Gagal menghapus progress RTL'], 500);
         }
     }
+
+    /**
+     * GET /rtl/penerima-options
+     * Get list of active staff / users for RTL recipient selection with optional search keyword and role
+     */
+    public function penerima_options()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+            return $this->response(['status' => 'error', 'message' => 'Method not allowed'], 405);
+        }
+
+        $q = $this->input->get('q');
+        $role = $this->input->get('role');
+        $data = $this->rtl->get_penerima_options($q, $role);
+
+        $this->response(['status' => 'success', 'data' => $data], 200);
+    }
 }

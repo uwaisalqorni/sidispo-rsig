@@ -16,6 +16,7 @@ import Tag from 'primevue/tag'
 import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
 import Paginator from 'primevue/paginator'
+import Checkbox from 'primevue/checkbox'
 import { useToast } from 'primevue/usetoast'
 import Toast from 'primevue/toast'
 
@@ -33,6 +34,8 @@ const loading = ref(true)
 const disposisiList = ref([])
 const usersList = ref([])
 const selectedPenerima = ref([])
+const penerimaSearch = ref('')
+const penerimaRoleFilter = ref('SEMUA')
 const showModal = ref(false)
 const isEditing = ref(false)
 const editId = ref(null)
@@ -271,9 +274,62 @@ onMounted(() => {
   fetchDisposisiSelesai()
 })
 
+// Filter pencarian staf penerima RTL
+const filteredUsers = computed(() => {
+  let list = usersList.value || []
+
+  if (penerimaRoleFilter.value && penerimaRoleFilter.value !== 'SEMUA') {
+    list = list.filter(u => u.role === penerimaRoleFilter.value)
+  }
+
+  if (penerimaSearch.value.trim()) {
+    const q = penerimaSearch.value.trim().toLowerCase()
+    list = list.filter(u => {
+      const nama = (u.nama_lengkap || '').toLowerCase()
+      const nip = (u.nip || '').toLowerCase()
+      const jabatan = (u.jabatan || '').toLowerCase()
+      const unit = (u.unit || '').toLowerCase()
+      const role = (u.role || '').toLowerCase()
+      return nama.includes(q) || nip.includes(q) || jabatan.includes(q) || unit.includes(q) || role.includes(q)
+    })
+  }
+
+  return list
+})
+
+// Objek staf yang terpilih untuk chip pratinjau
+const selectedUsersObjects = computed(() => {
+  if (!usersList.value || selectedPenerima.value.length === 0) return []
+  const idSet = new Set(selectedPenerima.value.map(Number))
+  return usersList.value.filter(u => idSet.has(Number(u.id)))
+})
+
+// Helper pilih semua hasil pencarian / batalkan
+const toggleSelectFiltered = () => {
+  const currentFilteredIds = filteredUsers.value.map(u => Number(u.id))
+  if (currentFilteredIds.length === 0) return
+  const allSelected = currentFilteredIds.every(id => selectedPenerima.value.includes(id))
+
+  if (allSelected) {
+    selectedPenerima.value = selectedPenerima.value.filter(id => !currentFilteredIds.includes(id))
+  } else {
+    const newSet = new Set([...selectedPenerima.value, ...currentFilteredIds])
+    selectedPenerima.value = Array.from(newSet)
+  }
+}
+
+const clearAllPenerima = () => {
+  selectedPenerima.value = []
+}
+
+const removePenerima = (userId) => {
+  selectedPenerima.value = selectedPenerima.value.filter(id => Number(id) !== Number(userId))
+}
+
 const togglePenerima = (userId) => {
-  const idx = selectedPenerima.value.indexOf(userId)
-  if (idx === -1) selectedPenerima.value.push(userId)
+  const id = Number(userId)
+  const idx = selectedPenerima.value.indexOf(id)
+  if (idx === -1) selectedPenerima.value.push(id)
   else selectedPenerima.value.splice(idx, 1)
 }
 
@@ -282,12 +338,14 @@ const openCreate = async () => {
   editId.value = null
   form.value = { disposisi_id: '', prioritas: 'Biasa', deskripsi_rtl: '', batas_waktu: '' }
   selectedPenerima.value = []
+  penerimaSearch.value = ''
+  penerimaRoleFilter.value = 'SEMUA'
   submitMsg.value = { type: '', text: '' }
   showModal.value = true
 
   if (usersList.value.length === 0) {
     try {
-      const { data } = await api.get('/users')
+      const { data } = await api.get('/rtl/penerima-options').catch(() => api.get('/users'))
       usersList.value = data.data || []
     } catch (e) {
       console.error('Failed to fetch users', e)
@@ -310,12 +368,14 @@ const openEdit = async (item) => {
     batas_waktu: item.batas_waktu && item.batas_waktu !== '0000-00-00' ? item.batas_waktu.slice(0, 10) : ''
   }
   selectedPenerima.value = []
+  penerimaSearch.value = ''
+  penerimaRoleFilter.value = 'SEMUA'
   submitMsg.value = { type: '', text: '' }
   showModal.value = true
 
   if (usersList.value.length === 0) {
     try {
-      const { data } = await api.get('/users')
+      const { data } = await api.get('/rtl/penerima-options').catch(() => api.get('/users'))
       usersList.value = data.data || []
     } catch (e) {
       console.error('Failed to fetch users', e)
@@ -836,22 +896,182 @@ const goDetail = (id) => {
             </div>
           </div>
 
-          <div>
-            <label class="block text-xs font-bold text-textMuted uppercase mb-1.5">Penerima RTL *</label>
-            <div class="bg-surface2 border border-border rounded-xl p-3 max-h-48 overflow-y-auto custom-scrollbar flex flex-col gap-2">
-              <label v-for="u in usersList" :key="u.id" 
-                class="flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-all border border-transparent"
-                :class="selectedPenerima.includes(u.id) ? 'bg-brandGreenBg border-brandGreen/40' : 'hover:bg-surface'">
-                <input type="checkbox" :value="u.id" @change="togglePenerima(u.id)"
-                  :checked="selectedPenerima.includes(u.id)"
-                  class="w-4 h-4 rounded text-brandGreen focus:ring-brandGreen/30 accent-brandGreen bg-surface border-border" />
-                <div>
-                  <div class="text-sm font-bold text-textMain leading-tight">{{ u.nama_lengkap }}</div>
-                  <div class="text-[11px] text-textMuted mt-0.5">{{ u.jabatan || 'Staff' }}</div>
-                </div>
-              </label>
+          <!-- Penerima RTL -->
+          <div class="space-y-2">
+            <!-- Label Header & Quick Actions -->
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <div class="flex items-center gap-2">
+                <label class="block text-xs font-bold text-textMuted uppercase">
+                  Penerima RTL <span class="text-rose-500">*</span>
+                </label>
+                <span
+                  v-if="selectedPenerima.length > 0"
+                  class="text-[11px] font-bold px-2 py-0.2 rounded-full bg-brandGreenBg text-brandGreen border border-brandGreen/30"
+                >
+                  {{ selectedPenerima.length }} dipilih
+                </span>
+              </div>
+
+              <!-- Quick actions: Pilih Semua / Bersihkan -->
+              <div class="flex items-center gap-2 text-xs">
+                <button
+                  type="button"
+                  @click="toggleSelectFiltered"
+                  :disabled="filteredUsers.length === 0"
+                  class="text-[11px] font-semibold text-brandGreen hover:underline disabled:opacity-40 disabled:no-underline flex items-center gap-1 cursor-pointer"
+                >
+                  <i class="pi" :class="filteredUsers.length > 0 && filteredUsers.every(u => selectedPenerima.includes(Number(u.id))) ? 'pi-minus-circle' : 'pi-check-circle'"></i>
+                  <span>{{ filteredUsers.length > 0 && filteredUsers.every(u => selectedPenerima.includes(Number(u.id))) ? 'Batal Pilih Semua' : 'Pilih Semua' }}</span>
+                </button>
+                <span v-if="selectedPenerima.length > 0" class="text-border">|</span>
+                <button
+                  v-if="selectedPenerima.length > 0"
+                  type="button"
+                  @click="clearAllPenerima"
+                  class="text-[11px] font-semibold text-rose-600 hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <i class="pi pi-trash text-[10px]"></i>
+                  <span>Bersihkan ({{ selectedPenerima.length }})</span>
+                </button>
+              </div>
             </div>
-            <div class="text-[11px] text-textMuted mt-2">{{ selectedPenerima.length }} penerima dipilih</div>
+
+            <!-- Form Search & Role Tabs -->
+            <div class="space-y-2">
+              <!-- Search Bar -->
+              <div class="relative flex items-center">
+                <i class="pi pi-search absolute left-3 text-textMuted text-xs pointer-events-none"></i>
+                <input
+                  v-model="penerimaSearch"
+                  type="text"
+                  placeholder="Cari nama staff, NIP, jabatan, unit, atau role..."
+                  class="w-full bg-surface border border-border rounded-xl pl-8 pr-8 py-2 text-xs text-textMain placeholder-textMuted focus:border-brandGreen focus:outline-none transition-colors shadow-2xs"
+                />
+                <button
+                  v-if="penerimaSearch"
+                  type="button"
+                  @click="penerimaSearch = ''"
+                  class="absolute right-2.5 p-1 text-textMuted hover:text-textMain text-xs cursor-pointer"
+                  title="Hapus pencarian"
+                >
+                  <i class="pi pi-times"></i>
+                </button>
+              </div>
+
+              <!-- Role Filter Pills -->
+              <div class="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-[11px]">
+                <button
+                  v-for="rf in [
+                    { label: 'Semua Role', value: 'SEMUA' },
+                    { label: 'Pejabat', value: 'PEJABAT' },
+                    { label: 'Staf', value: 'STAF' },
+                    { label: 'Direktur', value: 'DIREKTUR' },
+                    { label: 'Admin', value: 'ADMIN' },
+                  ]"
+                  :key="rf.value"
+                  type="button"
+                  @click="penerimaRoleFilter = rf.value"
+                  class="px-2.5 py-1 rounded-lg font-semibold whitespace-nowrap transition-all cursor-pointer"
+                  :class="penerimaRoleFilter === rf.value ? 'bg-brandGreen text-white shadow-2xs' : 'bg-surface hover:bg-surface3 text-textMuted border border-border/70'"
+                >
+                  {{ rf.label }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Selected Staff Chips Preview -->
+            <div v-if="selectedUsersObjects.length > 0" class="flex flex-wrap items-center gap-1.5 max-h-20 overflow-y-auto p-2 bg-surface rounded-xl border border-border/60">
+              <span class="text-[10px] font-bold text-textMuted uppercase tracking-wider mr-1">Terpilih:</span>
+              <span
+                v-for="su in selectedUsersObjects"
+                :key="su.id"
+                class="inline-flex items-center gap-1 bg-brandGreenBg border border-brandGreen/30 text-brandGreen text-[11px] font-semibold px-2 py-0.5 rounded-md"
+              >
+                <span>{{ su.nama_lengkap }}</span>
+                <button
+                  type="button"
+                  @click.stop="removePenerima(su.id)"
+                  class="hover:text-rose-600 ml-0.5 text-xs font-bold leading-none cursor-pointer"
+                  title="Hapus"
+                >
+                  &times;
+                </button>
+              </span>
+            </div>
+
+            <!-- List Staff Checkboxes -->
+            <div v-if="usersList.length === 0" class="text-xs text-amber-600 p-3 bg-amber-50 rounded-xl border border-amber-200">
+              Memuat daftar pengguna atau belum ada pengguna terdaftar...
+            </div>
+            <div v-else-if="filteredUsers.length === 0" class="text-xs text-textMuted text-center py-6 bg-surface rounded-xl border border-dashed border-border flex flex-col items-center gap-1">
+              <i class="pi pi-search text-lg text-textDim"></i>
+              <span>Tidak ada staff yang cocok dengan pencarian "<strong>{{ penerimaSearch }}</strong>"</span>
+              <button
+                type="button"
+                @click="penerimaSearch = ''; penerimaRoleFilter = 'SEMUA'"
+                class="mt-1 text-xs text-brandGreen font-semibold hover:underline cursor-pointer"
+              >
+                Reset Filter Pencarian
+              </button>
+            </div>
+            <div v-else class="flex flex-col gap-1 max-h-52 overflow-y-auto border border-border/80 rounded-xl p-2 bg-surface divide-y divide-border/40">
+              <div
+                v-for="u in filteredUsers"
+                :key="u.id"
+                class="flex items-center gap-3 p-2 rounded-lg transition-all hover:bg-surface2 cursor-pointer"
+                :class="selectedPenerima.includes(Number(u.id)) ? 'bg-brandGreenBg border border-brandGreen/30' : ''"
+                @click="() => {
+                  const uid = Number(u.id)
+                  if (selectedPenerima.includes(uid)) {
+                    selectedPenerima = selectedPenerima.filter(x => x !== uid)
+                  } else {
+                    selectedPenerima.push(uid)
+                  }
+                }"
+              >
+                <Checkbox
+                  :input-id="`rtl-user-${u.id}`"
+                  :value="Number(u.id)"
+                  v-model="selectedPenerima"
+                  @click.stop
+                />
+                <label :for="`rtl-user-${u.id}`" class="flex-1 cursor-pointer flex items-center justify-between gap-2" @click.stop>
+                  <div class="min-w-0">
+                    <div class="text-xs font-bold text-textMain truncate">{{ u.nama_lengkap }}</div>
+                    <div class="text-[11px] text-textMuted truncate flex items-center gap-1.5 flex-wrap">
+                      <span v-if="u.nip" class="font-mono text-textDim">NIP: {{ u.nip }}</span>
+                      <span v-if="u.nip && u.jabatan">•</span>
+                      <span>{{ u.jabatan || u.role }}</span>
+                      <span v-if="u.unit" class="text-textDim">({{ u.unit }})</span>
+                    </div>
+                  </div>
+                  <Tag
+                    v-if="u.role === 'DIREKTUR'"
+                    value="Direktur"
+                    severity="warn"
+                    class="text-[9px] uppercase px-1.5 py-0 shrink-0"
+                  />
+                  <Tag
+                    v-else-if="u.role === 'PEJABAT'"
+                    value="Pejabat"
+                    severity="success"
+                    class="text-[9px] uppercase px-1.5 py-0 shrink-0"
+                  />
+                  <Tag
+                    v-else-if="u.role === 'STAF'"
+                    value="Staf"
+                    severity="info"
+                    class="text-[9px] uppercase px-1.5 py-0 shrink-0"
+                  />
+                  <Tag
+                    v-else-if="u.role === 'ADMIN'"
+                    value="Admin"
+                    severity="danger"
+                    class="text-[9px] uppercase px-1.5 py-0 shrink-0"
+                  />
+                </label>
+              </div>
+            </div>
           </div>
         </form>
       </div>
