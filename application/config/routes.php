@@ -112,6 +112,15 @@ $route['api/v1/admin/perihal/(:num)']['put']               = 'Perihal/update/$1'
 $route['api/v1/admin/perihal/(:num)']['delete']            = 'Perihal/destroy/$1';           // DELETE – Hapus perihal (ADMIN)
 $route['api/v1/admin/perihal/(:num)/toggle']['put']        = 'Perihal/toggle/$1';            // PUT    – Toggle aktif/nonaktif (ADMIN)
 
+// ── MASTER ASAL SURAT ───────────────────────────────────────────────────
+$route['api/v1/asal-surat']['get']                         = 'Asal_surat/index';             // GET    – List asal surat (semua role)
+$route['api/v1/asal-surat/(:num)']['get']                  = 'Asal_surat/show/$1';           // GET    – Detail asal surat
+$route['api/v1/admin/asal-surat']['post']                  = 'Asal_surat/create';            // POST   – Buat asal surat (ADMIN)
+$route['api/v1/admin/asal-surat/(:num)']['put']            = 'Asal_surat/update/$1';         // PUT    – Update asal surat (ADMIN)
+$route['api/v1/admin/asal-surat/(:num)']['post']           = 'Asal_surat/update/$1';         // POST   – Update asal surat (ADMIN)
+$route['api/v1/admin/asal-surat/(:num)']['delete']         = 'Asal_surat/destroy/$1';        // DELETE – Hapus asal surat (ADMIN)
+$route['api/v1/admin/asal-surat/(:num)/toggle']['put']     = 'Asal_surat/toggle/$1';         // PUT    – Toggle aktif/nonaktif (ADMIN)
+
 // ── NOTIFIKASI ────────────────────────────────────────────────────────────
 $route['api/v1/notifikasi']['get']                         = 'Notifikasi/index';        // GET    – List notifikasi
 $route['api/v1/notifikasi/(:num)/baca']['put']             = 'Notifikasi/read/$1';      // PUT    – Tandai 1 notifikasi dibaca

@@ -35,9 +35,23 @@ const showPreview = computed({
   set: (v) => { if (!v) preview.value = null },
 })
 
-// Folders & Perihal lists – loaded from API
-const folders     = ref([])
-const perihalList = ref([])
+// Folders, Master Perihal, & Master Asal Surat lists
+const folders        = ref([])
+const perihalList    = ref([])
+const asalSuratList  = ref([])
+
+// Pickers state
+const showPerihalPicker = ref(false)
+const perihalSearch     = ref('')
+const perihalSuggestions = ref([])
+
+const showAsalPicker    = ref(false)
+const asalSearch        = ref('')
+const asalSuggestions   = ref([])
+
+// Nomor Agenda Toggle State
+const hasNomorAgenda = ref(true)
+const agendaMode     = ref('auto') // 'auto' | 'manual'
 
 // Filter & Search
 const searchQuery       = ref('')
@@ -80,6 +94,28 @@ const displayList = computed(() => {
   }
 
   return list
+})
+
+// Filtered Picker for Master Perihal
+const filteredPerihalList = computed(() => {
+  if (!perihalSearch.value) return perihalList.value
+  const q = perihalSearch.value.toLowerCase()
+  return perihalList.value.filter(p =>
+    p.nama.toLowerCase().includes(q) ||
+    (p.keterangan || '').toLowerCase().includes(q)
+  )
+})
+
+// Filtered Picker for Master Asal Surat
+const filteredAsalList = computed(() => {
+  if (!asalSearch.value) return asalSuratList.value
+  const q = asalSearch.value.toLowerCase()
+  return asalSuratList.value.filter(a =>
+    a.nama.toLowerCase().includes(q) ||
+    (a.kode || '').toLowerCase().includes(q) ||
+    (a.kategori || '').toLowerCase().includes(q) ||
+    (a.keterangan || '').toLowerCase().includes(q)
+  )
 })
 
 // Form state
@@ -133,29 +169,61 @@ const resetFilter = () => {
   loadSurat()
 }
 
-onMounted(async () => {
+const loadMasterData = async () => {
   try {
-    const [folderRes, perihalRes] = await Promise.all([
+    const [folderRes, perihalRes, asalRes] = await Promise.all([
       api.get('/folder'),
-      api.get('/perihal?active=1')
+      api.get('/perihal?active=1'),
+      api.get('/asal-surat?active=1')
     ])
-    folders.value     = folderRes.data.data  || []
-    perihalList.value = perihalRes.data.data || []
+    folders.value       = folderRes.data.data  || []
+    perihalList.value   = perihalRes.data.data || []
+    asalSuratList.value = asalRes.data.data    || []
     if (route.query.folder) {
       selectedFolderId.value = Number(route.query.folder)
     }
   } catch { /* silent */ }
-  await loadSurat()
+}
+
+onMounted(async () => {
+  await Promise.all([loadMasterData(), loadSurat()])
 })
 
 const onFileChange = (e) => {
   files.value = Array.from(e.target.files)
 }
 
+// ── AutoComplete Handlers ─────────────────────────────────────────
+const onPerihalComplete = (e) => {
+  const query = (e.query || '').toLowerCase()
+  perihalSuggestions.value = perihalList.value
+    .map(p => p.nama)
+    .filter(n => n.toLowerCase().includes(query))
+}
+
+const onAsalComplete = (e) => {
+  const query = (e.query || '').toLowerCase()
+  asalSuggestions.value = asalSuratList.value
+    .map(a => a.nama)
+    .filter(n => n.toLowerCase().includes(query))
+}
+
+const selectPerihalFromMaster = (p) => {
+  form.value.perihal = p.nama
+  showPerihalPicker.value = false
+}
+
+const selectAsalFromMaster = (a) => {
+  form.value.asal_surat = a.nama
+  showAsalPicker.value = false
+}
+
 // ── Modal Create / Edit Handlers ──────────────────────────────────
 const openCreate = () => {
   editMode.value = false
   editId.value   = null
+  hasNomorAgenda.value = true
+  agendaMode.value     = 'auto'
   submitMsg.value = { type: '', text: '' }
   form.value = {
     nomor_agenda: '',
@@ -175,6 +243,8 @@ const openCreate = () => {
 const openEdit = async (item) => {
   editMode.value = true
   editId.value   = item.id
+  hasNomorAgenda.value = !!item.nomor_agenda
+  agendaMode.value     = item.nomor_agenda ? 'manual' : 'auto'
   submitMsg.value = { type: '', text: '' }
   files.value = []
   existingFiles.value = []
@@ -199,6 +269,8 @@ const openEdit = async (item) => {
     if (data.data) {
       const d = data.data
       form.value.nomor_agenda   = d.nomor_agenda || ''
+      hasNomorAgenda.value      = !!d.nomor_agenda
+      agendaMode.value          = d.nomor_agenda ? 'manual' : 'auto'
       form.value.nomor_surat    = d.nomor_surat || ''
       form.value.tanggal_surat  = d.tanggal_surat || ''
       form.value.tanggal_terima = d.tanggal_terima || ''
@@ -217,7 +289,6 @@ const deleteExistingFile = async (fileId) => {
     await api.delete(`/surat/file/${fileId}`)
     existingFiles.value = existingFiles.value.filter(f => f.id !== fileId)
     toast.add({ severity: 'success', summary: 'Berhasil', detail: 'Lampiran dihapus.', life: 3000 })
-    // Update preview jika sedang terbuka
     if (preview.value) {
       preview.value.files = (preview.value.files || []).filter(f => f.id !== fileId)
     }
@@ -235,7 +306,22 @@ const handleSubmit = async () => {
   submitMsg.value = { type: '', text: '' }
 
   const fd = new FormData()
+
+  // Atur nomor agenda
+  if (!hasNomorAgenda.value) {
+    fd.append('has_nomor_agenda', '0')
+    fd.append('nomor_agenda', '__NONE__')
+  } else {
+    fd.append('has_nomor_agenda', '1')
+    if (agendaMode.value === 'auto') {
+      fd.append('nomor_agenda', editMode.value && form.value.nomor_agenda ? form.value.nomor_agenda : '__AUTO__')
+    } else {
+      fd.append('nomor_agenda', form.value.nomor_agenda.trim() || '__AUTO__')
+    }
+  }
+
   Object.entries(form.value).forEach(([k, v]) => {
+    if (k === 'nomor_agenda') return // Sudah di-handle di atas
     if (v !== null && v !== undefined && v !== '') fd.append(k, v)
   })
   files.value.forEach(f => fd.append('files[]', f))
@@ -428,8 +514,11 @@ function fileUrl(path) {
 
           <Column field="nomor_agenda" header="No. Agenda" style="width: 140px">
             <template #body="{ data }">
-              <span class="font-mono text-xs font-bold text-brandBlue bg-brandBlueBg px-2 py-0.5 rounded-md">
+              <span v-if="data.nomor_agenda" class="font-mono text-xs font-bold text-brandBlue bg-brandBlueBg px-2 py-0.5 rounded-md">
                 {{ data.nomor_agenda }}
+              </span>
+              <span v-else class="text-xs text-textDim italic px-2 py-0.5 rounded bg-surface2">
+                —
               </span>
             </template>
           </Column>
@@ -450,7 +539,7 @@ function fileUrl(path) {
 
           <Column field="asal_surat" header="Asal Surat" style="min-width: 160px">
             <template #body="{ data }">
-              <span class="text-textMain">{{ data.asal_surat }}</span>
+              <span class="text-textMain font-medium">{{ data.asal_surat }}</span>
             </template>
           </Column>
 
@@ -528,7 +617,7 @@ function fileUrl(path) {
     <Drawer v-model:visible="showPreview" position="right" header="Detail Surat Masuk" class="w-full max-w-lg">
       <div v-if="preview" class="flex flex-col gap-5">
         <div class="grid grid-cols-2 gap-3 text-sm p-4 rounded-xl bg-surface2 border border-border/60">
-          <div><span class="text-textMuted text-xs block mb-1">No. Agenda</span><span class="font-mono font-bold text-accent">{{ preview.nomor_agenda }}</span></div>
+          <div><span class="text-textMuted text-xs block mb-1">No. Agenda</span><span class="font-mono font-bold text-accent">{{ preview.nomor_agenda || '— (Tanpa Agenda)' }}</span></div>
           <div><span class="text-textMuted text-xs block mb-1">No. Surat</span><span class="font-semibold text-textMain">{{ preview.nomor_surat }}</span></div>
           <div class="col-span-2"><span class="text-textMuted text-xs block mb-1">Perihal</span><span class="font-bold text-textMain text-base">{{ preview.perihal }}</span></div>
           <div><span class="text-textMuted text-xs block mb-1">Asal Surat</span><span class="text-textMain">{{ preview.asal_surat }}</span></div>
@@ -579,7 +668,7 @@ function fileUrl(path) {
       v-model:visible="showModal"
       modal
       :header="editMode ? 'Edit Surat Masuk' : 'Registrasi Surat Masuk'"
-      :style="{ width: 'min(680px, 95vw)' }"
+      :style="{ width: 'min(720px, 95vw)' }"
       :draggable="false"
       class="!rounded-2xl"
     >
@@ -588,34 +677,121 @@ function fileUrl(path) {
           {{ submitMsg.text }}
         </Message>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div class="flex flex-col gap-1.5">
-            <label class="text-xs font-bold text-textMuted uppercase">No. Agenda</label>
-            <InputText v-model="form.nomor_agenda" :disabled="editMode" placeholder="Auto / SM-2026-00001" class="w-full !bg-surface2" />
-            <p v-if="editMode" class="text-[11px] text-textMuted">Nomor agenda bersifat permanen dari sistem.</p>
+        <!-- Blok Nomor Agenda (Dapat diatur Aktif / Nonaktif / Manual / Otomatis) -->
+        <div class="p-3.5 rounded-xl bg-surface2 border border-border flex flex-col gap-2.5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i class="pi pi-bookmark text-brandBlue"></i>
+              <label class="text-xs font-bold text-textMain uppercase tracking-wide">Nomor Agenda</label>
+            </div>
+            <div class="flex items-center gap-2">
+              <input
+                id="hasAgendaCheck"
+                type="checkbox"
+                v-model="hasNomorAgenda"
+                class="rounded border-border text-accent focus:ring-accent cursor-pointer"
+              />
+              <label for="hasAgendaCheck" class="text-xs font-semibold text-textMain cursor-pointer select-none">
+                {{ hasNomorAgenda ? 'Gunakan Nomor Agenda' : 'Tanpa Nomor Agenda' }}
+              </label>
+            </div>
           </div>
+
+          <div v-if="hasNomorAgenda" class="flex flex-col sm:flex-row items-center gap-3 pt-2 border-t border-border/50">
+            <div class="flex items-center gap-3 text-xs shrink-0">
+              <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                <input type="radio" value="auto" v-model="agendaMode" class="text-accent" />
+                <span>Otomatis (Sistem)</span>
+              </label>
+              <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                <input type="radio" value="manual" v-model="agendaMode" class="text-accent" />
+                <span>Input Manual</span>
+              </label>
+            </div>
+
+            <div class="flex-1 w-full">
+              <InputText
+                v-if="agendaMode === 'manual'"
+                v-model="form.nomor_agenda"
+                placeholder="Contoh: SM-2026-00123 / AGENDA-01"
+                class="w-full !bg-surface text-xs !py-1.5 !rounded-lg"
+              />
+              <div v-else class="text-xs text-textMuted font-mono bg-surface px-3 py-1.5 rounded-lg border border-border flex items-center justify-between">
+                <span>{{ editMode && form.nomor_agenda ? form.nomor_agenda : '[Auto Generate: SM-' + new Date().getFullYear() + '-XXXXX]' }}</span>
+                <span class="text-[10px] text-accent font-semibold">AUTO</span>
+              </div>
+            </div>
+          </div>
+          <div v-else class="text-[11px] text-textMuted italic">
+            Surat ini akan diregistrasikan tanpa nomor agenda resmi.
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div class="flex flex-col gap-1.5">
             <label class="text-xs font-bold text-textMuted uppercase">No. Surat *</label>
             <InputText v-model="form.nomor_surat" placeholder="BPJS/KES/2026/001" class="w-full !bg-surface2" required />
           </div>
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-bold text-textMuted uppercase">Folder / Kategori</label>
+            <Select
+              v-model="form.folder_id"
+              :options="folders"
+              option-label="nama"
+              option-value="id"
+              placeholder="Pilih folder (opsional)"
+              class="w-full !bg-surface2"
+              show-clear
+            />
+          </div>
         </div>
 
+        <!-- Perihal dengan AutoComplete & Modal Picker Cerdas -->
         <div class="flex flex-col gap-1.5">
-          <label class="text-xs font-bold text-textMuted uppercase">Perihal *</label>
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-bold text-textMuted uppercase">Perihal *</label>
+            <button
+              type="button"
+              @click="showPerihalPicker = true"
+              class="text-[11px] font-bold text-accent hover:underline inline-flex items-center gap-1 cursor-pointer bg-transparent border-0 p-0"
+            >
+              <i class="pi pi-book"></i> Pilih dari Master Perihal
+            </button>
+          </div>
           <AutoComplete
             v-model="form.perihal"
-            :suggestions="perihalList.map(p => p.nama)"
-            placeholder="Pilih dari daftar atau ketik perihal..."
+            :suggestions="perihalSuggestions"
+            placeholder="Pilih dari daftar perihal baku atau ketik baru..."
             class="w-full"
-            input-class="w-full !bg-surface2"
+            input-class="w-full !bg-surface2 text-sm"
             :complete-on-focus="true"
-            @complete="(e) => e.suggestions = perihalList.map(p => p.nama).filter(n => n.toLowerCase().includes((e.query || '').toLowerCase()))"
+            @complete="onPerihalComplete"
+            required
           />
         </div>
 
+        <!-- Asal Surat dengan AutoComplete & Modal Picker Instansi -->
         <div class="flex flex-col gap-1.5">
-          <label class="text-xs font-bold text-textMuted uppercase">Asal Surat *</label>
-          <InputText v-model="form.asal_surat" placeholder="Nama instansi / pengirim surat" class="w-full !bg-surface2" required />
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-bold text-textMuted uppercase">Asal Surat / Pengirim *</label>
+            <button
+              type="button"
+              @click="showAsalPicker = true"
+              class="text-[11px] font-bold text-accent hover:underline inline-flex items-center gap-1 cursor-pointer bg-transparent border-0 p-0"
+            >
+              <i class="pi pi-building"></i> Pilih dari Master Asal Surat
+            </button>
+          </div>
+          <AutoComplete
+            v-model="form.asal_surat"
+            :suggestions="asalSuggestions"
+            placeholder="Pilih instansi pengirim atau ketik instansi baru..."
+            class="w-full"
+            input-class="w-full !bg-surface2 text-sm"
+            :complete-on-focus="true"
+            @complete="onAsalComplete"
+            required
+          />
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -627,19 +803,6 @@ function fileUrl(path) {
             <label class="text-xs font-bold text-textMuted uppercase">Tanggal Terima *</label>
             <InputText v-model="form.tanggal_terima" type="date" class="w-full !bg-surface2" required />
           </div>
-        </div>
-
-        <div class="flex flex-col gap-1.5">
-          <label class="text-xs font-bold text-textMuted uppercase">Folder / Kategori</label>
-          <Select
-            v-model="form.folder_id"
-            :options="folders"
-            option-label="nama"
-            option-value="id"
-            placeholder="Pilih folder (opsional)"
-            class="w-full !bg-surface2"
-            show-clear
-          />
         </div>
 
         <div class="flex flex-col gap-1.5">
@@ -706,6 +869,98 @@ function fileUrl(path) {
       </form>
     </Dialog>
 
+    <!-- Modal Picker: Master Perihal Cepat -->
+    <Dialog
+      v-model:visible="showPerihalPicker"
+      modal
+      header="📋 Pilih dari Master Perihal"
+      :style="{ width: 'min(560px, 95vw)' }"
+      :draggable="false"
+      class="!rounded-2xl"
+    >
+      <div class="flex flex-col gap-3 py-1">
+        <IconField class="w-full">
+          <InputIcon class="pi pi-search text-accent" />
+          <InputText
+            v-model="perihalSearch"
+            placeholder="Ketik untuk mencari perihal baku..."
+            class="w-full !bg-surface2 text-sm !rounded-xl"
+          />
+        </IconField>
+
+        <div class="max-h-72 overflow-y-auto divide-y divide-border border border-border rounded-xl bg-surface2">
+          <div
+            v-for="p in filteredPerihalList"
+            :key="p.id"
+            class="p-3 hover:bg-surface cursor-pointer transition-colors flex items-center justify-between gap-3 group"
+            @click="selectPerihalFromMaster(p)"
+          >
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-semibold text-textMain group-hover:text-accent">{{ p.nama }}</div>
+              <div v-if="p.keterangan" class="text-xs text-textMuted truncate">{{ p.keterangan }}</div>
+            </div>
+            <i class="pi pi-arrow-right text-xs text-textMuted group-hover:text-accent"></i>
+          </div>
+          <div v-if="filteredPerihalList.length === 0" class="p-6 text-center text-xs text-textMuted">
+            Tidak ada perihal yang cocok dengan kata kunci.
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <Button label="Tutup" severity="secondary" outlined @click="showPerihalPicker = false" />
+      </template>
+    </Dialog>
+
+    <!-- Modal Picker: Master Asal Surat Cepat -->
+    <Dialog
+      v-model:visible="showAsalPicker"
+      modal
+      header="🏛️ Pilih dari Master Asal Surat"
+      :style="{ width: 'min(580px, 95vw)' }"
+      :draggable="false"
+      class="!rounded-2xl"
+    >
+      <div class="flex flex-col gap-3 py-1">
+        <IconField class="w-full">
+          <InputIcon class="pi pi-search text-accent" />
+          <InputText
+            v-model="asalSearch"
+            placeholder="Ketik nama instansi, kode, atau kategori..."
+            class="w-full !bg-surface2 text-sm !rounded-xl"
+          />
+        </IconField>
+
+        <div class="max-h-72 overflow-y-auto divide-y divide-border border border-border rounded-xl bg-surface2">
+          <div
+            v-for="a in filteredAsalList"
+            :key="a.id"
+            class="p-3 hover:bg-surface cursor-pointer transition-colors flex items-center justify-between gap-3 group"
+            @click="selectAsalFromMaster(a)"
+          >
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-sm font-semibold text-textMain group-hover:text-accent">{{ a.nama }}</span>
+                <span v-if="a.kode" class="font-mono text-[10px] font-bold px-1.5 py-0.2 rounded bg-brandBlueBg text-brandBlue border border-brandBlue/30">
+                  {{ a.kode }}
+                </span>
+                <span v-if="a.kategori" class="text-[10px] font-medium px-1.5 py-0.2 rounded bg-surface text-textMuted border border-border">
+                  {{ a.kategori }}
+                </span>
+              </div>
+              <div v-if="a.keterangan || a.alamat" class="text-xs text-textMuted truncate mt-0.5">{{ a.keterangan || a.alamat }}</div>
+            </div>
+            <i class="pi pi-arrow-right text-xs text-textMuted group-hover:text-accent"></i>
+          </div>
+          <div v-if="filteredAsalList.length === 0" class="p-6 text-center text-xs text-textMuted">
+            Tidak ada instansi yang cocok dengan kata kunci.
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <Button label="Tutup" severity="secondary" outlined @click="showAsalPicker = false" />
+      </template>
+    </Dialog>
+
     <!-- Dialog Konfirmasi Hapus Surat -->
     <Dialog
       v-model:visible="showDeleteDialog"
@@ -728,7 +983,7 @@ function fileUrl(path) {
 
         <div class="p-3.5 rounded-xl bg-surface2 border border-border/80 text-xs flex flex-col gap-1.5">
           <div><span class="text-textMuted">No. Surat:</span> <strong class="text-textMain">{{ deleteTarget.nomor_surat }}</strong></div>
-          <div><span class="text-textMuted">No. Agenda:</span> <span class="font-mono font-bold text-brandBlue">{{ deleteTarget.nomor_agenda }}</span></div>
+          <div><span class="text-textMuted">No. Agenda:</span> <span class="font-mono font-bold text-brandBlue">{{ deleteTarget.nomor_agenda || '— (Tanpa Agenda)' }}</span></div>
           <div><span class="text-textMuted">Perihal:</span> <span class="text-textMain font-medium">{{ deleteTarget.perihal }}</span></div>
           <div><span class="text-textMuted">Asal Surat:</span> <span class="text-textMain">{{ deleteTarget.asal_surat }}</span></div>
         </div>

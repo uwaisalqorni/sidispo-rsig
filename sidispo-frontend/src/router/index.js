@@ -8,6 +8,7 @@ import AdminUsersView from '../views/AdminUsersView.vue'
 import AdminFoldersView from '../views/AdminFoldersView.vue'
 import AdminSettingsView from '../views/AdminSettingsView.vue'
 import AdminPerihalView from '../views/AdminPerihalView.vue'
+import AdminAsalSuratView from '../views/AdminAsalSuratView.vue'
 import RtlView from '../views/RtlView.vue'
 import RtlDetailView from '../views/RtlDetailView.vue'
 import DashboardRtlView from '../views/DashboardRtlView.vue'
@@ -101,6 +102,12 @@ const router = createRouter({
       path: '/admin/perihal',
       name: 'admin-perihal',
       component: AdminPerihalView,
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
+      path: '/admin/asal-surat',
+      name: 'admin-asal-surat',
+      component: AdminAsalSuratView,
       meta: { requiresAuth: true, requiresAdmin: true }
     },
   ],
