@@ -95,7 +95,7 @@ class Rtl_model extends CI_Model {
 
     public function get_by_id($id)
     {
-        $this->db->select('rtl.*, rtl.prioritas, d.nomor_disposisi, sm.perihal as perihal_surat, u.nama_lengkap as pembuat');
+        $this->db->select('rtl.*, rtl.prioritas, d.nomor_disposisi, d.isi_disposisi, d.tanggal_disposisi, sm.nomor_surat, sm.asal_surat, sm.perihal as perihal_surat, sm.tanggal_surat, u.nama_lengkap as pembuat');
         $this->db->from('rtl');
         $this->db->join('disposisi d', 'd.id = rtl.disposisi_id');
         $this->db->join('surat_masuk sm', 'sm.id = d.surat_masuk_id');
