@@ -12,7 +12,7 @@ class Rtl extends MY_Controller {
 
     /**
      * GET /rtl
-     * Get all RTL records
+     * Get all RTL records with filters and total count
      */
     public function index()
     {
@@ -20,17 +20,47 @@ class Rtl extends MY_Controller {
             return $this->response(['status' => 'error', 'message' => 'Method not allowed'], 405);
         }
 
-        $limit = $this->input->get('limit') ? (int)$this->input->get('limit') : 100;
+        $limit  = $this->input->get('limit') !== null ? (int)$this->input->get('limit') : 1000;
         $offset = $this->input->get('offset') ? (int)$this->input->get('offset') : 0;
         
-        $role = $this->current_user->role;
+        $role    = $this->current_user->role;
         $user_id = $this->current_user->id;
 
-        $data = $this->rtl->get_all($limit, $offset, $user_id, $role);
+        $filters = [];
+        $q              = $this->input->get('q');
+        $status         = $this->input->get('status');
+        $prioritas      = $this->input->get('prioritas');
+        $tanggal_dari   = $this->input->get('tanggal_dari');
+        $tanggal_sampai = $this->input->get('tanggal_sampai');
+        $date_by        = $this->input->get('date_by'); // 'batas_waktu' | 'dibuat_at'
+
+        if (!empty($q)) {
+            $filters['q'] = trim($q);
+        }
+        if (!empty($status) && $status !== 'Semua') {
+            $filters['status'] = trim($status);
+        }
+        if (!empty($prioritas) && $prioritas !== 'Semua') {
+            $filters['prioritas'] = trim($prioritas);
+        }
+        if ($tanggal_dari && preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal_dari)) {
+            $filters['tanggal_dari'] = $tanggal_dari;
+        }
+        if ($tanggal_sampai && preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal_sampai)) {
+            $filters['tanggal_sampai'] = $tanggal_sampai;
+        }
+        if (!empty($date_by)) {
+            $filters['date_by'] = $date_by;
+        }
+
+        $data  = $this->rtl->get_all($limit, $offset, $user_id, $role, $filters);
+        $total = $this->rtl->count_filtered($user_id, $role, $filters);
         
         $this->response([
-            'status' => 'success',
-            'data' => $data
+            'status'  => 'success',
+            'total'   => $total,
+            'filters' => $filters,
+            'data'    => $data
         ], 200);
     }
 

@@ -9,7 +9,56 @@ class Rtl_model extends CI_Model {
         $this->load->database();
     }
 
-    public function get_all($limit = 100, $offset = 0, $user_id = null, $role = null)
+    private function apply_filters($filters = [])
+    {
+        if (!empty($filters['q'])) {
+            $q = $filters['q'];
+            $this->db->group_start();
+            $this->db->like('d.nomor_disposisi', $q);
+            $this->db->or_like('sm.perihal', $q);
+            $this->db->or_like('rtl.deskripsi_rtl', $q);
+            $this->db->or_like('u.nama_lengkap', $q);
+            $this->db->group_end();
+        }
+
+        if (!empty($filters['status']) && $filters['status'] !== 'Semua') {
+            $this->db->where('rtl.status_progress', $filters['status']);
+        }
+
+        if (!empty($filters['prioritas']) && $filters['prioritas'] !== 'Semua') {
+            $this->db->where('rtl.prioritas', $filters['prioritas']);
+        }
+
+        $date_field = (!empty($filters['date_by']) && $filters['date_by'] === 'dibuat_at') ? 'DATE(rtl.dibuat_at)' : 'rtl.batas_waktu';
+
+        if (!empty($filters['tanggal_dari'])) {
+            $this->db->where($date_field . ' >=', $filters['tanggal_dari']);
+        }
+
+        if (!empty($filters['tanggal_sampai'])) {
+            $this->db->where($date_field . ' <=', $filters['tanggal_sampai']);
+        }
+    }
+
+    public function count_filtered($user_id = null, $role = null, $filters = [])
+    {
+        $this->db->from('rtl');
+        $this->db->join('disposisi d', 'd.id = rtl.disposisi_id');
+        $this->db->join('surat_masuk sm', 'sm.id = d.surat_masuk_id');
+        $this->db->join('users u', 'u.id = rtl.dibuat_oleh');
+
+        // Role-based visibility
+        if ($role && !in_array($role, ['ADMIN', 'DIREKTUR'])) {
+            $this->db->join('rtl_penerima my_rp', 'my_rp.rtl_id = rtl.id');
+            $this->db->where('my_rp.user_id', $user_id);
+        }
+
+        $this->apply_filters($filters);
+
+        return $this->db->count_all_results();
+    }
+
+    public function get_all($limit = 1000, $offset = 0, $user_id = null, $role = null, $filters = [])
     {
         $this->db->select('rtl.*, rtl.prioritas, d.nomor_disposisi, sm.perihal as perihal_surat, u.nama_lengkap as pembuat');
         $this->db->from('rtl');
@@ -23,18 +72,23 @@ class Rtl_model extends CI_Model {
             $this->db->where('my_rp.user_id', $user_id);
         }
 
+        $this->apply_filters($filters);
+
         $this->db->order_by('rtl.id', 'DESC');
-        $this->db->limit($limit, $offset);
+        if ($limit > 0) {
+            $this->db->limit($limit, $offset);
+        }
         $results = $this->db->get()->result_array();
 
-        // Fetch penerima names for display in card payload
+        // Fetch penerima names for display in card and table payload
         foreach ($results as &$row) {
-            $this->db->select('u.nama_lengkap');
+            $this->db->select('u.id as user_id, u.nama_lengkap, u.jabatan, rp.status as status_penerima');
             $this->db->from('rtl_penerima rp');
             $this->db->join('users u', 'u.id = rp.user_id');
             $this->db->where('rp.rtl_id', $row['id']);
             $penerimas = $this->db->get()->result_array();
             $row['penerima_names'] = implode(', ', array_column($penerimas, 'nama_lengkap'));
+            $row['penerima_list']  = $penerimas;
         }
         return $results;
     }
