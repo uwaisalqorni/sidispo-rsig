@@ -85,10 +85,13 @@ $route['api/v1/disposisi/overdue']['get']                  = 'Disposisi/overdue'
 $route['api/v1/penerima/(:num)']['get']                    = 'Penerima/index/$1';          // GET – List penerima + status per disposisi
 $route['api/v1/penerima/(:num)/status']['put']             = 'Penerima/update_status/$1';  // PUT – Update status (STAF only)
 
-// ── PROGRESS (append-only log) ────────────────────────────────────────────
-$route['api/v1/progress/(:num)']['get']                    = 'Progress/index/$1';           // GET  – Timeline log per penerima
-$route['api/v1/progress/(:num)']['post']                   = 'Progress/store/$1';           // POST – Tambah log progress + catatan
-$route['api/v1/progress/disposisi/(:num)']['get']          = 'Progress/by_disposisi/$1';    // GET  – Timeline gabungan per disposisi
+// ── PROGRESS ─────────────────────────────────────────────────────────────
+$route['api/v1/progress/(:num)']['get']                    = 'Progress/index/$1';           // GET    – Timeline log per penerima
+$route['api/v1/progress/(:num)']['post']                   = 'Progress/store/$1';           // POST   – Tambah log progress + catatan
+$route['api/v1/progress/disposisi/(:num)']['get']          = 'Progress/by_disposisi/$1';    // GET    – Timeline gabungan per disposisi
+$route['api/v1/progress/log/(:num)']['put']                = 'Progress/update/$1';          // PUT    – Update log progress sendiri
+$route['api/v1/progress/log/(:num)']['post']               = 'Progress/update/$1';          // POST   – Update log progress sendiri
+$route['api/v1/progress/log/(:num)']['delete']             = 'Progress/destroy/$1';         // DELETE – Hapus log progress sendiri
 
 // ── FOLDER ────────────────────────────────────────────────────────────────
 $route['api/v1/folder']['get']                             = 'Folder/index';            // GET    – List folder (nested tree)

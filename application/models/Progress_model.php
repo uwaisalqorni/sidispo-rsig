@@ -39,6 +39,31 @@ class Progress_model extends CI_Model {
     }
 
     /**
+     * Get single progress log by ID
+     */
+    public function get_by_id($id)
+    {
+        $this->db->select('pl.*, u.nama_lengkap, u.jabatan, dp.disposisi_id');
+        $this->db->from('progress_log pl');
+        $this->db->join('disposisi_penerima dp', 'dp.id = pl.disposisi_penerima_id');
+        $this->db->join('users u', 'u.id = pl.user_id', 'left');
+        $this->db->where('pl.id', $id);
+        return $this->db->get()->row_array();
+    }
+
+    /**
+     * Get latest log for a disposisi_penerima record
+     */
+    public function get_latest_log($disposisi_penerima_id)
+    {
+        return $this->db->where('disposisi_penerima_id', $disposisi_penerima_id)
+                        ->order_by('id', 'DESC')
+                        ->limit(1)
+                        ->get('progress_log')
+                        ->row_array();
+    }
+
+    /**
      * Append a new progress log entry (never update, always insert)
      */
     public function store($disposisi_penerima_id, $user_id, $status_lama, $status_baru, $catatan)
@@ -52,5 +77,23 @@ class Progress_model extends CI_Model {
         ];
         $this->db->insert('progress_log', $data);
         return $this->db->insert_id();
+    }
+
+    /**
+     * Update an existing progress log entry
+     */
+    public function update_log($id, $data)
+    {
+        $this->db->where('id', $id);
+        return $this->db->update('progress_log', $data);
+    }
+
+    /**
+     * Delete an existing progress log entry
+     */
+    public function delete_log($id)
+    {
+        $this->db->where('id', $id);
+        return $this->db->delete('progress_log');
     }
 }
