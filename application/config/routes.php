@@ -74,6 +74,7 @@ $route['api/v1/dashboard']['get']           = 'Dashboard/index';  // GET   – S
 // ── DISPOSISI ─────────────────────────────────────────────────────────────
 $route['api/v1/disposisi']['get']                          = 'Disposisi/index';        // GET    – List (role-aware)
 $route['api/v1/disposisi']['post']                         = 'Disposisi/create';       // POST   – Buat disposisi + assign penerima
+$route['api/v1/disposisi/penerima-options']['get']         = 'Disposisi/penerima_options'; // GET – Opsi penerima (staff/pejabat)
 $route['api/v1/disposisi/(:num)']['get']                   = 'Disposisi/detail/$1';    // GET    – Detail + penerima + files
 $route['api/v1/disposisi/(:num)']['put']                   = 'Disposisi/update/$1';    // PUT    – Edit disposisi
 $route['api/v1/disposisi/(:num)']['post']                  = 'Disposisi/update/$1';    // POST   – Edit disposisi

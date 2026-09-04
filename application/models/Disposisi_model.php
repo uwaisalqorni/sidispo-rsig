@@ -224,9 +224,9 @@ class Disposisi_model extends CI_Model {
         $disposisi_id = $this->db->insert_id();
 
         // Insert assignees and Notifications
+        $notif_batch = [];
         if (!empty($penerima_ids)) {
             $penerima_batch = [];
-            $notif_batch = [];
             
             // Generate pesan notif
             $this->db->select('nomor_surat, perihal');
@@ -236,11 +236,11 @@ class Disposisi_model extends CI_Model {
             foreach ($penerima_ids as $uid) {
                 $penerima_batch[] = [
                     'disposisi_id' => $disposisi_id,
-                    'user_id' => $uid,
+                    'user_id' => (int)$uid,
                     'status' => 'DITERIMA'
                 ];
                 $notif_batch[] = [
-                    'user_id' => $uid,
+                    'user_id' => (int)$uid,
                     'jenis' => 'DISPOSISI_BARU',
                     'judul' => 'Disposisi Masuk',
                     'pesan' => $pesan,
@@ -249,9 +249,9 @@ class Disposisi_model extends CI_Model {
             }
             $this->db->insert_batch('disposisi_penerima', $penerima_batch);
             
-            // Insert Notifikasi Batch & send emails
+            // Insert in-app notifikasi ke tabel DB dalam transaksi (tanpa kirim email dulu)
             if (!empty($notif_batch)) {
-                $this->notifikasi->insert_batch($notif_batch);
+                $this->notifikasi->insert_batch($notif_batch, false);
             }
         }
 
@@ -259,6 +259,11 @@ class Disposisi_model extends CI_Model {
 
         if ($this->db->trans_status() === FALSE) {
             return false;
+        }
+
+        // Kirim email notifikasi DI LUAR transaksi database agar koneksi DB tidak terblokir
+        if (!empty($notif_batch)) {
+            $this->notifikasi->send_batch_emails($notif_batch);
         }
 
         return $disposisi_id;
@@ -348,9 +353,9 @@ class Disposisi_model extends CI_Model {
             }
 
             // Tambahkan penerima baru
+            $notif_batch = [];
             if (!empty($new_uids)) {
                 $penerima_batch = [];
-                $notif_batch = [];
 
                 $disp = $this->db->get_where('disposisi', ['id' => $id])->row_array();
                 $sm = $disp ? $this->db->get_where('surat_masuk', ['id' => $disp['surat_masuk_id']])->row() : null;
@@ -359,11 +364,11 @@ class Disposisi_model extends CI_Model {
                 foreach ($new_uids as $uid) {
                     $penerima_batch[] = [
                         'disposisi_id' => $id,
-                        'user_id' => $uid,
+                        'user_id' => (int)$uid,
                         'status' => 'DITERIMA'
                     ];
                     $notif_batch[] = [
-                        'user_id' => $uid,
+                        'user_id' => (int)$uid,
                         'jenis' => 'DISPOSISI_BARU',
                         'judul' => 'Disposisi Masuk',
                         'pesan' => $pesan,
@@ -373,14 +378,23 @@ class Disposisi_model extends CI_Model {
                 $this->db->insert_batch('disposisi_penerima', $penerima_batch);
 
                 if (!empty($notif_batch)) {
-                    $this->notifikasi->insert_batch($notif_batch);
+                    $this->notifikasi->insert_batch($notif_batch, false);
                 }
             }
         }
 
         $this->db->trans_complete();
 
-        return $this->db->trans_status();
+        if ($this->db->trans_status() === FALSE) {
+            return false;
+        }
+
+        // Kirim email notifikasi untuk penerima baru di luar transaksi database
+        if (!empty($notif_batch)) {
+            $this->notifikasi->send_batch_emails($notif_batch);
+        }
+
+        return true;
     }
 
     /**
@@ -391,4 +405,33 @@ class Disposisi_model extends CI_Model {
         $this->db->where('id', $id);
         return $this->db->delete('disposisi');
     }
+
+    /**
+     * Get active users / staff for recipient selection in Disposisi with optional search and role filter
+     */
+    public function get_penerima_options($search = null, $role = null)
+    {
+        $this->db->select('id, nip, nama_lengkap, email, jabatan, unit, role');
+        $this->db->where('is_active', 1);
+
+        if (!empty($role) && $role !== 'SEMUA') {
+            $this->db->where('role', $role);
+        }
+
+        if (!empty($search)) {
+            $search = trim($search);
+            $this->db->group_start();
+            $this->db->like('nama_lengkap', $search);
+            $this->db->or_like('nip', $search);
+            $this->db->or_like('jabatan', $search);
+            $this->db->or_like('unit', $search);
+            $this->db->or_like('email', $search);
+            $this->db->group_end();
+        }
+
+        $this->db->order_by('role', 'ASC');
+        $this->db->order_by('nama_lengkap', 'ASC');
+        return $this->db->get('users')->result_array();
+    }
 }
+

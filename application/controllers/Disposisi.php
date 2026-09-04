@@ -253,4 +253,22 @@ class Disposisi extends MY_Controller {
             return $this->response(['status' => 'error', 'message' => 'Gagal menghapus disposisi'], 500);
         }
     }
+
+    /**
+     * GET /disposisi/penerima-options
+     * Get list of active staff / users for recipient selection with optional search keyword and role
+     */
+    public function penerima_options()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+            return $this->response(['status' => 'error', 'message' => 'Method not allowed'], 405);
+        }
+
+        $q = $this->input->get('q');
+        $role = $this->input->get('role');
+        $data = $this->disposisi->get_penerima_options($q, $role);
+
+        $this->response(['status' => 'success', 'data' => $data], 200);
+    }
 }
+

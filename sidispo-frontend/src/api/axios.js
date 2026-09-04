@@ -3,9 +3,10 @@ import router from '@/router'
 
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL || 'http://192.168.0.194/SiDispo/api/v1',
-    timeout: 15000,
+    timeout: 60000,
     headers: { 'Content-Type': 'application/json' }
 })
+
 
 // Request interceptor — otomatis sisipkan Bearer token
 api.interceptors.request.use(config => {
