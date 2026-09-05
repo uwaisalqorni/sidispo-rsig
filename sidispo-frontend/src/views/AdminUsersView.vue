@@ -16,9 +16,10 @@ const filterRole  = ref('')
 const selectedUser = ref(null)
 
 const ROLES = ['ADMIN', 'DIREKTUR', 'PEJABAT', 'STAF']
+const masterJabatan = ref([])
 
 const form = ref({
-  nip: '', nama_lengkap: '', email: '', no_hp: '', jabatan: '',
+  nip: '', nama_lengkap: '', email: '', no_hp: '', jabatan: '', jabatan_id: '',
   unit: '', role: 'STAF', password: '', is_active: 1
 })
 const resetForm = ref({ password: 'Sidispo@2026' })
@@ -41,7 +42,8 @@ const filtered = computed(() => {
       u.nama_lengkap.toLowerCase().includes(q) ||
       u.email.toLowerCase().includes(q) ||
       (u.no_hp || '').toLowerCase().includes(q) ||
-      (u.nip || '').includes(q)
+      (u.nip || '').includes(q) ||
+      (u.jabatan || '').toLowerCase().includes(q)
     )
   }
   return list
@@ -56,13 +58,35 @@ const load = async () => {
   } catch { /* silent */ } finally { loading.value = false }
 }
 
-onMounted(load)
+const loadJabatan = async () => {
+  try {
+    const { data } = await api.get('/jabatan')
+    masterJabatan.value = data.data || []
+  } catch { /* silent */ }
+}
+
+onMounted(() => {
+  load()
+  loadJabatan()
+})
+
+const getJabatanInfo = (jid) => {
+  if (!jid) return null
+  return masterJabatan.value.find(j => j.id == jid) || null
+}
+
+const onJabatanMasterChange = () => {
+  if (form.value.jabatan_id && !form.value.jabatan) {
+    const found = masterJabatan.value.find(j => j.id == form.value.jabatan_id)
+    if (found) form.value.jabatan = found.nama
+  }
+}
 
 // ── Open modal ─────────────────────────────────────────────────────────────
 const openCreate = () => {
   editMode.value = false
   submitError.value = ''
-  Object.assign(form.value, { nip:'', nama_lengkap:'', email:'', no_hp:'', jabatan:'', unit:'', role:'STAF', password:'', is_active:1 })
+  Object.assign(form.value, { nip:'', nama_lengkap:'', email:'', no_hp:'', jabatan:'', jabatan_id:'', unit:'', role:'STAF', password:'', is_active:1 })
   showModal.value = true
 }
 
@@ -72,7 +96,9 @@ const openEdit = (user) => {
   Object.assign(form.value, {
     nip: user.nip, nama_lengkap: user.nama_lengkap, email: user.email,
     no_hp: user.no_hp || '',
-    jabatan: user.jabatan, unit: user.unit,
+    jabatan: user.jabatan,
+    jabatan_id: user.jabatan_id || '',
+    unit: user.unit,
     role: user.role, password: '', is_active: user.is_active
   })
   selectedUser.value = user
@@ -231,7 +257,12 @@ function initials(nama) {
                 <span v-else class="text-textDim text-xs">—</span>
               </td>
               <td class="px-5 py-3">
-                <div class="text-[13px] text-textMain">{{ u.jabatan || '—' }}</div>
+                <div class="flex items-center gap-1.5">
+                  <div class="text-[13px] font-medium text-textMain">{{ u.jabatan || '—' }}</div>
+                  <span v-if="getJabatanInfo(u.jabatan_id)" class="text-[10px] px-1.5 py-0.5 rounded bg-brandBlueBg text-brandBlue font-semibold border border-brandBlue/20">
+                    Lv.{{ getJabatanInfo(u.jabatan_id).level }}
+                  </span>
+                </div>
                 <div class="text-[11px] text-textMuted">{{ u.unit || '' }}</div>
               </td>
               <td class="px-5 py-3">
@@ -299,8 +330,18 @@ function initials(nama) {
                 class="w-full bg-surface2 border border-border rounded-lg px-3 py-2.5 text-sm text-textMain focus:border-accent focus:outline-none" />
             </div>
             <div>
-              <label class="block text-xs font-bold text-textMuted uppercase mb-1.5">Jabatan</label>
-              <input v-model="form.jabatan" type="text" placeholder="Jabatan / posisi"
+              <label class="block text-xs font-bold text-textMuted uppercase mb-1.5">Master Jabatan (Hierarki)</label>
+              <select v-model="form.jabatan_id" @change="onJabatanMasterChange"
+                class="w-full bg-surface2 border border-border rounded-lg px-3 py-2.5 text-sm text-textMain focus:border-accent focus:outline-none">
+                <option value="">-- Pilih Master Jabatan --</option>
+                <option v-for="j in masterJabatan" :key="j.id" :value="j.id">
+                  [Lv. {{ j.level }}] {{ j.nama }}
+                </option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-textMuted uppercase mb-1.5">Jabatan Spesifik</label>
+              <input v-model="form.jabatan" type="text" placeholder="Jabatan / posisi detail"
                 class="w-full bg-surface2 border border-border rounded-lg px-3 py-2.5 text-sm text-textMain focus:border-accent focus:outline-none" />
             </div>
             <div>

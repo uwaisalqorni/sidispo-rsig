@@ -8,6 +8,7 @@ class Disposisi_model extends CI_Model {
         parent::__construct();
         $this->load->database();
         $this->load->model('Notifikasi_model', 'notifikasi');
+        $this->load->model('Jabatan_model', 'jabatan_m');
     }
 
     /**
@@ -190,12 +191,53 @@ class Disposisi_model extends CI_Model {
         $disposisi = $this->db->get()->row_array();
         
         if ($disposisi) {
-            // Get penerima list
-            $this->db->select('dp.*, u.nama_lengkap, u.jabatan, u.unit');
+            // Get penerima list with jabatan info
+            $this->db->select('dp.*, u.nama_lengkap, u.jabatan, u.unit, u.jabatan_id, mj.nama as jabatan_master, mj.level as jabatan_level');
             $this->db->from('disposisi_penerima dp');
             $this->db->join('users u', 'u.id = dp.user_id');
+            $this->db->join('master_jabatan mj', 'mj.id = u.jabatan_id', 'left');
             $this->db->where('dp.disposisi_id', $id);
-            $disposisi['penerima'] = $this->db->get()->result_array();
+            $this->db->order_by('dp.urutan_level', 'ASC');
+            $penerima_list = $this->db->get()->result_array();
+
+            // Compute lock status per penerima jika berjenjang
+            if (!empty($disposisi['is_berjenjang'])) {
+                // Collect statuses per level
+                $level_statuses = [];
+                foreach ($penerima_list as $p) {
+                    $lv = (int)($p['urutan_level'] ?? 0);
+                    if ($lv > 0) {
+                        if (!isset($level_statuses[$lv])) $level_statuses[$lv] = [];
+                        $level_statuses[$lv][] = $p['status'];
+                    }
+                }
+
+                foreach ($penerima_list as &$p) {
+                    $my_lv = (int)($p['urutan_level'] ?? 0);
+                    $p['is_locked'] = false;
+                    if ($my_lv > 1) {
+                        $prev_lv = $my_lv - 1;
+                        if (isset($level_statuses[$prev_lv])) {
+                            // Check if any penerima at previous level is NOT SELESAI
+                            foreach ($level_statuses[$prev_lv] as $st) {
+                                if ($st !== 'SELESAI') {
+                                    $p['is_locked'] = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                unset($p);
+            } else {
+                // Non-berjenjang: tidak ada lock
+                foreach ($penerima_list as &$p) {
+                    $p['is_locked'] = false;
+                }
+                unset($p);
+            }
+
+            $disposisi['penerima'] = $penerima_list;
             
             // Get original file from surat_masuk
             $this->db->where('surat_masuk_id', $disposisi['surat_masuk_id']);
@@ -220,6 +262,14 @@ class Disposisi_model extends CI_Model {
         $seq = $query->id ? ($query->id + 1) : 1;
         $data['nomor_disposisi'] = 'D-' . $year . str_pad($seq, 4, '0', STR_PAD_LEFT);
 
+        // Compute urutan_level jika mode berjenjang
+        $is_berjenjang = !empty($data['is_berjenjang']) ? 1 : 0;
+        $data['is_berjenjang'] = $is_berjenjang;
+        $urutan_map = [];
+        if ($is_berjenjang && !empty($penerima_ids)) {
+            $urutan_map = $this->jabatan_m->compute_urutan_levels($penerima_ids);
+        }
+
         $this->db->insert('disposisi', $data);
         $disposisi_id = $this->db->insert_id();
 
@@ -234,13 +284,15 @@ class Disposisi_model extends CI_Model {
             $pesan = "Disposisi Baru: " . ($sm ? $sm->perihal : "Surat Masuk");
 
             foreach ($penerima_ids as $uid) {
+                $uid_int = (int)$uid;
                 $penerima_batch[] = [
                     'disposisi_id' => $disposisi_id,
-                    'user_id' => (int)$uid,
+                    'user_id' => $uid_int,
+                    'urutan_level' => isset($urutan_map[$uid_int]) ? $urutan_map[$uid_int] : null,
                     'status' => 'DITERIMA'
                 ];
                 $notif_batch[] = [
-                    'user_id' => (int)$uid,
+                    'user_id' => $uid_int,
                     'jenis' => 'DISPOSISI_BARU',
                     'judul' => 'Disposisi Masuk',
                     'pesan' => $pesan,
@@ -278,6 +330,24 @@ class Disposisi_model extends CI_Model {
         $dp = $this->db->get_where('disposisi_penerima', ['id' => $dp_id, 'user_id' => $user_id])->row_array();
         if (!$dp) return false;
 
+        // ── Validasi Berjenjang ──────────────────────────────────────────
+        $disposisi = $this->db->get_where('disposisi', ['id' => $dp['disposisi_id']])->row_array();
+        if ($disposisi && !empty($disposisi['is_berjenjang']) && !empty($dp['urutan_level'])) {
+            $my_level = (int)$dp['urutan_level'];
+            if ($my_level > 1) {
+                // Cek apakah semua penerima di level sebelumnya sudah SELESAI
+                $belum_selesai = $this->db
+                    ->where('disposisi_id', $dp['disposisi_id'])
+                    ->where('urutan_level', $my_level - 1)
+                    ->where('status !=', 'SELESAI')
+                    ->count_all_results('disposisi_penerima');
+
+                if ($belum_selesai > 0) {
+                    return 'LOCKED'; // Level ini belum bisa diisi
+                }
+            }
+        }
+
         $this->db->trans_start();
         
         // 1. Log progress (Append-only)
@@ -295,8 +365,6 @@ class Disposisi_model extends CI_Model {
             $update_data['tanggal_selesai'] = date('Y-m-d H:i:s');
         }
         $this->db->where('id', $dp_id);
-        $this->db->update('disposisi_penerima', $update_data);
-        
         $this->db->update('disposisi_penerima', $update_data);
         
         // 3. Insert Notification to Disposisi Creator (Direktur/Admin)

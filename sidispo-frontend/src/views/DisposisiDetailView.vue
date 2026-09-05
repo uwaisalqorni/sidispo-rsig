@@ -208,6 +208,9 @@ function fileUrl(path) {
                 :class="statusConfig[disposisi.status_global]?.cls ?? 'bg-surface3 text-textMuted'">
                 {{ statusConfig[disposisi.status_global]?.label ?? disposisi.status_global }}
               </span>
+              <span v-if="Number(disposisi.is_berjenjang) === 1" class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20 flex items-center gap-1">
+                <i class="pi pi-sitemap text-[10px]"></i> Mode Berjenjang
+              </span>
             </div>
             <h2 class="text-xl font-bold text-textMain leading-snug">{{ disposisi.perihal }}</h2>
             <p class="text-sm text-textMuted mt-1 flex items-center gap-2 flex-wrap">
@@ -220,6 +223,13 @@ function fileUrl(path) {
             <span class="text-xs text-textMuted">Dibuat oleh</span>
             <span class="text-sm font-semibold text-textMain">{{ disposisi.pembuat }}</span>
             <span class="text-xs text-textMuted">Batas waktu: <strong class="text-brandYellow font-mono">{{ disposisi.batas_waktu || '—' }}</strong></span>
+          </div>
+        </div>
+
+        <div v-if="Number(disposisi.is_berjenjang) === 1" class="p-3 mb-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-700 dark:text-amber-300 flex items-center gap-2.5">
+          <i class="pi pi-info-circle text-base text-amber-600 shrink-0"></i>
+          <div>
+            <strong>Alur Validasi Berjenjang Aktif:</strong> Progress divalidasi secara berurutan sesuai level hierarki jabatan. Penerima di level atas baru dapat mencatat progress setelah level di bawahnya selesai.
           </div>
         </div>
 
@@ -243,14 +253,24 @@ function fileUrl(path) {
               <span class="text-xs text-textMuted font-semibold bg-surface3 px-2 py-0.5 rounded-full">{{ timeline.length }}</span>
             </div>
             <!-- Tombol Tambah Progress (jika user merupakan penerima) -->
-            <button
-              v-if="myPenerima"
-              @click="openAddProgressModal(myPenerima)"
-              class="text-xs px-3 py-1.5 bg-accent text-white font-semibold rounded-lg hover:bg-accentHover transition-colors flex items-center gap-1.5 shadow-xs"
-            >
-              <i class="pi pi-plus text-[10px]"></i>
-              Update Progress
-            </button>
+            <div v-if="myPenerima">
+              <button
+                v-if="!myPenerima.is_locked"
+                @click="openAddProgressModal(myPenerima)"
+                class="text-xs px-3 py-1.5 bg-accent text-white font-semibold rounded-lg hover:bg-accentHover transition-colors flex items-center gap-1.5 shadow-xs"
+              >
+                <i class="pi pi-plus text-[10px]"></i>
+                Update Progress
+              </button>
+              <div
+                v-else
+                class="text-xs px-2.5 py-1 bg-surface3 text-textMuted border border-border/80 font-semibold rounded-lg flex items-center gap-1.5 cursor-not-allowed opacity-80"
+                title="Level Anda belum dapat diisi. Menunggu validasi level sebelumnya."
+              >
+                <i class="pi pi-lock text-[10px] text-amber-500"></i>
+                <span>Terkunci (Tunggu Level Bawah)</span>
+              </div>
+            </div>
           </div>
           <div class="p-5 flex-1">
             <div v-if="timeline.length === 0" class="text-sm text-textMuted py-8 text-center flex flex-col items-center justify-center gap-2">
@@ -357,24 +377,39 @@ function fileUrl(path) {
                         Anda
                       </span>
                     </div>
-                    <div class="text-[11px] text-textMuted truncate">{{ dp.jabatan }}</div>
+                    <div class="text-[11px] text-textMuted truncate flex items-center gap-1.5 mt-0.5">
+                      <span>{{ dp.jabatan_master || dp.jabatan }}</span>
+                      <span v-if="dp.urutan_level" class="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                        Lv.{{ dp.urutan_level }}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
                 <div class="flex flex-col items-end gap-1.5 shrink-0">
-                  <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full"
-                    :class="statusConfig[dp.status]?.cls ?? 'bg-surface3 text-textMuted'">
-                    {{ statusConfig[dp.status]?.label ?? dp.status }}
-                  </span>
+                  <div class="flex items-center gap-1.5">
+                    <span v-if="dp.is_locked" class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-surface3 text-amber-600 border border-amber-500/30 flex items-center gap-1" title="Menunggu validasi level sebelumnya">
+                      <i class="pi pi-lock text-[9px]"></i> Terkunci
+                    </span>
+                    <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                      :class="statusConfig[dp.status]?.cls ?? 'bg-surface3 text-textMuted'">
+                      {{ statusConfig[dp.status]?.label ?? dp.status }}
+                    </span>
+                  </div>
 
                   <!-- Tombol Update Progress hanya muncul jika penerima ini adalah pengguna yang sedang login -->
-                  <button
-                    v-if="Number(dp.user_id) === Number(user?.id)"
-                    @click="openAddProgressModal(dp)"
-                    class="text-xs text-accent font-semibold hover:underline flex items-center gap-1"
-                  >
-                    <i class="pi pi-plus text-[10px]"></i> Update Progress
-                  </button>
+                  <template v-if="Number(dp.user_id) === Number(user?.id)">
+                    <button
+                      v-if="!dp.is_locked"
+                      @click="openAddProgressModal(dp)"
+                      class="text-xs text-accent font-semibold hover:underline flex items-center gap-1"
+                    >
+                      <i class="pi pi-plus text-[10px]"></i> Update Progress
+                    </button>
+                    <span v-else class="text-[10px] text-textMuted italic flex items-center gap-1">
+                      <i class="pi pi-lock text-[9px]"></i> Tunggu level bawah
+                    </span>
+                  </template>
                 </div>
               </div>
             </div>

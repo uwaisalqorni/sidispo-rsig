@@ -9,6 +9,7 @@ import AdminFoldersView from '../views/AdminFoldersView.vue'
 import AdminSettingsView from '../views/AdminSettingsView.vue'
 import AdminPerihalView from '../views/AdminPerihalView.vue'
 import AdminAsalSuratView from '../views/AdminAsalSuratView.vue'
+import AdminJabatanView from '../views/AdminJabatanView.vue'
 import RtlView from '../views/RtlView.vue'
 import RtlDetailView from '../views/RtlDetailView.vue'
 import DashboardRtlView from '../views/DashboardRtlView.vue'
@@ -108,6 +109,12 @@ const router = createRouter({
       path: '/admin/asal-surat',
       name: 'admin-asal-surat',
       component: AdminAsalSuratView,
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
+      path: '/admin/jabatan',
+      name: 'admin-jabatan',
+      component: AdminJabatanView,
       meta: { requiresAuth: true, requiresAdmin: true }
     },
   ],

@@ -138,6 +138,7 @@ class Rtl extends MY_Controller {
             'deskripsi_rtl' => $input['deskripsi_rtl'],
             'batas_waktu' => !empty($input['batas_waktu']) ? $input['batas_waktu'] : null,
             'status_progress' => 'TO_DO',
+            'is_berjenjang' => !empty($input['is_berjenjang']) ? 1 : 0,
             'dibuat_oleh' => $this->current_user->id
         ];
 
@@ -274,7 +275,9 @@ class Rtl extends MY_Controller {
 
         $success = $this->rtl->update_progress_penerima($id, $status_baru, $catatan, $this->current_user->id);
 
-        if ($success) {
+        if ($success === 'LOCKED') {
+            $this->response(['status' => 'error', 'message' => 'Level Anda belum dapat diakses. Penerima di level sebelumnya belum menyelesaikan tugasnya.'], 403);
+        } elseif ($success) {
             $this->response(['status' => 'success', 'message' => 'Progress RTL berhasil dicatat'], 200);
         } else {
             $this->response(['status' => 'error', 'message' => 'Gagal mencatat progress RTL'], 500);

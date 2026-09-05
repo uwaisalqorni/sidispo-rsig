@@ -122,12 +122,48 @@ const filteredSurat = computed(() => {
   )
 })
 
+const masterJabatanList = ref([])
+
 const formDisposisi = ref({
   surat_masuk_id: '',
   isi_disposisi: '',
   prioritas: 'NORMAL',
   batas_waktu: '',
-  catatan_direktur: ''
+  catatan_direktur: '',
+  is_berjenjang: 0
+})
+
+// Pratinjau simulasi rantai hierarki saat mode berjenjang aktif
+const hierarkiPreview = computed(() => {
+  if (!formDisposisi.value.is_berjenjang || selectedUsersObjects.value.length === 0) return []
+  
+  const usersWithLevel = selectedUsersObjects.value.map(u => {
+    const mj = masterJabatanList.value.find(j => j.id == u.jabatan_id)
+    let lv = mj ? Number(mj.level) : 1
+    if (!mj) {
+      if (u.role === 'STAF') lv = 1
+      else if (u.role === 'PEJABAT') lv = 3
+      else if (u.role === 'DIREKTUR') lv = 5
+      else if (u.role === 'ADMIN') lv = 99
+    }
+    return {
+      ...u,
+      level: lv,
+      jabatan_label: mj?.nama || u.jabatan || u.role
+    }
+  })
+
+  // Kelompokkan penerima berdasarkan level
+  const groups = {}
+  usersWithLevel.forEach(u => {
+    if (!groups[u.level]) groups[u.level] = []
+    groups[u.level].push(u)
+  })
+
+  return Object.keys(groups).sort((a, b) => Number(a) - Number(b)).map(lv => ({
+    level: Number(lv),
+    users: groups[lv]
+  }))
 })
 
 const statusSeverity = {
@@ -260,7 +296,7 @@ onMounted(async () => {
 
 watch(() => route.query.tab, syncTabFromQuery)
 
-// Load data master (surat & users)
+// Load data master (surat, users, jabatan)
 const loadFormData = async () => {
   const promises = []
   if (suratList.value.length === 0) {
@@ -271,6 +307,13 @@ const loadFormData = async () => {
       api.get('/disposisi/penerima-options')
         .catch(() => api.get('/users'))
         .then(({ data }) => { usersList.value = data.data || [] })
+        .catch(() => {})
+    )
+  }
+  if (masterJabatanList.value.length === 0) {
+    promises.push(
+      api.get('/jabatan')
+        .then(({ data }) => { masterJabatanList.value = data.data || [] })
         .catch(() => {})
     )
   }
@@ -291,7 +334,8 @@ const openModal = async () => {
     isi_disposisi: '',
     prioritas: 'NORMAL',
     batas_waktu: '',
-    catatan_direktur: ''
+    catatan_direktur: '',
+    is_berjenjang: 0
   }
   showModal.value = true
   await loadFormData()
@@ -312,7 +356,8 @@ const openEdit = async (item) => {
     isi_disposisi: item.isi_disposisi || '',
     prioritas: item.prioritas || 'NORMAL',
     batas_waktu: item.batas_waktu ? item.batas_waktu.slice(0, 10) : '',
-    catatan_direktur: item.catatan_direktur || ''
+    catatan_direktur: item.catatan_direktur || '',
+    is_berjenjang: Number(item.is_berjenjang || 0)
   }
 
   showModal.value = true
@@ -328,6 +373,7 @@ const openEdit = async (item) => {
       formDisposisi.value.prioritas        = d.prioritas || 'NORMAL'
       formDisposisi.value.batas_waktu      = d.batas_waktu ? d.batas_waktu.slice(0, 10) : ''
       formDisposisi.value.catatan_direktur = d.catatan_direktur || ''
+      formDisposisi.value.is_berjenjang    = Number(d.is_berjenjang ?? item.is_berjenjang ?? 0)
       if (d.penerima && Array.isArray(d.penerima)) {
         selectedPenerima.value = d.penerima.map(p => Number(p.user_id))
       }
@@ -556,11 +602,16 @@ function formatDate(d) {
             </div>
           </template>
 
-          <Column field="nomor_disposisi" header="No. Disposisi" style="width: 130px">
+          <Column field="nomor_disposisi" header="No. Disposisi" style="width: 140px">
             <template #body="{ data }">
-              <span class="font-mono text-xs font-bold text-brandPurple bg-brandPurpleBg px-2 py-0.5 rounded-md">
-                {{ data.nomor_disposisi }}
-              </span>
+              <div class="flex flex-col gap-1 items-start">
+                <span class="font-mono text-xs font-bold text-brandPurple bg-brandPurpleBg px-2 py-0.5 rounded-md">
+                  {{ data.nomor_disposisi }}
+                </span>
+                <span v-if="Number(data.is_berjenjang) === 1" class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-600 border border-amber-500/20 flex items-center gap-1">
+                  <i class="pi pi-sitemap text-[9px]"></i> Berjenjang
+                </span>
+              </div>
             </template>
           </Column>
 
@@ -717,6 +768,57 @@ function formatDate(d) {
           <div class="flex flex-col gap-1.5">
             <label class="text-xs font-bold text-textMuted uppercase">Batas Waktu (Deadline)</label>
             <InputText v-model="formDisposisi.batas_waktu" type="date" class="w-full !bg-surface2" />
+          </div>
+        </div>
+
+        <!-- Mode Berjenjang Toggle & Preview -->
+        <div class="flex flex-col gap-2.5 p-3.5 rounded-2xl border border-border/80 bg-surface2/40">
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold text-sm shrink-0 border border-amber-500/20">
+                <i class="pi pi-sitemap"></i>
+              </div>
+              <div>
+                <div class="text-xs font-bold text-textMain flex items-center gap-1.5">
+                  <span>Alur Validasi Berjenjang</span>
+                  <span class="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-600 font-semibold border border-amber-500/20">Hierarki</span>
+                </div>
+                <div class="text-[11px] text-textMuted">Validasi berurutan dari staf/unit terbawah hingga pejabat/direktur.</div>
+              </div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer shrink-0">
+              <input type="checkbox" v-model="formDisposisi.is_berjenjang" :true-value="1" :false-value="0" class="sr-only peer">
+              <div class="w-10 h-5 bg-surface3 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+            </label>
+          </div>
+
+          <!-- Preview Rantai Validasi Berjenjang -->
+          <div v-if="formDisposisi.is_berjenjang" class="mt-1 pt-2.5 border-t border-border/60">
+            <div class="text-[11px] font-bold text-amber-700 dark:text-amber-400 mb-2 flex items-center gap-1.5">
+              <i class="pi pi-sort-amount-up text-xs"></i>
+              <span>Simulasi Urutan Rantai Validasi:</span>
+            </div>
+            <div v-if="hierarkiPreview.length > 0" class="flex flex-wrap items-center gap-2">
+              <template v-for="(step, idx) in hierarkiPreview" :key="step.level">
+                <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-surface border border-border text-xs shadow-2xs">
+                  <span class="w-5 h-5 rounded-full bg-amber-500 text-white font-bold text-[10px] flex items-center justify-center shrink-0">
+                    {{ idx + 1 }}
+                  </span>
+                  <div>
+                    <div class="font-bold text-textMain text-[11px]">
+                      {{ step.users.map(u => u.nama_lengkap).join(', ') }}
+                    </div>
+                    <div class="text-[10px] text-textMuted">
+                      Lv.{{ step.level }} ({{ step.users.map(u => u.jabatan_label).join(', ') }})
+                    </div>
+                  </div>
+                </div>
+                <i v-if="idx < hierarkiPreview.length - 1" class="pi pi-arrow-right text-[10px] text-amber-500 shrink-0"></i>
+              </template>
+            </div>
+            <div v-else class="text-[11px] text-textMuted italic bg-surface/60 p-2 rounded-lg border border-border/60">
+              Pilih beberapa staf penerima di bawah untuk melihat urutan rantai validasinya.
+            </div>
           </div>
         </div>
 

@@ -156,6 +156,15 @@ $route['api/v1/admin/settings/test-email']['post']          = 'Admin/settings_te
 // ── USERS (general – accessible by all authenticated users) ──────────────
 $route['api/v1/users']['get']                              = 'Admin/users_active';          // GET    – Daftar user aktif (untuk pilih penerima disposisi)
 
+// ── MASTER JABATAN ──────────────────────────────────────────────────────
+$route['api/v1/jabatan']['get']                            = 'Jabatan/index';             // GET    – List jabatan (semua role)
+$route['api/v1/jabatan/hierarki']['get']                   = 'Jabatan/hierarki';           // GET    – Pohon hierarki jabatan
+$route['api/v1/jabatan/(:num)']['get']                     = 'Jabatan/show/$1';            // GET    – Detail jabatan
+$route['api/v1/admin/jabatan']['post']                     = 'Jabatan/create';             // POST   – Buat jabatan (ADMIN)
+$route['api/v1/admin/jabatan/(:num)']['put']               = 'Jabatan/update/$1';          // PUT    – Update jabatan (ADMIN)
+$route['api/v1/admin/jabatan/(:num)']['post']              = 'Jabatan/update/$1';          // POST   – Update jabatan (ADMIN)
+$route['api/v1/admin/jabatan/(:num)']['delete']            = 'Jabatan/destroy/$1';         // DELETE – Hapus jabatan (ADMIN)
+
 // ── RTL (Rencana Tindak Lanjut) ──────────────────────────────────────────
 $route['api/v1/rtl']['get']                                = 'Rtl/index';
 $route['api/v1/rtl']['post']                               = 'Rtl/create';

@@ -55,7 +55,8 @@ class Auth extends MY_Controller {
                         'no_hp' => $user['no_hp'],
                         'role' => $user['role'],
                         'unit' => $user['unit'],
-                        'jabatan' => $user['jabatan']
+                        'jabatan' => $user['jabatan'],
+                        'jabatan_id' => $user['jabatan_id'] ?? null
                     ]
                 ];
 

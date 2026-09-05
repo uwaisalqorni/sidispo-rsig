@@ -1,5 +1,49 @@
 
 -- ================================================
+-- TABEL: master_jabatan
+-- Master jabatan organisasi & level hierarki
+-- ================================================
+CREATE TABLE master_jabatan (
+  id          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  nama        VARCHAR(100) NOT NULL,
+  kode        VARCHAR(50)  NULL UNIQUE,
+  level       INT UNSIGNED NOT NULL DEFAULT 1,
+  deskripsi   TEXT NULL,
+  is_active   TINYINT(1) NOT NULL DEFAULT 1,
+  created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_level (level),
+  INDEX idx_active (is_active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO master_jabatan (id, nama, kode, level) VALUES
+  (1, 'Staff',              'STAFF',        1),
+  (2, 'Kepala Instalasi',   'KA_INSTALASI', 2),
+  (3, 'Kepala Bidang',      'KABID',        3),
+  (4, 'Wakil Direktur',     'WADIR',        4),
+  (5, 'Direktur',           'DIREKTUR',     5),
+  (6, 'Administrator',      'ADMIN',        99);
+
+-- ================================================
+-- TABEL: jabatan_hierarki
+-- Relasi hierarki parent-child jabatan
+-- ================================================
+CREATE TABLE jabatan_hierarki (
+  id          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  jabatan_id  BIGINT UNSIGNED NOT NULL,
+  parent_id   BIGINT UNSIGNED NOT NULL,
+  UNIQUE KEY uq_child_parent (jabatan_id, parent_id),
+  CONSTRAINT fk_jh_jabatan FOREIGN KEY (jabatan_id) REFERENCES master_jabatan(id) ON DELETE CASCADE,
+  CONSTRAINT fk_jh_parent  FOREIGN KEY (parent_id) REFERENCES master_jabatan(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO jabatan_hierarki (jabatan_id, parent_id) VALUES
+  (1, 2),  -- Staff -> Kepala Instalasi
+  (2, 3),  -- Kepala Instalasi -> Kabid
+  (3, 4),  -- Kabid -> Wadir
+  (4, 5);  -- Wadir -> Direktur
+
+-- ================================================
 -- TABEL: users
 -- Pengguna & autentikasi sistem
 -- ================================================
@@ -11,6 +55,7 @@ CREATE TABLE users (
   no_hp          VARCHAR(25)        NULL,
   password_hash  VARCHAR(255)       NOT NULL,
   jabatan        VARCHAR(100)       NOT NULL,
+  jabatan_id     BIGINT UNSIGNED    NULL,
   unit           VARCHAR(100)       NULL,
   role           ENUM('DIREKTUR','PEJABAT','STAF','ADMIN')
                                          NOT NULL DEFAULT 'STAF',
@@ -25,7 +70,9 @@ CREATE TABLE users (
   UNIQUE KEY uq_nip   (nip),
   UNIQUE KEY uq_email (email),
   KEY idx_role (role),
-  KEY idx_active (is_active)
+  KEY idx_active (is_active),
+  KEY idx_jabatan (jabatan_id),
+  CONSTRAINT fk_users_jabatan FOREIGN KEY (jabatan_id) REFERENCES master_jabatan(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         
 
@@ -148,6 +195,7 @@ CREATE TABLE disposisi (
   status_global     ENUM('AKTIF','SELESAI','ARSIP')
                                        NOT NULL DEFAULT 'AKTIF',
   catatan_direktur  TEXT             NULL,
+  is_berjenjang     TINYINT(1)       NOT NULL DEFAULT 0,
   tanggal_disposisi TIMESTAMP        NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at        TIMESTAMP        NOT NULL DEFAULT CURRENT_TIMESTAMP
                                        ON UPDATE CURRENT_TIMESTAMP,
@@ -176,6 +224,7 @@ CREATE TABLE disposisi_penerima (
   id               BIGINT UNSIGNED  NOT NULL AUTO_INCREMENT,
   disposisi_id     BIGINT UNSIGNED  NOT NULL,
   user_id          BIGINT UNSIGNED  NOT NULL,
+  urutan_level     INT UNSIGNED     NULL DEFAULT NULL,
   status           ENUM('DITERIMA','PROSES','TUNGGU','SELESAI','OVERDUE')
                                       NOT NULL DEFAULT 'DITERIMA',
   tanggal_terima   TIMESTAMP        NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -270,8 +319,64 @@ CREATE TABLE notifikasi (
     FOREIGN KEY (disposisi_id) REFERENCES disposisi(id)
     ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-        
 
+-- ================================================
+-- TABEL: rtl (Rencana Tindak Lanjut)
+-- ================================================
+CREATE TABLE rtl (
+  id               BIGINT UNSIGNED  NOT NULL AUTO_INCREMENT,
+  disposisi_id     BIGINT UNSIGNED  NOT NULL,
+  deskripsi_rtl    TEXT             NOT NULL,
+  prioritas        ENUM('Biasa','Penting','Segera','Rahasia') DEFAULT 'Biasa',
+  batas_waktu      DATE             NULL,
+  status_progress  ENUM('TO_DO','ON_PROGRESS','REVIEW','DONE') DEFAULT 'TO_DO',
+  is_berjenjang    TINYINT(1)       NOT NULL DEFAULT 0,
+  dibuat_oleh      BIGINT UNSIGNED  NOT NULL,
+  dibuat_at        DATETIME         DEFAULT CURRENT_TIMESTAMP,
+  diupdate_at      DATETIME         DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_disposisi (disposisi_id),
+  KEY idx_dibuat (dibuat_oleh),
+  CONSTRAINT fk_rtl_disposisi FOREIGN KEY (disposisi_id) REFERENCES disposisi(id) ON DELETE CASCADE,
+  CONSTRAINT fk_rtl_dibuat FOREIGN KEY (dibuat_oleh) REFERENCES users(id) ON DELETE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ================================================
+-- TABEL: rtl_penerima
+-- Penerima tugas RTL & status
+-- ================================================
+CREATE TABLE rtl_penerima (
+  id               BIGINT UNSIGNED  NOT NULL AUTO_INCREMENT,
+  rtl_id           BIGINT UNSIGNED  NOT NULL,
+  user_id          BIGINT UNSIGNED  NOT NULL,
+  urutan_level     INT UNSIGNED     NULL DEFAULT NULL,
+  status           ENUM('TO_DO','ON_PROGRESS','REVIEW','DONE') DEFAULT 'TO_DO',
+  PRIMARY KEY (id),
+  KEY idx_rtl (rtl_id),
+  KEY idx_user (user_id),
+  CONSTRAINT fk_rp_rtl FOREIGN KEY (rtl_id) REFERENCES rtl(id) ON DELETE CASCADE,
+  CONSTRAINT fk_rp_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ================================================
+-- TABEL: rtl_progress_log
+-- Riwayat / log aktivitas progress RTL
+-- ================================================
+CREATE TABLE rtl_progress_log (
+  id               BIGINT UNSIGNED  NOT NULL AUTO_INCREMENT,
+  rtl_id           BIGINT UNSIGNED  NOT NULL,
+  rtl_penerima_id  BIGINT UNSIGNED  NULL,
+  status_baru      ENUM('TO_DO','ON_PROGRESS','REVIEW','DONE') NOT NULL,
+  catatan          TEXT             NULL,
+  dibuat_oleh      BIGINT UNSIGNED  NOT NULL,
+  created_at       DATETIME         DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_log_rtl (rtl_id),
+  KEY idx_log_penerima (rtl_penerima_id),
+  KEY idx_log_user (dibuat_oleh),
+  CONSTRAINT fk_rpl_rtl FOREIGN KEY (rtl_id) REFERENCES rtl(id) ON DELETE CASCADE,
+  CONSTRAINT fk_rpl_user FOREIGN KEY (dibuat_oleh) REFERENCES users(id) ON DELETE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ================================================
 -- VIEWS berguna untuk Dashboard Direktur

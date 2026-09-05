@@ -50,11 +50,46 @@ const deleting = ref(false)
 // Role Checks: Hanya ADMIN yang boleh edit dan delete
 const isAdmin = computed(() => user.value?.role === 'ADMIN')
 
+const masterJabatanList = ref([])
+
 const form = ref({
   disposisi_id: '',
   prioritas: 'Biasa',
   deskripsi_rtl: '',
-  batas_waktu: ''
+  batas_waktu: '',
+  is_berjenjang: 0
+})
+
+// Pratinjau simulasi hierarki saat mode berjenjang aktif
+const hierarkiPreview = computed(() => {
+  if (!form.value.is_berjenjang || selectedUsersObjects.value.length === 0) return []
+  
+  const usersWithLevel = selectedUsersObjects.value.map(u => {
+    const mj = masterJabatanList.value.find(j => j.id == u.jabatan_id)
+    let lv = mj ? Number(mj.level) : 1
+    if (!mj) {
+      if (u.role === 'STAF') lv = 1
+      else if (u.role === 'PEJABAT') lv = 3
+      else if (u.role === 'DIREKTUR') lv = 5
+      else if (u.role === 'ADMIN') lv = 99
+    }
+    return {
+      ...u,
+      level: lv,
+      jabatan_label: mj?.nama || u.jabatan || u.role
+    }
+  })
+
+  const groups = {}
+  usersWithLevel.forEach(u => {
+    if (!groups[u.level]) groups[u.level] = []
+    groups[u.level].push(u)
+  })
+
+  return Object.keys(groups).sort((a, b) => Number(a) - Number(b)).map(lv => ({
+    level: Number(lv),
+    users: groups[lv]
+  }))
 })
 
 // Filter & Search State
@@ -336,7 +371,7 @@ const togglePenerima = (userId) => {
 const openCreate = async () => {
   isEditing.value = false
   editId.value = null
-  form.value = { disposisi_id: '', prioritas: 'Biasa', deskripsi_rtl: '', batas_waktu: '' }
+  form.value = { disposisi_id: '', prioritas: 'Biasa', deskripsi_rtl: '', batas_waktu: '', is_berjenjang: 0 }
   selectedPenerima.value = []
   penerimaSearch.value = ''
   penerimaRoleFilter.value = 'SEMUA'
@@ -350,6 +385,13 @@ const openCreate = async () => {
     } catch (e) {
       console.error('Failed to fetch users', e)
     }
+  }
+
+  if (masterJabatanList.value.length === 0) {
+    try {
+      const { data } = await api.get('/jabatan')
+      masterJabatanList.value = data.data || []
+    } catch (e) { /* silent */ }
   }
 
   if (disposisiList.value.length === 0) {
@@ -365,7 +407,8 @@ const openEdit = async (item) => {
     disposisi_id: item.disposisi_id,
     prioritas: item.prioritas || 'Biasa',
     deskripsi_rtl: item.deskripsi_rtl || '',
-    batas_waktu: item.batas_waktu && item.batas_waktu !== '0000-00-00' ? item.batas_waktu.slice(0, 10) : ''
+    batas_waktu: item.batas_waktu && item.batas_waktu !== '0000-00-00' ? item.batas_waktu.slice(0, 10) : '',
+    is_berjenjang: Number(item.is_berjenjang || 0)
   }
   selectedPenerima.value = []
   penerimaSearch.value = ''
@@ -380,6 +423,13 @@ const openEdit = async (item) => {
     } catch (e) {
       console.error('Failed to fetch users', e)
     }
+  }
+
+  if (masterJabatanList.value.length === 0) {
+    try {
+      const { data } = await api.get('/jabatan')
+      masterJabatanList.value = data.data || []
+    } catch (e) { /* silent */ }
   }
 
   if (disposisiList.value.length === 0) {
@@ -398,8 +448,11 @@ const openEdit = async (item) => {
   // Ambil data penerima yang sudah terpilih
   try {
     const { data } = await api.get(`/rtl/${item.id}`)
-    if (data.data?.penerima) {
-      selectedPenerima.value = data.data.penerima.map(p => Number(p.user_id))
+    if (data.data) {
+      form.value.is_berjenjang = Number(data.data.is_berjenjang ?? item.is_berjenjang ?? 0)
+      if (data.data.penerima) {
+        selectedPenerima.value = data.data.penerima.map(p => Number(p.user_id))
+      }
     }
   } catch (err) {
     if (item.penerima_list) {
@@ -444,7 +497,11 @@ const handleSubmit = async () => {
   submitMsg.value = { type: '', text: '' }
 
   try {
-    const payload = { ...form.value, penerima: selectedPenerima.value }
+    const payload = {
+      ...form.value,
+      is_berjenjang: form.value.is_berjenjang ? 1 : 0,
+      penerima: selectedPenerima.value
+    }
     if (isEditing.value && editId.value) {
       await api.put(`/rtl/${editId.value}`, payload)
       toast.add({ severity: 'success', summary: 'Sukses', detail: 'RTL berhasil diperbarui!', life: 3000 })
@@ -648,9 +705,14 @@ const goDetail = (id) => {
 
           <Column field="nomor_disposisi" header="No. Disposisi" style="width: 140px">
             <template #body="{ data }">
-              <span class="font-mono text-xs font-bold text-accent bg-accentGlow/20 px-2.5 py-1 rounded-md border border-accent/30 inline-block">
-                {{ data.nomor_disposisi }}
-              </span>
+              <div class="flex flex-col gap-1 items-start">
+                <span class="font-mono text-xs font-bold text-accent bg-accentGlow/20 px-2.5 py-1 rounded-md border border-accent/30 inline-block">
+                  {{ data.nomor_disposisi }}
+                </span>
+                <span v-if="Number(data.is_berjenjang) === 1" class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-600 border border-amber-500/20 flex items-center gap-1">
+                  <i class="pi pi-sitemap text-[9px]"></i> Berjenjang
+                </span>
+              </div>
             </template>
           </Column>
 
@@ -769,8 +831,11 @@ const goDetail = (id) => {
             @click="goDetail(rtl.id)"
           >
             <div class="flex justify-between items-start mb-3 gap-2">
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-1.5 flex-wrap">
                 <span class="text-xs font-bold text-accent font-mono bg-accentGlow/20 px-2 py-0.5 rounded border border-accent/30">{{ rtl.nomor_disposisi }}</span>
+                <span v-if="Number(rtl.is_berjenjang) === 1" class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 border border-amber-500/20 flex items-center gap-1">
+                  <i class="pi pi-sitemap text-[8px]"></i> Berjenjang
+                </span>
                 <span class="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase border" :class="getPrioritasColor(rtl.prioritas)">
                   {{ rtl.prioritas || 'Biasa' }}
                 </span>
@@ -893,6 +958,57 @@ const goDetail = (id) => {
               <label class="block text-xs font-bold text-textMuted uppercase mb-1.5">Batas Waktu</label>
               <input type="date" v-model="form.batas_waktu"
                 class="w-full bg-surface2 border border-border rounded-lg px-3 py-2 text-sm focus:border-accent outline-none text-textMain appearance-none" />
+            </div>
+          </div>
+
+          <!-- Mode Berjenjang Toggle & Preview -->
+          <div class="flex flex-col gap-2.5 p-3.5 rounded-2xl border border-border/80 bg-surface2/40">
+            <div class="flex items-center justify-between gap-3">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold text-sm shrink-0 border border-amber-500/20">
+                  <i class="pi pi-sitemap"></i>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-textMain flex items-center gap-1.5">
+                    <span>Alur Validasi Berjenjang RTL</span>
+                    <span class="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-600 font-semibold border border-amber-500/20">Hierarki</span>
+                  </div>
+                  <div class="text-[11px] text-textMuted">Tugas dikerjakan berurutan sesuai level hierarki staf hingga direktur.</div>
+                </div>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                <input type="checkbox" v-model="form.is_berjenjang" :true-value="1" :false-value="0" class="sr-only peer">
+                <div class="w-10 h-5 bg-surface3 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+              </label>
+            </div>
+
+            <!-- Preview Rantai Validasi Berjenjang -->
+            <div v-if="form.is_berjenjang" class="mt-1 pt-2.5 border-t border-border/60">
+              <div class="text-[11px] font-bold text-amber-700 dark:text-amber-400 mb-2 flex items-center gap-1.5">
+                <i class="pi pi-sort-amount-up text-xs"></i>
+                <span>Simulasi Urutan Validasi RTL:</span>
+              </div>
+              <div v-if="hierarkiPreview.length > 0" class="flex flex-wrap items-center gap-2">
+                <template v-for="(step, idx) in hierarkiPreview" :key="step.level">
+                  <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-surface border border-border text-xs shadow-2xs">
+                    <span class="w-5 h-5 rounded-full bg-amber-500 text-white font-bold text-[10px] flex items-center justify-center shrink-0">
+                      {{ idx + 1 }}
+                    </span>
+                    <div>
+                      <div class="font-bold text-textMain text-[11px]">
+                        {{ step.users.map(u => u.nama_lengkap).join(', ') }}
+                      </div>
+                      <div class="text-[10px] text-textMuted">
+                        Lv.{{ step.level }} ({{ step.users.map(u => u.jabatan_label).join(', ') }})
+                      </div>
+                    </div>
+                  </div>
+                  <i v-if="idx < hierarkiPreview.length - 1" class="pi pi-arrow-right text-[10px] text-amber-500 shrink-0"></i>
+                </template>
+              </div>
+              <div v-else class="text-[11px] text-textMuted italic bg-surface/60 p-2 rounded-lg border border-border/60">
+                Pilih beberapa staf penerima di bawah untuk melihat urutan rantai pengerjaan RTL.
+              </div>
             </div>
           </div>
 

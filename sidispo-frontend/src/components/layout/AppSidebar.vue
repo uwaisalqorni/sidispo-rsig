@@ -68,6 +68,7 @@ const mainMenuItems = computed(() => {
 
 const adminMenuItems = computed(() => [
   { label: 'Pengguna', icon: 'pi pi-users', command: () => router.push('/admin/users') },
+  { label: 'Master Jabatan', icon: 'pi pi-sitemap', command: () => router.push('/admin/jabatan') },
   { label: 'Folder', icon: 'pi pi-folder', command: () => router.push('/admin/folders') },
   { label: 'Master Perihal', icon: 'pi pi-book', command: () => router.push('/admin/perihal') },
   { label: 'Master Asal Surat', icon: 'pi pi-building', command: () => router.push('/admin/asal-surat') },

@@ -7,6 +7,7 @@ class Rtl_model extends CI_Model {
     {
         parent::__construct();
         $this->load->database();
+        $this->load->model('Jabatan_model', 'jabatan_m');
     }
 
     private function apply_filters($filters = [])
@@ -109,12 +110,50 @@ class Rtl_model extends CI_Model {
         $rtl = $this->get_by_id($id);
         if (!$rtl) return null;
 
-        // Get penerima list
-        $this->db->select('rp.id, rp.user_id, rp.status, u.nama_lengkap, u.jabatan');
+        // Get penerima list with jabatan info
+        $this->db->select('rp.id, rp.user_id, rp.urutan_level, rp.status, u.nama_lengkap, u.jabatan, u.unit, u.jabatan_id, mj.nama as jabatan_master, mj.level as jabatan_level');
         $this->db->from('rtl_penerima rp');
         $this->db->join('users u', 'u.id = rp.user_id');
+        $this->db->join('master_jabatan mj', 'mj.id = u.jabatan_id', 'left');
         $this->db->where('rp.rtl_id', $id);
-        $rtl['penerima'] = $this->db->get()->result_array();
+        $this->db->order_by('rp.urutan_level', 'ASC');
+        $penerima_list = $this->db->get()->result_array();
+
+        // Compute lock status per penerima jika berjenjang
+        if (!empty($rtl['is_berjenjang'])) {
+            $level_statuses = [];
+            foreach ($penerima_list as $p) {
+                $lv = (int)($p['urutan_level'] ?? 0);
+                if ($lv > 0) {
+                    if (!isset($level_statuses[$lv])) $level_statuses[$lv] = [];
+                    $level_statuses[$lv][] = $p['status'];
+                }
+            }
+
+            foreach ($penerima_list as &$p) {
+                $my_lv = (int)($p['urutan_level'] ?? 0);
+                $p['is_locked'] = false;
+                if ($my_lv > 1) {
+                    $prev_lv = $my_lv - 1;
+                    if (isset($level_statuses[$prev_lv])) {
+                        foreach ($level_statuses[$prev_lv] as $st) {
+                            if ($st !== 'DONE') {
+                                $p['is_locked'] = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            unset($p);
+        } else {
+            foreach ($penerima_list as &$p) {
+                $p['is_locked'] = false;
+            }
+            unset($p);
+        }
+
+        $rtl['penerima'] = $penerima_list;
 
         // Get timeline
         $this->db->select('rp.*, p.user_id as penerima_user_id, upen.nama_lengkap as nama_penerima, u.nama_lengkap as pembuat, u.jabatan');
@@ -144,13 +183,28 @@ class Rtl_model extends CI_Model {
     public function insert($data, $penerima_ids = [])
     {
         $this->db->trans_start();
+
+        // Compute urutan_level jika mode berjenjang
+        $is_berjenjang = !empty($data['is_berjenjang']) ? 1 : 0;
+        $data['is_berjenjang'] = $is_berjenjang;
+        $urutan_map = [];
+        if ($is_berjenjang && !empty($penerima_ids)) {
+            $urutan_map = $this->jabatan_m->compute_urutan_levels($penerima_ids);
+        }
+
         $this->db->insert('rtl', $data);
         $rtl_id = $this->db->insert_id();
 
         if (!empty($penerima_ids)) {
             $batch = [];
             foreach ($penerima_ids as $uid) {
-                $batch[] = ['rtl_id' => $rtl_id, 'user_id' => $uid, 'status' => 'TO_DO'];
+                $uid_int = (int)$uid;
+                $batch[] = [
+                    'rtl_id' => $rtl_id,
+                    'user_id' => $uid_int,
+                    'urutan_level' => isset($urutan_map[$uid_int]) ? $urutan_map[$uid_int] : null,
+                    'status' => 'TO_DO'
+                ];
             }
             $this->db->insert_batch('rtl_penerima', $batch);
         }
@@ -161,13 +215,31 @@ class Rtl_model extends CI_Model {
 
     public function update_progress_penerima($rtl_penerima_id, $status, $catatan, $user_id)
     {
-        $this->db->trans_start();
-
         // 1. Get rtl_penerima
         $penerima = $this->db->get_where('rtl_penerima', ['id' => $rtl_penerima_id])->row_array();
         if (!$penerima) return false;
 
         $rtl_id = $penerima['rtl_id'];
+
+        // ── Validasi Berjenjang ──────────────────────────────────────────
+        $rtl = $this->db->get_where('rtl', ['id' => $rtl_id])->row_array();
+        if ($rtl && !empty($rtl['is_berjenjang']) && !empty($penerima['urutan_level'])) {
+            $my_level = (int)$penerima['urutan_level'];
+            if ($my_level > 1) {
+                // Cek apakah semua penerima di level sebelumnya sudah DONE
+                $belum_done = $this->db
+                    ->where('rtl_id', $rtl_id)
+                    ->where('urutan_level', $my_level - 1)
+                    ->where('status !=', 'DONE')
+                    ->count_all_results('rtl_penerima');
+
+                if ($belum_done > 0) {
+                    return 'LOCKED';
+                }
+            }
+        }
+
+        $this->db->trans_start();
 
         // 2. Update status in rtl_penerima
         $this->db->where('id', $rtl_penerima_id);

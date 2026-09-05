@@ -1,0 +1,373 @@
+# Rencana Implementasi: Alur Disposisi Berjenjang Berdasarkan Hierarki Jabatan
+
+## Latar Belakang
+
+Saat ini, semua penerima disposisi/RTL berstatus sejajar (flat). Siapapun bisa mengisi progress kapan saja tanpa memperhatikan urutan hierarki jabatan. Perubahan ini akan menerapkan **alur validasi berjenjang** sehingga:
+
+- **Level bawah** (Unit/Kepala Instalasi) harus menyelesaikan validasi terlebih dahulu
+- **Level tengah** (Kabid) baru bisa mengisi setelah level bawah selesai
+- **Level atas** (Wadir/Direktur) baru bisa mengisi setelah level di bawahnya selesai
+
+### Contoh Alur
+```
+Staff IT / Ka Ins IT  →  Kabid Umum  →  Wadir  →  Direktur
+     (Level 1)           (Level 2)    (Level 3)   (Level 4)
+```
+
+### Data User Saat Ini
+
+| ID | Nama | Role | Jabatan | Unit |
+|---|---|---|---|---|
+| 2 | dr Navis | DIREKTUR | Direktur | Direktur |
+| 3 | Wadir Umum | PEJABAT | Wadir Umum | Wadir |
+| 4 | Bu Ida Keuangan | PEJABAT | Kabid Keuangan | Keuangan |
+| 6 | Moch Danial | PEJABAT | Kabid Umum | Kepala Bidang Umum |
+| 5 | Prasetyo Dwi R. | STAF | Ka Ins IT | Ins. TI |
+| 7 | M. Nur Afandi | STAF | Staff IT | TI |
+| 1 | Administrator | ADMIN | Administrator | IT |
+
+---
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Perubahan Skema Database**: Implementasi ini memerlukan pembuatan 2 tabel baru (`master_jabatan`, `jabatan_hierarki`) dan modifikasi pada tabel `users`, `disposisi_penerima`, dan `rtl_penerima`. Data jabatan yang sudah ada (kolom `jabatan` string) akan dipertahankan sebagai fallback.
+
+> [!WARNING]
+> **Breaking Change pada Alur Kerja**: Setelah implementasi ini, penerima disposisi/RTL yang berada di level atas TIDAK akan bisa mengisi progress sebelum level bawah menyelesaikan validasinya. Pastikan semua user memahami alur baru ini.
+
+> [!IMPORTANT]
+> **Backward Compatibility**: Disposisi/RTL yang sudah ada sebelumnya (tanpa `urutan_level` / tanpa relasi `jabatan_id`) akan tetap berjalan dengan mode flat (semua penerima bisa isi progress). Hanya disposisi/RTL baru yang menggunakan mode berjenjang.
+
+---
+
+## Open Questions
+
+> [!IMPORTANT]
+> **Q1**: Apakah alur berjenjang ini harus berlaku **otomatis** berdasarkan jabatan penerima, atau admin harus **memilih secara manual** bahwa disposisi tertentu menggunakan mode berjenjang? 
+> **Rekomendasi**: Mode otomatis berdasarkan level jabatan penerima, dengan opsi toggle "Mode Berjenjang" di form disposisi/RTL.
+
+> [!IMPORTANT]
+> **Q2**: Bagaimana jika ada 2 penerima di level yang sama (misal: 2 staff di level 1)? Apakah **semua** harus selesai dulu baru level 2 bisa diakses, atau **salah satu** saja cukup?
+> **Rekomendasi**: Semua penerima di level yang sama harus menyelesaikan terlebih dahulu.
+
+> [!IMPORTANT]
+> **Q3**: Apakah penerima di level atas bisa **melihat** progress level bawah (read-only) meskipun belum bisa mengisi? 
+> **Rekomendasi**: Ya, bisa melihat semua progress (timeline) tapi tombol "Tambah Progress" ter-lock.
+
+> [!IMPORTANT]
+> **Q4**: Apakah ADMIN tetap bisa bypass hierarki (isi progress kapan saja untuk semua level)?
+> **Rekomendasi**: Ya, ADMIN memiliki full access sebagai super user.
+
+---
+
+## Proposed Changes
+
+### Fase 1: Master Jabatan & Hierarki (Database)
+
+#### [NEW] Tabel `master_jabatan`
+
+Tabel master untuk menyimpan daftar jabatan yang terstruktur.
+
+```sql
+CREATE TABLE IF NOT EXISTS master_jabatan (
+  id          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  nama        VARCHAR(100) NOT NULL,           -- 'Staff IT', 'Ka Ins IT', 'Kabid Umum', 'Wadir', 'Direktur'
+  kode        VARCHAR(50)  NULL UNIQUE,        -- 'STAFF_IT', 'KA_INS_IT', 'KABID_UMUM', etc.
+  level       INT UNSIGNED NOT NULL DEFAULT 1, -- 1=paling bawah, 2=menengah, 3=atas, 4=tertinggi
+  deskripsi   TEXT NULL,
+  is_active   TINYINT(1) NOT NULL DEFAULT 1,
+  created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  
+  INDEX idx_level (level),
+  INDEX idx_active (is_active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+**Seed data awal** berdasarkan user yang sudah ada:
+
+```sql
+INSERT INTO master_jabatan (id, nama, kode, level) VALUES
+  (1, 'Staff',              'STAFF',       1),
+  (2, 'Kepala Instalasi',   'KA_INSTALASI', 2),
+  (3, 'Kepala Bidang',      'KABID',       3),
+  (4, 'Wakil Direktur',     'WADIR',       4),
+  (5, 'Direktur',           'DIREKTUR',    5),
+  (6, 'Administrator',      'ADMIN',       99);
+```
+
+#### [NEW] Tabel `jabatan_hierarki`
+
+Tabel relasi parent-child antar jabatan untuk mendefinisikan rantai validasi.
+
+```sql
+CREATE TABLE IF NOT EXISTS jabatan_hierarki (
+  id          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  jabatan_id  BIGINT UNSIGNED NOT NULL,        -- Jabatan bawahan
+  parent_id   BIGINT UNSIGNED NOT NULL,        -- Jabatan atasan langsung
+  
+  UNIQUE KEY uq_child_parent (jabatan_id, parent_id),
+  CONSTRAINT fk_jh_jabatan FOREIGN KEY (jabatan_id) REFERENCES master_jabatan(id) ON DELETE CASCADE,
+  CONSTRAINT fk_jh_parent  FOREIGN KEY (parent_id) REFERENCES master_jabatan(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+**Seed data hierarki**:
+
+```sql
+INSERT INTO jabatan_hierarki (jabatan_id, parent_id) VALUES
+  (1, 2),  -- Staff → Kepala Instalasi
+  (2, 3),  -- Kepala Instalasi → Kabid
+  (3, 4),  -- Kabid → Wadir
+  (4, 5);  -- Wadir → Direktur
+```
+
+**Visualisasi hierarki**:
+```
+Level 1: Staff
+    ↓
+Level 2: Kepala Instalasi
+    ↓
+Level 3: Kepala Bidang (Kabid)
+    ↓
+Level 4: Wakil Direktur (Wadir)
+    ↓
+Level 5: Direktur
+```
+
+#### [MODIFY] Tabel `users`
+
+Tambahkan kolom `jabatan_id` sebagai foreign key ke `master_jabatan`:
+
+```sql
+ALTER TABLE users 
+  ADD COLUMN jabatan_id BIGINT UNSIGNED NULL AFTER jabatan,
+  ADD CONSTRAINT fk_user_jabatan 
+    FOREIGN KEY (jabatan_id) REFERENCES master_jabatan(id) 
+    ON DELETE SET NULL;
+
+-- Mapping data existing
+UPDATE users SET jabatan_id = 1 WHERE jabatan LIKE '%Staff%' AND role = 'STAF';
+UPDATE users SET jabatan_id = 2 WHERE jabatan LIKE '%Ka Ins%' OR jabatan LIKE '%Kepala Instalasi%';
+UPDATE users SET jabatan_id = 3 WHERE jabatan LIKE '%Kabid%' OR jabatan LIKE '%Kepala Bidang%';
+UPDATE users SET jabatan_id = 4 WHERE jabatan LIKE '%Wadir%';
+UPDATE users SET jabatan_id = 5 WHERE jabatan LIKE '%Direktur%' AND role = 'DIREKTUR';
+UPDATE users SET jabatan_id = 6 WHERE role = 'ADMIN';
+```
+
+#### [MODIFY] Tabel `disposisi_penerima`
+
+Tambahkan kolom `urutan_level` untuk menyimpan urutan validasi berjenjang:
+
+```sql
+ALTER TABLE disposisi_penerima 
+  ADD COLUMN urutan_level INT UNSIGNED NULL DEFAULT NULL AFTER user_id;
+  -- NULL = mode flat (tidak berjenjang), 1 = level bawah, 2 = level tengah, dst
+```
+
+#### [MODIFY] Tabel `rtl_penerima`
+
+Tambahkan kolom `urutan_level` yang sama:
+
+```sql
+ALTER TABLE rtl_penerima
+  ADD COLUMN urutan_level INT UNSIGNED NULL DEFAULT NULL AFTER user_id;
+```
+
+#### [MODIFY] Tabel `disposisi`
+
+Tambahkan flag mode berjenjang:
+
+```sql
+ALTER TABLE disposisi
+  ADD COLUMN is_berjenjang TINYINT(1) NOT NULL DEFAULT 0 AFTER catatan_direktur;
+```
+
+#### [MODIFY] Tabel `rtl`
+
+Tambahkan flag mode berjenjang:
+
+```sql
+ALTER TABLE rtl
+  ADD COLUMN is_berjenjang TINYINT(1) NOT NULL DEFAULT 0 AFTER status_progress;
+```
+
+---
+
+### Fase 2: Backend API & Logic
+
+#### [NEW] [Jabatan_model.php](file:///c:/xampp/htdocs/SiDispo/application/models/Jabatan_model.php)
+
+Model untuk CRUD tabel `master_jabatan` dan `jabatan_hierarki`:
+
+- `get_all($active_only = true)` — Daftar semua jabatan
+- `get_by_id($id)` — Detail jabatan
+- `create($data)` — Tambah jabatan
+- `update($id, $data)` — Edit jabatan
+- `delete($id)` — Hapus jabatan
+- `get_hierarki()` — Get semua relasi parent-child
+- `get_children($jabatan_id)` — Get jabatan bawahan langsung
+- `get_parent($jabatan_id)` — Get jabatan atasan langsung
+- `get_level_for_user($user_id)` — Get level jabatan user
+- `compute_urutan_levels($user_ids)` — Hitung `urutan_level` otomatis berdasarkan jabatan_id setiap user
+
+#### [NEW] [Jabatan.php](file:///c:/xampp/htdocs/SiDispo/application/controllers/Jabatan.php)
+
+Controller REST API Master Jabatan (ADMIN only):
+
+- `GET /api/v1/jabatan` — Daftar jabatan (semua user terotentikasi)
+- `GET /api/v1/jabatan/(:num)` — Detail jabatan
+- `GET /api/v1/jabatan/hierarki` — Get pohon hierarki jabatan
+- `POST /api/v1/admin/jabatan` — Tambah jabatan (Admin only)
+- `PUT /api/v1/admin/jabatan/(:num)` — Edit jabatan (Admin only)
+- `DELETE /api/v1/admin/jabatan/(:num)` — Hapus jabatan (Admin only)
+
+#### [MODIFY] [Disposisi_model.php](file:///c:/xampp/htdocs/SiDispo/application/models/Disposisi_model.php)
+
+- **`insert()`**: Saat `is_berjenjang = true`, hitung `urutan_level` otomatis berdasarkan `jabatan_id` setiap penerima dan simpan ke `disposisi_penerima.urutan_level`.
+- **`update_progress()`**: Tambahkan validasi berjenjang:
+  ```php
+  // Cek apakah disposisi ini berjenjang
+  if ($disposisi['is_berjenjang']) {
+      // Cek apakah semua penerima di level sebelumnya sudah SELESAI
+      $level_sebelumnya = $dp['urutan_level'] - 1;
+      if ($level_sebelumnya > 0) {
+          $belum_selesai = ... // query disposisi_penerima WHERE urutan_level = $level_sebelumnya AND status != 'SELESAI'
+          if ($belum_selesai > 0) {
+              return 'LOCKED'; // Level ini belum bisa diisi
+          }
+      }
+  }
+  ```
+- **`get_by_id()`**: Tambahkan `urutan_level` dan info lock status ke response penerima.
+
+#### [MODIFY] [Rtl_model.php](file:///c:/xampp/htdocs/SiDispo/application/models/Rtl_model.php)
+
+Perubahan serupa dengan Disposisi_model:
+- **`insert()`**: Hitung `urutan_level` otomatis.
+- **`update_progress_penerima()`**: Validasi berjenjang sebelum update progress.
+- **`get_detail_with_timeline()`**: Tambahkan info lock status per penerima.
+
+#### [MODIFY] [Disposisi.php](file:///c:/xampp/htdocs/SiDispo/application/controllers/Disposisi.php)
+
+- **`create()`**: Terima parameter `is_berjenjang` dari input.
+- **`progress()`**: Handle response `LOCKED` dari model dengan pesan "Penerima di level sebelumnya belum menyelesaikan validasi".
+
+#### [MODIFY] [Rtl.php](file:///c:/xampp/htdocs/SiDispo/application/controllers/Rtl.php)
+
+Perubahan serupa dengan controller Disposisi:
+- **`create()`**: Terima parameter `is_berjenjang`.
+- **`progress()`**: Handle validasi berjenjang.
+
+#### [MODIFY] [Admin.php](file:///c:/xampp/htdocs/SiDispo/application/controllers/Admin.php)
+
+- **`users_create()` & `users_update()`**: Tambahkan `jabatan_id` sebagai input.
+
+#### [MODIFY] [Auth.php](file:///c:/xampp/htdocs/SiDispo/application/controllers/Auth.php)
+
+- **JWT Payload**: Tambahkan `jabatan_id` dan `jabatan_level` ke payload token.
+
+#### [MODIFY] [routes.php](file:///c:/xampp/htdocs/SiDispo/application/config/routes.php)
+
+```php
+// ── MASTER JABATAN ──────────────────────────────────
+$route['api/v1/jabatan']['get']                     = 'Jabatan/index';
+$route['api/v1/jabatan/hierarki']['get']             = 'Jabatan/hierarki';
+$route['api/v1/jabatan/(:num)']['get']              = 'Jabatan/show/$1';
+$route['api/v1/admin/jabatan']['post']              = 'Jabatan/create';
+$route['api/v1/admin/jabatan/(:num)']['put']        = 'Jabatan/update/$1';
+$route['api/v1/admin/jabatan/(:num)']['delete']     = 'Jabatan/destroy/$1';
+```
+
+---
+
+### Fase 3: Frontend Vue.js
+
+#### [NEW] [AdminJabatanView.vue](file:///c:/xampp/htdocs/SiDispo/sidispo-frontend/src/views/AdminJabatanView.vue)
+
+Halaman kelola Master Jabatan bagi Administrator:
+
+- **Tabel jabatan**: ID, Nama, Kode, Level, Status Aktif, Aksi
+- **Visualisasi Hierarki**: Diagram pohon (tree view) yang menampilkan rantai jabatan
+- **Modal Tambah/Edit**: Form nama jabatan, kode, level, deskripsi
+- **Modal Konfirmasi Hapus**
+- **Drag & Drop** untuk mengatur urutan level (opsional)
+
+#### [MODIFY] [AdminUsersView.vue](file:///c:/xampp/htdocs/SiDispo/sidispo-frontend/src/views/AdminUsersView.vue)
+
+- Tambahkan dropdown **"Jabatan (Master)"** di form tambah/edit user yang terhubung ke `/api/v1/jabatan`
+- Kolom jabatan di tabel menampilkan nama dari master jabatan + badge level
+
+#### [MODIFY] [DisposisiView.vue](file:///c:/xampp/htdocs/SiDispo/sidispo-frontend/src/views/DisposisiView.vue)
+
+- **Form Buat Disposisi**: Tambahkan toggle switch `"Mode Berjenjang"` (`is_berjenjang`)
+  - Jika aktif: Tampilkan preview urutan level penerima secara otomatis berdasarkan jabatan
+  - Preview visual: `Level 1: Staff IT → Level 2: Ka Ins IT → Level 3: Kabid → Level 4: Direktur`
+- **Detail Disposisi**: 
+  - Tampilkan badge level di samping nama penerima
+  - Jika mode berjenjang:
+    - Penerima yang level-nya belum bisa diakses: tampilkan icon 🔒 + tooltip "Menunggu validasi level sebelumnya"
+    - Penerima yang sudah bisa diakses: tampilkan tombol "Tambah Progress" seperti biasa
+    - Penerima yang sudah selesai: tampilkan ✅
+
+#### [MODIFY] [RtlView.vue](file:///c:/xampp/htdocs/SiDispo/sidispo-frontend/src/views/RtlView.vue)
+
+Perubahan serupa dengan DisposisiView:
+- Toggle `"Mode Berjenjang"` di form RTL
+- Lock status visual di detail RTL
+
+#### [MODIFY] [AppSidebar.vue](file:///c:/xampp/htdocs/SiDispo/sidispo-frontend/src/components/layout/AppSidebar.vue) & [router/index.js](file:///c:/xampp/htdocs/SiDispo/sidispo-frontend/src/router/index.js)
+
+- Tambahkan route `/admin/jabatan` (`name: 'admin-jabatan'`)
+- Tambahkan menu navigasi **"Master Jabatan"** (`pi pi-sitemap`) di kelompok menu **Admin Panel** pada Sidebar
+
+---
+
+## Ringkasan Perubahan File
+
+| Fase | File | Aksi | Deskripsi |
+|---|---|---|---|
+| 1 | Database Schema | NEW | Tabel `master_jabatan`, `jabatan_hierarki` |
+| 1 | Database Schema | MODIFY | ALTER `users` (tambah `jabatan_id`), ALTER `disposisi_penerima` & `rtl_penerima` (tambah `urutan_level`), ALTER `disposisi` & `rtl` (tambah `is_berjenjang`) |
+| 2 | `Jabatan_model.php` | NEW | Model CRUD master jabatan & hierarki |
+| 2 | `Jabatan.php` | NEW | Controller API master jabatan |
+| 2 | `Disposisi_model.php` | MODIFY | Validasi berjenjang pada insert & update_progress |
+| 2 | `Rtl_model.php` | MODIFY | Validasi berjenjang pada insert & update_progress |
+| 2 | `Disposisi.php` | MODIFY | Handle `is_berjenjang` & response LOCKED |
+| 2 | `Rtl.php` | MODIFY | Handle `is_berjenjang` & response LOCKED |
+| 2 | `Admin.php` | MODIFY | Tambah `jabatan_id` di user CRUD |
+| 2 | `Auth.php` | MODIFY | Tambah `jabatan_id`/`jabatan_level` ke JWT |
+| 2 | `routes.php` | MODIFY | Route master jabatan |
+| 3 | `AdminJabatanView.vue` | NEW | Halaman admin master jabatan |
+| 3 | `AdminUsersView.vue` | MODIFY | Dropdown jabatan dari master |
+| 3 | `DisposisiView.vue` | MODIFY | Toggle berjenjang & lock status UI |
+| 3 | `RtlView.vue` | MODIFY | Toggle berjenjang & lock status UI |
+| 3 | `AppSidebar.vue` | MODIFY | Menu Master Jabatan |
+| 3 | `router/index.js` | MODIFY | Route admin jabatan |
+
+---
+
+## Verification Plan
+
+### 1. Database Verification
+- Jalankan migration SQL (CREATE TABLE, ALTER TABLE, INSERT seed data)
+- Verifikasi relasi hierarki dengan query: `SELECT j.nama, p.nama AS atasan FROM jabatan_hierarki jh JOIN master_jabatan j ON j.id = jh.jabatan_id JOIN master_jabatan p ON p.id = jh.parent_id`
+- Verifikasi mapping `users.jabatan_id`
+
+### 2. Backend API Verification
+- Test CRUD Master Jabatan via API
+- Test pembuatan disposisi berjenjang → cek `disposisi_penerima.urutan_level` terisi otomatis
+- Test progress level 2 sebelum level 1 selesai → harus ditolak (403/LOCKED)
+- Test progress level 2 setelah level 1 semua SELESAI → harus berhasil
+- Test ADMIN bypass validasi berjenjang → harus berhasil
+
+### 3. Frontend Verification
+- Buka halaman Master Jabatan → CRUD + visualisasi hierarki
+- Buat disposisi baru dengan mode berjenjang → lihat preview level
+- Di detail disposisi, cek lock status visual untuk level yang belum bisa diakses
+- Login sebagai user level 2 → cek tombol "Tambah Progress" ter-lock
+- Login sebagai user level 1 → selesaikan progress → login kembali sebagai level 2 → tombol unlock
+
+### 4. Build Verification
+- Jalankan `cmd /c "npm run build"` untuk memastikan frontend build berhasil

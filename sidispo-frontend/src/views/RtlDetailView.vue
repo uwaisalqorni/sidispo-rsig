@@ -147,6 +147,10 @@ function initials(nama) {
 // Buka modal untuk tambah progress baru
 const openProgressModal = (dp) => {
   if (Number(dp.user_id) !== currentUserId.value) return
+  if (dp.is_locked) {
+    toast.add({ severity: 'warn', summary: 'Tugas Terkunci', detail: 'Level Anda belum dapat diisi. Menunggu penyelesaian dari level sebelumnya.', life: 4000 })
+    return
+  }
   isEditing.value = false
   editingLogId.value = null
   currentPenerimaId.value = dp.id
@@ -321,6 +325,11 @@ const handleDeleteLog = async () => {
                 {{ getStatusLabel(rtl.status_progress) }}
               </span>
 
+              <span v-if="Number(rtl.is_berjenjang) === 1" class="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full uppercase border shadow-2xs bg-amber-500/10 text-amber-600 border-amber-500/20">
+                <i class="pi pi-sitemap text-[10px]"></i>
+                Mode Berjenjang
+              </span>
+
               <span v-if="isOverdue" class="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full uppercase border bg-rose-50 text-rose-700 border-rose-200 animate-pulse">
                 <i class="pi pi-exclamation-triangle text-[10px]"></i>
                 Overdue
@@ -331,6 +340,14 @@ const handleDeleteLog = async () => {
             <h1 class="text-xl md:text-2xl font-extrabold text-textMain leading-tight">
               {{ rtl.perihal_surat || 'Rencana Tindak Lanjut' }}
             </h1>
+
+            <!-- Alert Mode Berjenjang -->
+            <div v-if="Number(rtl.is_berjenjang) === 1" class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-700 dark:text-amber-300 flex items-center gap-2.5">
+              <i class="pi pi-info-circle text-base text-amber-600 shrink-0"></i>
+              <div>
+                <strong>Alur Validasi Berjenjang RTL Aktif:</strong> Pengerjaan dan validasi tugas diselesaikan secara berurutan sesuai level jabatan. Level atas baru dapat menyelesaikan setelah level di bawahnya berstatus Selesai (Done).
+              </div>
+            </div>
 
             <!-- Reference Chips Grid -->
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
@@ -438,14 +455,24 @@ const handleDeleteLog = async () => {
             </div>
 
             <!-- Quick Action: Update Progress button if logged-in user is a recipient -->
-            <button
-              v-if="myPenerima"
-              @click="openProgressModal(myPenerima)"
-              class="px-3.5 py-1.5 bg-accent text-white font-semibold text-xs rounded-lg hover:bg-accentHover transition-colors flex items-center gap-1.5 shadow-xs"
-            >
-              <i class="pi pi-plus text-[11px]"></i>
-              <span>Update Progress Anda</span>
-            </button>
+            <div v-if="myPenerima">
+              <button
+                v-if="!myPenerima.is_locked"
+                @click="openProgressModal(myPenerima)"
+                class="px-3.5 py-1.5 bg-accent text-white font-semibold text-xs rounded-lg hover:bg-accentHover transition-colors flex items-center gap-1.5 shadow-xs"
+              >
+                <i class="pi pi-plus text-[11px]"></i>
+                <span>Update Progress Anda</span>
+              </button>
+              <div
+                v-else
+                class="px-3 py-1.5 bg-surface3 text-textMuted font-semibold text-xs rounded-lg border border-border flex items-center gap-1.5 cursor-not-allowed opacity-80"
+                title="Level Anda belum dapat diisi. Menunggu penyelesaian dari level sebelumnya."
+              >
+                <i class="pi pi-lock text-[11px] text-amber-500"></i>
+                <span>Terkunci (Tunggu Level Bawah)</span>
+              </div>
+            </div>
           </div>
 
           <!-- Timeline Content -->
@@ -461,14 +488,23 @@ const handleDeleteLog = async () => {
                   Catatan progres dari penerima RTL akan muncul secara berurutan di timeline ini.
                 </p>
               </div>
-              <button
-                v-if="myPenerima"
-                @click="openProgressModal(myPenerima)"
-                class="mt-2 inline-flex items-center gap-2 px-4 py-2 bg-accent text-white text-xs font-bold rounded-lg hover:bg-accentHover shadow-xs transition-colors"
-              >
-                <i class="pi pi-plus text-xs"></i>
-                <span>Catat Progres Pertama Anda</span>
-              </button>
+              <template v-if="myPenerima">
+                <button
+                  v-if="!myPenerima.is_locked"
+                  @click="openProgressModal(myPenerima)"
+                  class="mt-2 inline-flex items-center gap-2 px-4 py-2 bg-accent text-white text-xs font-bold rounded-lg hover:bg-accentHover shadow-xs transition-colors"
+                >
+                  <i class="pi pi-plus text-xs"></i>
+                  <span>Catat Progres Pertama Anda</span>
+                </button>
+                <div
+                  v-else
+                  class="mt-2 inline-flex items-center gap-2 px-4 py-2 bg-surface3 text-textMuted text-xs font-bold rounded-lg border border-border"
+                >
+                  <i class="pi pi-lock text-xs text-amber-500"></i>
+                  <span>Tugas Anda Terkunci (Menunggu Level Bawah)</span>
+                </div>
+              </template>
             </div>
 
             <!-- Timeline List -->
@@ -636,18 +672,29 @@ const handleDeleteLog = async () => {
                           Anda
                         </span>
                       </div>
-                      <div class="text-[11px] text-textMuted truncate">{{ dp.jabatan || 'Penerima Tugas' }}</div>
+                      <div class="text-[11px] text-textMuted truncate flex items-center gap-1.5 mt-0.5">
+                        <span>{{ dp.jabatan_master || dp.jabatan || 'Penerima Tugas' }}</span>
+                        <span v-if="dp.urutan_level" class="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                          Lv.{{ dp.urutan_level }}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
-                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 uppercase" :class="getStatusColor(dp.status)">
-                    {{ getStatusLabel(dp.status) }}
-                  </span>
+                  <div class="flex items-center gap-1.5 shrink-0">
+                    <span v-if="dp.is_locked" class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-surface3 text-amber-600 border border-amber-500/30 flex items-center gap-1" title="Menunggu validasi level sebelumnya">
+                      <i class="pi pi-lock text-[9px]"></i> Terkunci
+                    </span>
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 uppercase" :class="getStatusColor(dp.status)">
+                      {{ getStatusLabel(dp.status) }}
+                    </span>
+                  </div>
                 </div>
 
                 <!-- Action Button inside Recipient Card for the logged-in user -->
                 <div v-if="Number(dp.user_id) === currentUserId" class="pt-2 border-t border-accent/20 flex justify-end">
                   <button
+                    v-if="!dp.is_locked"
                     type="button"
                     @click="openProgressModal(dp)"
                     class="inline-flex items-center gap-1.5 px-3 py-1 bg-accent text-white text-xs font-bold rounded-lg hover:bg-accentHover transition-colors shadow-xs"
@@ -655,6 +702,14 @@ const handleDeleteLog = async () => {
                     <i class="pi pi-plus text-[10px]"></i>
                     Update Progress Saya
                   </button>
+                  <div
+                    v-else
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-surface3 text-textMuted text-xs font-bold rounded-lg border border-border cursor-not-allowed opacity-80"
+                    title="Tugas ini terkunci karena penerima di level sebelumnya belum menyelesaikan tugasnya."
+                  >
+                    <i class="pi pi-lock text-[10px] text-amber-500"></i>
+                    <span>Terkunci (Menunggu Level Bawah)</span>
+                  </div>
                 </div>
               </div>
             </div>

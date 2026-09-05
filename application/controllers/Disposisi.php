@@ -102,7 +102,8 @@ class Disposisi extends MY_Controller {
             'isi_disposisi' => $input['isi_disposisi'],
             'prioritas' => $input['prioritas'] ?? 'NORMAL',
             'batas_waktu' => $input['batas_waktu'] ?? null,
-            'catatan_direktur' => $input['catatan_direktur'] ?? null
+            'catatan_direktur' => $input['catatan_direktur'] ?? null,
+            'is_berjenjang' => !empty($input['is_berjenjang']) ? 1 : 0
         ];
 
         $penerima_ids = is_array($input['penerima_ids']) ? $input['penerima_ids'] : explode(',', $input['penerima_ids']);
@@ -148,7 +149,9 @@ class Disposisi extends MY_Controller {
         // Ensure user is updating their own progress
         $updated = $this->disposisi->update_progress($dp_id, $this->current_user->id, $status_baru, $catatan);
 
-        if ($updated) {
+        if ($updated === 'LOCKED') {
+            $this->response(['status' => 'error', 'message' => 'Level Anda belum dapat diakses. Penerima di level sebelumnya belum menyelesaikan validasi.'], 403);
+        } elseif ($updated) {
             $this->response(['status' => 'success', 'message' => 'Progress berhasil diperbarui'], 200);
         } else {
             $this->response(['status' => 'error', 'message' => 'Gagal memperbarui progress atau unauthorized'], 400);

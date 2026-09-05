@@ -78,6 +78,7 @@ class Admin extends MY_Controller {
             'no_hp'        => !empty($data['no_hp']) ? trim($data['no_hp']) : null,
             'password_hash'=> password_hash($data['password'], PASSWORD_BCRYPT),
             'jabatan'      => $data['jabatan'] ?? '',
+            'jabatan_id'   => !empty($data['jabatan_id']) ? (int)$data['jabatan_id'] : null,
             'unit'         => $data['unit'] ?? $data['unit_kerja'] ?? '',
             'role'         => $data['role'],
             'is_active'    => isset($data['is_active']) ? (int)$data['is_active'] : 1,
@@ -117,10 +118,16 @@ class Admin extends MY_Controller {
         if (!$data) $data = $this->input->post();
 
         $update = [];
-        $fields = ['nip', 'nama_lengkap', 'email', 'no_hp', 'jabatan', 'unit', 'role', 'is_active'];
+        $fields = ['nip', 'nama_lengkap', 'email', 'no_hp', 'jabatan', 'jabatan_id', 'unit', 'role', 'is_active'];
         foreach ($fields as $f) {
             if (isset($data[$f])) {
-                $update[$f] = ($f === 'no_hp' && empty($data[$f])) ? null : $data[$f];
+                if ($f === 'no_hp' && empty($data[$f])) {
+                    $update[$f] = null;
+                } elseif ($f === 'jabatan_id') {
+                    $update[$f] = !empty($data[$f]) ? (int)$data[$f] : null;
+                } else {
+                    $update[$f] = $data[$f];
+                }
             }
         }
         // Handle unit_kerja alias
