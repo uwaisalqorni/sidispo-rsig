@@ -5,7 +5,9 @@ import { useAuthStore } from '@/stores/auth'
 import { storeToRefs } from 'pinia'
 import { useToast } from 'primevue/usetoast'
 import Toast from 'primevue/toast'
+import Button from 'primevue/button'
 import api from '@/api/axios'
+import LembarDisposisiModal from '@/components/disposisi/LembarDisposisiModal.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -16,6 +18,7 @@ const toast = useToast()
 const disposisi = ref(null)
 const timeline  = ref([])
 const loading   = ref(true)
+const showLembarModal = ref(false)
 
 // Progress Modal State (Add & Edit)
 const showProgressModal = ref(false)
@@ -219,11 +222,42 @@ function fileUrl(path) {
               <span>No. Surat: <strong>{{ disposisi.nomor_surat }}</strong></span>
             </p>
           </div>
-          <div class="flex flex-col items-end gap-1 text-right">
-            <span class="text-xs text-textMuted">Dibuat oleh</span>
-            <span class="text-sm font-semibold text-textMain">{{ disposisi.pembuat }}</span>
-            <span class="text-xs text-textMuted">Batas waktu: <strong class="text-brandYellow font-mono">{{ disposisi.batas_waktu || '—' }}</strong></span>
+          <div class="flex flex-col items-end gap-2 text-right">
+            <div>
+              <span class="text-xs text-textMuted">Dibuat oleh: </span>
+              <span class="text-sm font-semibold text-textMain">{{ disposisi.pembuat }}</span>
+            </div>
+            <div class="text-xs text-textMuted">
+              Batas waktu: <strong class="text-brandYellow font-mono">{{ disposisi.batas_waktu || '—' }}</strong>
+            </div>
+            <div class="pt-1">
+              <Button
+                label="Lembar Disposisi"
+                icon="pi pi-file-check"
+                severity="success"
+                size="small"
+                class="btn-gradient !text-xs !py-1.5 !px-3 shadow-xs"
+                @click="showLembarModal = true"
+              />
+            </div>
           </div>
+        </div>
+
+        <!-- Banner Disposisi Selesai -->
+        <div v-if="disposisi.status_global === 'SELESAI'" class="p-4 mb-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-800 flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-2.5">
+            <i class="pi pi-check-circle text-2xl text-emerald-600 shrink-0"></i>
+            <div>
+              <strong class="text-sm block text-emerald-900">Disposisi Telah Selesai:</strong>
+              <span class="text-emerald-700">Seluruh tahapan progress telah selesai dan divalidasi berjenjang. Lembar disposisi resmi siap dicetak / diunduh.</span>
+            </div>
+          </div>
+          <Button
+            label="Buka & Cetak Lembar Disposisi"
+            icon="pi pi-print"
+            class="btn-gradient !text-xs !py-1.5 !px-3.5 shrink-0"
+            @click="showLembarModal = true"
+          />
         </div>
 
         <div v-if="Number(disposisi.is_berjenjang) === 1" class="p-3 mb-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-700 dark:text-amber-300 flex items-center gap-2.5">
@@ -533,5 +567,13 @@ function fileUrl(path) {
         </div>
       </div>
     </div>
+
+    <!-- Modal Cetak & Arsip Lembar Disposisi Selesai Resmi RSI -->
+    <LembarDisposisiModal
+      v-if="disposisi"
+      v-model:visible="showLembarModal"
+      :disposisi="disposisi"
+      :timeline="timeline"
+    />
   </div>
 </template>

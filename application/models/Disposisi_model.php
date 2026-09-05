@@ -64,6 +64,9 @@ class Disposisi_model extends CI_Model {
                 sm.perihal,
                 sm.asal_surat,
                 sm.nomor_surat,
+                sm.nomor_agenda,
+                sm.tanggal_surat,
+                sm.tanggal_terima,
                 u.nama_lengkap AS pembuat,
                 f.nama AS nama_folder,
                 d.prioritas,
@@ -104,7 +107,8 @@ class Disposisi_model extends CI_Model {
 
         if (!empty($filters['q'])) {
             $q = '%' . trim($filters['q']) . '%';
-            $where_clauses[] = "(d.nomor_disposisi LIKE ? OR sm.perihal LIKE ? OR sm.asal_surat LIKE ? OR sm.nomor_surat LIKE ? OR d.isi_disposisi LIKE ? OR u.nama_lengkap LIKE ?)";
+            $where_clauses[] = "(d.nomor_disposisi LIKE ? OR sm.perihal LIKE ? OR sm.asal_surat LIKE ? OR sm.nomor_surat LIKE ? OR sm.nomor_agenda LIKE ? OR d.isi_disposisi LIKE ? OR u.nama_lengkap LIKE ?)";
+            $params[] = $q;
             $params[] = $q;
             $params[] = $q;
             $params[] = $q;
@@ -146,6 +150,9 @@ class Disposisi_model extends CI_Model {
                 sm.perihal,
                 sm.asal_surat,
                 sm.nomor_surat,
+                sm.nomor_agenda,
+                sm.tanggal_surat,
+                sm.tanggal_terima,
                 u.nama_lengkap AS pembuat,
                 f.nama AS nama_folder,
                 d.prioritas,
@@ -182,7 +189,7 @@ class Disposisi_model extends CI_Model {
      */
     public function get_by_id($id)
     {
-        $this->db->select('d.*, sm.perihal, sm.asal_surat, sm.nomor_surat, f.nama as nama_folder, u.nama_lengkap as pembuat');
+        $this->db->select('d.*, sm.perihal, sm.asal_surat, sm.nomor_surat, sm.nomor_agenda, sm.tanggal_surat, sm.tanggal_terima, sm.keterangan as keterangan_surat, f.nama as nama_folder, u.nama_lengkap as pembuat');
         $this->db->from('disposisi d');
         $this->db->join('surat_masuk sm', 'sm.id = d.surat_masuk_id');
         $this->db->join('folders f', 'f.id = d.folder_id', 'left');

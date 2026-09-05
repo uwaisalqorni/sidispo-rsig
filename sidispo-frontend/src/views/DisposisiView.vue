@@ -18,6 +18,7 @@ import SelectButton from 'primevue/selectbutton'
 import Checkbox from 'primevue/checkbox'
 import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
+import LembarDisposisiModal from '@/components/disposisi/LembarDisposisiModal.vue'
 
 const toast  = useToast()
 const auth   = useAuthStore()
@@ -29,6 +30,29 @@ const editMode   = ref(false)
 const editId     = ref(null)
 const submitting = ref(false)
 const submitError = ref('')
+
+// Lembar Disposisi Report state
+const showReportModal = ref(false)
+const selectedReportDisposisi = ref(null)
+const selectedReportTimeline = ref([])
+const loadingReport = ref(false)
+
+const openReportModal = async (disp) => {
+  try {
+    loadingReport.value = true
+    const [detailRes, timelineRes] = await Promise.all([
+      api.get(`/disposisi/${disp.id}`),
+      api.get(`/progress/disposisi/${disp.id}`)
+    ])
+    selectedReportDisposisi.value = detailRes.data.data
+    selectedReportTimeline.value = timelineRes.data.data || []
+    showReportModal.value = true
+  } catch (e) {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Gagal memuat dokumen lembar disposisi', life: 3000 })
+  } finally {
+    loadingReport.value = false
+  }
+}
 
 const tabs = ['Semua', 'Diproses', 'Menunggu', 'Selesai', 'Overdue']
 const activeTab = ref('Semua')
@@ -669,9 +693,18 @@ function formatDate(d) {
             </template>
           </Column>
 
-          <Column header="Aksi" style="width: 140px; text-align: center">
+          <Column header="Aksi" style="width: 155px; text-align: center">
             <template #body="{ data }">
               <div class="flex items-center justify-center gap-1.5" @click.stop>
+                <!-- Tombol Lembar Disposisi (Khusus status SELESAI atau untuk melihat lembar disposisi resmi) -->
+                <Button
+                  v-if="data.status_display === 'SELESAI' || data.status_global === 'SELESAI'"
+                  icon="pi pi-print"
+                  size="small"
+                  class="!w-8 !h-8 !p-0 !rounded-lg !bg-emerald-50 !text-emerald-700 !border-emerald-300 hover:!bg-emerald-100 shadow-2xs"
+                  v-tooltip.top="'Cetak Lembar Disposisi'"
+                  @click.stop="openReportModal(data)"
+                />
                 <Button
                   icon="pi pi-arrow-right"
                   size="small"
@@ -1058,5 +1091,13 @@ function formatDate(d) {
         </div>
       </template>
     </Dialog>
+
+    <!-- Modal Cetak Lembar Disposisi Selesai Resmi RSI -->
+    <LembarDisposisiModal
+      v-if="selectedReportDisposisi"
+      v-model:visible="showReportModal"
+      :disposisi="selectedReportDisposisi"
+      :timeline="selectedReportTimeline"
+    />
   </div>
 </template>
