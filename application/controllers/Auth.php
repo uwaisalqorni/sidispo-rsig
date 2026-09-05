@@ -51,6 +51,8 @@ class Auth extends MY_Controller {
                         'id' => $user['id'],
                         'nip' => $user['nip'],
                         'nama_lengkap' => $user['nama_lengkap'],
+                        'email' => $user['email'],
+                        'no_hp' => $user['no_hp'],
                         'role' => $user['role'],
                         'unit' => $user['unit'],
                         'jabatan' => $user['jabatan']
@@ -118,10 +120,12 @@ class Auth extends MY_Controller {
         if (strpos($content_type, 'multipart/form-data') !== false) {
             $nama_lengkap = $this->input->post('nama_lengkap');
             $email = $this->input->post('email');
+            $no_hp = $this->input->post('no_hp');
         } else {
             $input = json_decode(trim(file_get_contents('php://input')), true);
             $nama_lengkap = isset($input['nama_lengkap']) ? $input['nama_lengkap'] : null;
             $email = isset($input['email']) ? $input['email'] : null;
+            $no_hp = isset($input['no_hp']) ? $input['no_hp'] : null;
         }
 
         $update_data = [];
@@ -140,6 +144,10 @@ class Auth extends MY_Controller {
                 return;
             }
             $update_data['email'] = trim($email);
+        }
+
+        if ($no_hp !== null) {
+            $update_data['no_hp'] = trim($no_hp) !== '' ? trim($no_hp) : null;
         }
 
         // Handle foto profil upload

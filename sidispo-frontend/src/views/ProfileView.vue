@@ -19,6 +19,7 @@ const toast = useToast()
 // Profile form
 const namaLengkap = ref('')
 const email = ref('')
+const noHp = ref('')
 const fotoFile = ref(null)
 const fotoPreview = ref(null)
 const profileMsg = ref('')
@@ -47,10 +48,11 @@ const roleBadge = computed(() => {
   return map[user.value?.role] || map.STAF
 })
 
-onMounted(() => {
-  auth.refreshUser()
+onMounted(async () => {
+  await auth.refreshUser()
   namaLengkap.value = user.value?.nama_lengkap || ''
   email.value = user.value?.email || ''
+  noHp.value = user.value?.no_hp || ''
 })
 
 function onFotoSelect(event) {
@@ -91,6 +93,9 @@ async function handleUpdateProfile() {
   }
   if (email.value.trim()) {
     formData.append('email', email.value.trim())
+  }
+  if (noHp.value.trim()) {
+    formData.append('no_hp', noHp.value.trim())
   }
   if (fotoFile.value) {
     formData.append('foto_profil', fotoFile.value)
@@ -178,6 +183,9 @@ async function handleChangePassword() {
                 </span>
                 <span class="text-xs font-medium px-3 py-1 rounded-full bg-surface2 text-textMuted border border-border/50">
                   NIP: {{ user?.nip }}
+                </span>
+                <span v-if="user?.no_hp" class="text-xs font-medium px-3 py-1 rounded-full bg-surface2 text-textMuted border border-border/50 flex items-center gap-1">
+                  <span>📱</span> {{ user.no_hp }}
                 </span>
               </div>
             </div>
@@ -269,6 +277,15 @@ async function handleChangePassword() {
             <IconField>
               <InputIcon class="pi pi-envelope text-accent" />
               <InputText id="email" v-model="email" type="email" placeholder="email@contoh.com" class="w-full !bg-surface2" :disabled="profileLoading" />
+            </IconField>
+          </div>
+
+          <!-- No. HP / WhatsApp -->
+          <div class="flex flex-col gap-2">
+            <label for="no_hp" class="text-xs font-bold text-textMuted uppercase tracking-wide">No. HP / WhatsApp</label>
+            <IconField>
+              <InputIcon class="pi pi-phone text-accent" />
+              <InputText id="no_hp" v-model="noHp" type="tel" placeholder="Contoh: 081234567890" class="w-full !bg-surface2" :disabled="profileLoading" />
             </IconField>
           </div>
 

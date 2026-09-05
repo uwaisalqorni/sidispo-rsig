@@ -18,7 +18,7 @@ const selectedUser = ref(null)
 const ROLES = ['ADMIN', 'DIREKTUR', 'PEJABAT', 'STAF']
 
 const form = ref({
-  nip: '', nama_lengkap: '', email: '', jabatan: '',
+  nip: '', nama_lengkap: '', email: '', no_hp: '', jabatan: '',
   unit: '', role: 'STAF', password: '', is_active: 1
 })
 const resetForm = ref({ password: 'Sidispo@2026' })
@@ -40,6 +40,7 @@ const filtered = computed(() => {
     list = list.filter(u =>
       u.nama_lengkap.toLowerCase().includes(q) ||
       u.email.toLowerCase().includes(q) ||
+      (u.no_hp || '').toLowerCase().includes(q) ||
       (u.nip || '').includes(q)
     )
   }
@@ -61,7 +62,7 @@ onMounted(load)
 const openCreate = () => {
   editMode.value = false
   submitError.value = ''
-  Object.assign(form.value, { nip:'', nama_lengkap:'', email:'', jabatan:'', unit:'', role:'STAF', password:'', is_active:1 })
+  Object.assign(form.value, { nip:'', nama_lengkap:'', email:'', no_hp:'', jabatan:'', unit:'', role:'STAF', password:'', is_active:1 })
   showModal.value = true
 }
 
@@ -70,6 +71,7 @@ const openEdit = (user) => {
   submitError.value = ''
   Object.assign(form.value, {
     nip: user.nip, nama_lengkap: user.nama_lengkap, email: user.email,
+    no_hp: user.no_hp || '',
     jabatan: user.jabatan, unit: user.unit,
     role: user.role, password: '', is_active: user.is_active
   })
@@ -176,7 +178,7 @@ function initials(nama) {
 
     <!-- Filter + Search -->
     <div class="flex flex-wrap gap-2 mb-4">
-      <input v-model="search" type="text" placeholder="🔍 Cari nama, email, NIP..."
+      <input v-model="search" type="text" placeholder="🔍 Cari nama, email, No. HP, NIP..."
         class="flex-1 min-w-[200px] bg-surface border border-border rounded-lg px-3 py-2 text-sm text-textMain focus:border-accent focus:outline-none" />
       <select v-model="filterRole"
         class="bg-surface border border-border rounded-lg px-3 py-2 text-sm text-textMain focus:border-accent focus:outline-none">
@@ -193,6 +195,7 @@ function initials(nama) {
             <tr>
               <th class="px-5 py-3">Pengguna</th>
               <th class="px-5 py-3">NIP</th>
+              <th class="px-5 py-3">No. HP</th>
               <th class="px-5 py-3">Jabatan / Unit</th>
               <th class="px-5 py-3">Role</th>
               <th class="px-5 py-3">Status</th>
@@ -201,7 +204,7 @@ function initials(nama) {
           </thead>
           <tbody>
             <tr v-if="loading" v-for="i in 5" :key="i" class="border-b border-border">
-              <td colspan="6" class="px-5 py-3">
+              <td colspan="7" class="px-5 py-3">
                 <div class="h-3 bg-surface3 rounded animate-pulse w-full"></div>
               </td>
             </tr>
@@ -220,6 +223,13 @@ function initials(nama) {
                 </div>
               </td>
               <td class="px-5 py-3 font-mono text-xs text-textMuted">{{ u.nip || '—' }}</td>
+              <td class="px-5 py-3">
+                <div v-if="u.no_hp" class="text-xs font-mono text-textMain flex items-center gap-1.5">
+                  <span class="text-emerald-500">📱</span>
+                  <a :href="`tel:${u.no_hp}`" class="hover:text-accent hover:underline">{{ u.no_hp }}</a>
+                </div>
+                <span v-else class="text-textDim text-xs">—</span>
+              </td>
               <td class="px-5 py-3">
                 <div class="text-[13px] text-textMain">{{ u.jabatan || '—' }}</div>
                 <div class="text-[11px] text-textMuted">{{ u.unit || '' }}</div>
@@ -250,7 +260,7 @@ function initials(nama) {
               </td>
             </tr>
             <tr v-if="!loading && filtered.length === 0">
-              <td colspan="6" class="px-5 py-10 text-center text-textMuted">Tidak ada pengguna ditemukan.</td>
+              <td colspan="7" class="px-5 py-10 text-center text-textMuted">Tidak ada pengguna ditemukan.</td>
             </tr>
           </tbody>
         </table>
@@ -284,6 +294,11 @@ function initials(nama) {
                 class="w-full bg-surface2 border border-border rounded-lg px-3 py-2.5 text-sm text-textMain focus:border-accent focus:outline-none" required />
             </div>
             <div>
+              <label class="block text-xs font-bold text-textMuted uppercase mb-1.5">No. HP / WhatsApp</label>
+              <input v-model="form.no_hp" type="tel" placeholder="Contoh: 081234567890"
+                class="w-full bg-surface2 border border-border rounded-lg px-3 py-2.5 text-sm text-textMain focus:border-accent focus:outline-none" />
+            </div>
+            <div>
               <label class="block text-xs font-bold text-textMuted uppercase mb-1.5">Jabatan</label>
               <input v-model="form.jabatan" type="text" placeholder="Jabatan / posisi"
                 class="w-full bg-surface2 border border-border rounded-lg px-3 py-2.5 text-sm text-textMain focus:border-accent focus:outline-none" />
@@ -300,8 +315,8 @@ function initials(nama) {
                 <option v-for="r in ROLES" :key="r" :value="r">{{ r }}</option>
               </select>
             </div>
-            <div>
-              <label class="block text-xs font-bold text-textMuted uppercase mb-1.5">Status</label>
+            <div class="col-span-2">
+              <label class="block text-xs font-bold text-textMuted uppercase mb-1.5">Status Akun</label>
               <select v-model="form.is_active"
                 class="w-full bg-surface2 border border-border rounded-lg px-3 py-2.5 text-sm text-textMain focus:border-accent focus:outline-none">
                 <option :value="1">Aktif</option>

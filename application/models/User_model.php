@@ -18,13 +18,24 @@ class User_model extends CI_Model {
     }
 
     /**
-     * Get user by Email or NIP for login
+     * Get user by Email, NIP, or No HP for login
      */
     public function get_user_by_nip_or_email($username)
     {
+        $this->db->group_start();
         $this->db->where('nip', $username);
         $this->db->or_where('email', $username);
+        $this->db->or_where('no_hp', $username);
+        $this->db->group_end();
         return $this->db->get('users')->row_array();
+    }
+
+    /**
+     * Get user by No HP
+     */
+    public function get_user_by_no_hp($no_hp)
+    {
+        return $this->db->get_where('users', ['no_hp' => $no_hp])->row_array();
     }
 
     /**

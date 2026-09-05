@@ -1,4 +1,4 @@
-﻿DROP DATABASE IF EXISTS sidispo;
+DROP DATABASE IF EXISTS sidispo;
 CREATE DATABASE sidispo CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE sidispo;
 SET FOREIGN_KEY_CHECKS=0;
@@ -12,6 +12,7 @@ CREATE TABLE users (
   nip            VARCHAR(20)        NOT NULL,
   nama_lengkap   VARCHAR(100)       NOT NULL,
   email          VARCHAR(100)       NOT NULL,
+  no_hp          VARCHAR(25)        NULL,
   password_hash  VARCHAR(255)       NOT NULL,
   jabatan        VARCHAR(100)       NOT NULL,
   unit           VARCHAR(100)       NULL,

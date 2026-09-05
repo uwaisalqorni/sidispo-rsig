@@ -75,6 +75,7 @@ class Admin extends MY_Controller {
             'nip'          => $data['nip'],
             'nama_lengkap' => $data['nama_lengkap'],
             'email'        => $data['email'],
+            'no_hp'        => !empty($data['no_hp']) ? trim($data['no_hp']) : null,
             'password_hash'=> password_hash($data['password'], PASSWORD_BCRYPT),
             'jabatan'      => $data['jabatan'] ?? '',
             'unit'         => $data['unit'] ?? $data['unit_kerja'] ?? '',
@@ -116,9 +117,11 @@ class Admin extends MY_Controller {
         if (!$data) $data = $this->input->post();
 
         $update = [];
-        $fields = ['nip', 'nama_lengkap', 'email', 'jabatan', 'unit', 'role', 'is_active'];
+        $fields = ['nip', 'nama_lengkap', 'email', 'no_hp', 'jabatan', 'unit', 'role', 'is_active'];
         foreach ($fields as $f) {
-            if (isset($data[$f])) $update[$f] = $data[$f];
+            if (isset($data[$f])) {
+                $update[$f] = ($f === 'no_hp' && empty($data[$f])) ? null : $data[$f];
+            }
         }
         // Handle unit_kerja alias
         if (isset($data['unit_kerja'])) $update['unit'] = $data['unit_kerja'];

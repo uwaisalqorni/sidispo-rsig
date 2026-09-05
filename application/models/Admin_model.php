@@ -16,7 +16,7 @@ class Admin_model extends CI_Model {
 
     public function get_all_users() {
         return $this->db
-            ->select('id, nip, nama_lengkap, email, jabatan, unit, role, is_active, created_at')
+            ->select('id, nip, nama_lengkap, email, no_hp, jabatan, unit, role, is_active, created_at')
             ->order_by('role', 'ASC')
             ->order_by('nama_lengkap', 'ASC')
             ->get('users')
@@ -26,7 +26,7 @@ class Admin_model extends CI_Model {
     /** Only active users – for recipient selection (accessible by all roles) */
     public function get_active_users() {
         return $this->db
-            ->select('id, nip, nama_lengkap, email, jabatan, unit, role')
+            ->select('id, nip, nama_lengkap, email, no_hp, jabatan, unit, role')
             ->where('is_active', 1)
             ->order_by('role', 'ASC')
             ->order_by('nama_lengkap', 'ASC')
@@ -36,7 +36,7 @@ class Admin_model extends CI_Model {
 
     public function get_user_by_id($id) {
         return $this->db
-            ->select('id, nip, nama_lengkap, email, jabatan, unit, role, is_active, created_at')
+            ->select('id, nip, nama_lengkap, email, no_hp, jabatan, unit, role, is_active, created_at')
             ->where('id', $id)
             ->get('users')
             ->row_array();

@@ -146,7 +146,7 @@ const features = [
           <Divider class="my-6" />
 
           <p class="text-xs text-textDim text-center leading-relaxed">
-            Versi 1.0.0 &copy; 2026 RSIG<br>
+            Versi 1.1.0 &copy; 2026 RSIG<br>
             <span class="text-accent font-semibold">Dikembangkan oleh IT RSIG</span>
           </p>
         </div>

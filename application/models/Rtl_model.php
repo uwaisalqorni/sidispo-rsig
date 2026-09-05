@@ -341,7 +341,7 @@ class Rtl_model extends CI_Model {
      */
     public function get_penerima_options($search = null, $role = null)
     {
-        $this->db->select('id, nip, nama_lengkap, email, jabatan, unit, role');
+        $this->db->select('id, nip, nama_lengkap, email, no_hp, jabatan, unit, role');
         $this->db->where('is_active', 1);
 
         if (!empty($role) && $role !== 'SEMUA') {
@@ -353,6 +353,7 @@ class Rtl_model extends CI_Model {
             $this->db->group_start();
             $this->db->like('nama_lengkap', $search);
             $this->db->or_like('nip', $search);
+            $this->db->or_like('no_hp', $search);
             $this->db->or_like('jabatan', $search);
             $this->db->or_like('unit', $search);
             $this->db->or_like('email', $search);
