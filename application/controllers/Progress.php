@@ -111,6 +111,32 @@ class Progress extends MY_Controller {
             return $this->response(['status' => 'error', 'message' => 'ID Disposisi dibutuhkan'], 400);
         }
 
+        // Proteksi: Hanya ADMIN, DIREKTUR, pembuat disposisi, atau user penerima disposisi yang berhak melihat timeline internal
+        $role = $this->current_user->role;
+        $user_id = (int)$this->current_user->id;
+        if ($role !== 'ADMIN' && $role !== 'DIREKTUR') {
+            $this->load->model('Disposisi_model', 'disposisi');
+            $disp = $this->disposisi->get_by_id($disposisi_id);
+            if (!$disp) {
+                return $this->response(['status' => 'error', 'message' => 'Disposisi tidak ditemukan'], 404);
+            }
+            if ((int)$disp['dibuat_oleh'] !== $user_id) {
+                $is_penerima = false;
+                foreach ($disp['penerima'] ?? [] as $p) {
+                    if ((int)$p['user_id'] === $user_id) {
+                        $is_penerima = true;
+                        break;
+                    }
+                }
+                if (!$is_penerima) {
+                    return $this->response([
+                        'status'  => 'error',
+                        'message' => 'Akses ditolak. Anda bukan penerima disposisi ini dan tidak dapat melihat log progres internal.'
+                    ], 403);
+                }
+            }
+        }
+
         $timeline = $this->progress->get_timeline_by_disposisi($disposisi_id);
 
         $this->response([

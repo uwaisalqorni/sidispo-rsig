@@ -21,6 +21,44 @@ const props = defineProps({
 
 const emit = defineEmits(['update:visible'])
 
+// Mode Layar Penuh (Fullscreen) & Zooming Dokumen
+const isFullscreen = ref(false)
+const zoomLevel = ref(100)
+
+const zoomIn = () => {
+  if (zoomLevel.value < 150) zoomLevel.value += 10
+}
+
+const zoomOut = () => {
+  if (zoomLevel.value > 60) zoomLevel.value -= 10
+}
+
+const resetZoom = () => {
+  zoomLevel.value = 100
+}
+
+const toggleFullscreen = () => {
+  isFullscreen.value = !isFullscreen.value
+}
+
+const dialogStyle = computed(() => {
+  if (isFullscreen.value) {
+    return {
+      width: '100vw',
+      height: '100vh',
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      margin: '0',
+      borderRadius: '0'
+    }
+  }
+  return {
+    width: '920px',
+    maxWidth: '96vw',
+    maxHeight: '94vh'
+  }
+})
+
 // Tutup modal
 const closeDialog = () => {
   emit('update:visible', false)
@@ -131,6 +169,9 @@ const handlePrint = () => {
     return
   }
 
+  const clone = printContent.cloneNode(true)
+  clone.style.transform = 'none'
+
   // Buat iframe tersembunyi untuk mencetak secara terisolasi tanpa terpengaruh modal/CSS app
   const iframe = document.createElement('iframe')
   iframe.style.position = 'fixed'
@@ -185,8 +226,8 @@ const handlePrint = () => {
             border-bottom: 2px solid #0f172a;
           }
           .logo-wrapper {
-            width: 60px;
-            height: 60px;
+            width: 58px;
+            height: 58px;
             flex-shrink: 0;
             display: flex;
             align-items: center;
@@ -276,11 +317,11 @@ const handlePrint = () => {
             border-right: 1.5px solid #0f172a;
           }
           .row-item {
-            padding: 5px 8px;
-            min-height: 74px;
+            padding: 4px 8px;
+            min-height: 72px;
             border-bottom: 1px solid #0f172a;
             display: flex;
-            flex-col;
+            flex-direction: column;
             justify-content: space-between;
           }
           .row-item:last-child {
@@ -313,7 +354,7 @@ const handlePrint = () => {
             line-height: 1.25;
           }
           .ruled-lines {
-            margin-top: 4px;
+            margin-top: 3px;
           }
           .ruled-line {
             border-bottom: 1px dashed #94a3b8;
@@ -342,7 +383,7 @@ const handlePrint = () => {
           .body-paraf-row {
             display: grid;
             grid-template-columns: 42% 58%;
-            min-height: 74px;
+            min-height: 72px;
             border-bottom: 1px solid #0f172a;
             text-align: center;
           }
@@ -421,7 +462,7 @@ const handlePrint = () => {
         </style>
       </head>
       <body>
-        ${printContent.outerHTML}
+        ${clone.outerHTML}
       </body>
     </html>
   `)
@@ -443,225 +484,287 @@ const handlePrint = () => {
     :visible="visible"
     @update:visible="emit('update:visible', $event)"
     modal
-    :style="{ width: '840px', maxWidth: '96vw' }"
+    :maximizable="true"
+    :breakpoints="{ '1200px': '94vw', '960px': '96vw', '640px': '98vw' }"
+    :style="dialogStyle"
     :closable="true"
     class="lembar-disposisi-dialog"
+    :class="{ 'is-fullscreen-modal': isFullscreen }"
   >
     <template #header>
-      <div class="flex items-center justify-between w-full pr-3">
+      <div class="flex items-center justify-between w-full pr-2 flex-wrap gap-2">
         <div class="flex items-center gap-2.5">
-          <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
-            <i class="pi pi-file-check text-base"></i>
+          <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold shadow-2xs">
+            <i class="pi pi-file-check text-lg"></i>
           </div>
           <div>
-            <h3 class="text-base font-bold text-textMain m-0">Pratinjau Lembar Disposisi Selesai</h3>
-            <p class="text-xs text-textMuted m-0">Format Formulir Dinas Rumah Sakit Islam Gondanglegi (Siap Cetak A4)</p>
+            <div class="flex items-center gap-2">
+              <h3 class="text-base font-bold text-slate-800 dark:text-slate-100 m-0">Lembar Disposisi Selesai</h3>
+              <span class="text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded border border-emerald-300">RESMI</span>
+            </div>
+            <p class="text-xs text-slate-500 m-0">Format Formulir Dinas RSI Gondanglegi (Siap Cetak A4)</p>
           </div>
         </div>
-        <div class="flex items-center gap-2 no-print">
+
+        <!-- Action Toolbar -->
+        <div class="flex items-center gap-1.5 sm:gap-2 no-print">
+          <!-- Zoom Controls -->
+          <div class="flex items-center bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-0.5 text-xs">
+            <button 
+              type="button" 
+              class="w-7 h-7 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded transition-colors disabled:opacity-40" 
+              :disabled="zoomLevel <= 60"
+              @click="zoomOut"
+              title="Perkecil (-)"
+            >
+              <i class="pi pi-minus text-[10px]"></i>
+            </button>
+            <button 
+              type="button" 
+              class="px-2 h-7 flex items-center justify-center font-mono font-bold text-[11px] text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700 rounded transition-colors"
+              @click="resetZoom"
+              title="Reset 100%"
+            >
+              {{ zoomLevel }}%
+            </button>
+            <button 
+              type="button" 
+              class="w-7 h-7 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded transition-colors disabled:opacity-40" 
+              :disabled="zoomLevel >= 150"
+              @click="zoomIn"
+              title="Perbesar (+)"
+            >
+              <i class="pi pi-plus text-[10px]"></i>
+            </button>
+          </div>
+
+          <!-- Fullscreen Toggle -->
+          <button
+            type="button"
+            class="h-8 px-2.5 flex items-center gap-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 transition-colors shadow-2xs"
+            @click="toggleFullscreen"
+            :title="isFullscreen ? 'Kecilkan Tampilan' : 'Tampilan Layar Penuh'"
+          >
+            <i :class="isFullscreen ? 'pi pi-window-minimize' : 'pi pi-window-maximize'" class="text-xs"></i>
+            <span class="hidden md:inline">{{ isFullscreen ? 'Kecilkan' : 'Layar Penuh' }}</span>
+          </button>
+
+          <!-- Cetak Button -->
           <Button
-            label="Cetak Lembar Disposisi"
+            label="Cetak"
             icon="pi pi-print"
-            class="btn-gradient !text-xs !py-2 !px-4 shadow-sm"
+            class="btn-gradient !text-xs !py-1.5 !px-3 shadow-sm"
             @click="handlePrint"
           />
         </div>
       </div>
     </template>
 
-    <!-- AREA DOKUMEN CETAK LEMBAR DISPOSISI (A4 PROPORTIONAL) -->
-    <div id="lembar-disposisi-print-area" class="lembar-disposisi-paper mx-auto my-1">
-      <!-- KOP SURAT RESMI RSI GONDANGLEGI -->
-      <div class="kop-container">
-        <!-- Logo RSI -->
-        <div class="logo-wrapper">
-          <img
-            :src="logoRsi"
-            alt="Logo RSI Gondanglegi"
-          />
-        </div>
-
-        <!-- Teks Kop Surat -->
-        <div class="kop-text">
-          <h2>YAYASAN RUMAH SAKIT ISLAM GONDANGLEGI</h2>
-          <h3>BIDANG KESEKRETARIATAN</h3>
-          <h4>SEKSI TATA USAHA & HUKUM</h4>
-          <p>Jl. Hayam Wuruk No. 122 Telp. (0341) 875129</p>
-          <div class="kop-meta">
-            <span>Email : <strong>rsigondanglegi@gmail.com</strong></span>
-            <span>•</span>
-            <span>Website : <strong>www.rsigondanglegi.com</strong></span>
-            <span>•</span>
-            <span>WA : <strong>0887 7065 5458</strong></span>
+    <!-- AREA CANVAS PRATINJAU DOKUMEN -->
+    <div class="lembar-disposisi-viewer-canvas">
+      <!-- AREA DOKUMEN CETAK LEMBAR DISPOSISI (A4 PROPORTIONAL) -->
+      <div 
+        id="lembar-disposisi-print-area" 
+        class="lembar-disposisi-paper"
+        :style="{
+          transform: `scale(${zoomLevel / 100})`,
+          transformOrigin: 'top center'
+        }"
+      >
+        <!-- KOP SURAT RESMI RSI GONDANGLEGI -->
+        <div class="kop-container">
+          <!-- Logo RSI -->
+          <div class="logo-wrapper">
+            <img
+              :src="logoRsi"
+              alt="Logo RSI Gondanglegi"
+            />
           </div>
-        </div>
 
-        <!-- Spacer penyeimbang di kanan -->
-        <div class="w-14 shrink-0 hidden sm:block"></div>
-      </div>
-
-      <!-- Garis Ganda Pembatas Kop -->
-      <div class="double-line"></div>
-
-      <!-- JUDUL LEMBAR DISPOSISI -->
-      <div class="title-section">
-        <h1>
-          LEMBAR DISPOSISI {{ (disposisi.perihal || 'SURAT MASUK').toUpperCase() }}
-        </h1>
-      </div>
-
-      <!-- INFO TANGGAL & AGENDA NO -->
-      <div class="info-bar">
-        <div>
-          <span>Tanggal : </span>
-          <span class="font-normal">{{ formatDateIndo(disposisi.tanggal_surat || disposisi.tanggal_disposisi) }}</span>
-        </div>
-        <div>
-          <span>Agenda No. : </span>
-          <span class="font-bold font-mono">{{ disposisi.nomor_agenda || '.........' }}</span>
-        </div>
-      </div>
-
-      <!-- BADAN TABEL DISPOSISI BERJENJANG -->
-      <div class="table-disposisi">
-        <!-- AREA KIRI: HIERARKI JABATAN & CATATAN PROGRESS SELESAI (74%) -->
-        <div class="col-left">
-          <!-- Loop Jenjang Jabatan -->
-          <div
-            v-for="(item, idx) in hierarchicalLevels"
-            :key="item.id"
-            class="row-item"
-          >
-            <div>
-              <!-- Judul Jabatan & Nama Pejabat -->
-              <div class="row-header">
-                <span>{{ idx + 1 }}. {{ item.display_jabatan }}</span>
-                <span class="row-pejabat">({{ item.nama_lengkap }})</span>
-              </div>
-
-              <!-- Isi Catatan Progress Selesai -->
-              <div class="row-content">
-                <!-- Jika ini Direktur dan ada catatan awal -->
-                <div v-if="item.jabatan_level >= 5 && disposisi.catatan_direktur && disposisi.catatan_direktur !== item.selesai_note" class="mb-1 text-[9.5px] text-slate-700 italic">
-                  <strong>Instruksi Awal:</strong> {{ disposisi.catatan_direktur }}
-                </div>
-
-                <!-- Catatan progress yang statusnya SELESAI -->
-                <div v-if="item.selesai_note" class="note-box">
-                  <span>{{ item.selesai_note }}</span>
-                </div>
-                <div v-else-if="item.is_done" class="text-slate-600 italic text-[9.5px]">
-                  ✓ Tugas telah diselesaikan dan divalidasi.
-                </div>
-                <div v-else class="text-slate-400 italic text-[9.5px]">
-                  — Menunggu giliran alur validasi berjenjang —
-                </div>
-              </div>
-            </div>
-
-            <!-- Ruled Lines Khas Lembar Disposisi Kertas Fisik -->
-            <div class="ruled-lines">
-              <div class="ruled-line"></div>
-              <div class="ruled-line"></div>
+          <!-- Teks Kop Surat -->
+          <div class="kop-text">
+            <h2>YAYASAN RUMAH SAKIT ISLAM GONDANGLEGI</h2>
+            <h3>BIDANG KESEKRETARIATAN</h3>
+            <h4>SEKSI TATA USAHA & HUKUM</h4>
+            <p>Jl. Hayam Wuruk No. 122 Telp. (0341) 875129</p>
+            <div class="kop-meta">
+              <span>Email : <strong>rsigondanglegi@gmail.com</strong></span>
+              <span>•</span>
+              <span>Website : <strong>www.rsigondanglegi.com</strong></span>
+              <span>•</span>
+              <span>WA : <strong>0887 7065 5458</strong></span>
             </div>
           </div>
 
-          <!-- Tambahan baris kosong bergaris jika hierarki kurang dari 5 baris (agar presisi format 5 tingkat) -->
-          <template v-if="hierarchicalLevels.length < 5">
+          <!-- Spacer penyeimbang di kanan -->
+          <div class="w-14 shrink-0 hidden sm:block"></div>
+        </div>
+
+        <!-- Garis Ganda Pembatas Kop -->
+        <div class="double-line"></div>
+
+        <!-- JUDUL LEMBAR DISPOSISI -->
+        <div class="title-section">
+          <h1>
+            LEMBAR DISPOSISI {{ (disposisi.perihal || 'SURAT MASUK').toUpperCase() }}
+          </h1>
+        </div>
+
+        <!-- INFO TANGGAL & AGENDA NO -->
+        <div class="info-bar">
+          <div>
+            <span>Tanggal : </span>
+            <span class="font-normal">{{ formatDateIndo(disposisi.tanggal_surat || disposisi.tanggal_disposisi) }}</span>
+          </div>
+          <div>
+            <span>Agenda No. : </span>
+            <span class="font-bold font-mono">{{ disposisi.nomor_agenda || '.........' }}</span>
+          </div>
+        </div>
+
+        <!-- BADAN TABEL DISPOSISI BERJENJANG -->
+        <div class="table-disposisi">
+          <!-- AREA KIRI: HIERARKI JABATAN & CATATAN PROGRESS SELESAI (74%) -->
+          <div class="col-left">
+            <!-- Loop Jenjang Jabatan -->
             <div
-              v-for="emptyIdx in (5 - hierarchicalLevels.length)"
-              :key="'empty-' + emptyIdx"
+              v-for="(item, idx) in hierarchicalLevels"
+              :key="item.id"
               class="row-item"
             >
-              <div class="row-header">
-                <span>{{ hierarchicalLevels.length + emptyIdx }}.</span>
-              </div>
-              <div class="ruled-lines mt-auto">
-                <div class="ruled-line"></div>
-                <div class="ruled-line"></div>
-              </div>
-            </div>
-          </template>
-        </div>
+              <div>
+                <!-- Judul Jabatan & Nama Pejabat -->
+                <div class="row-header">
+                  <span>{{ idx + 1 }}. {{ item.display_jabatan }}</span>
+                  <span class="row-pejabat">({{ item.nama_lengkap }})</span>
+                </div>
 
-        <!-- AREA KANAN: TABEL TGL & PARAF (26%) -->
-        <div class="col-right">
-          <!-- Header Tabel Kolom Kanan -->
-          <div class="header-paraf">
-            <div>Tgl</div>
-            <div>Paraf</div>
-          </div>
-
-          <!-- Baris Tanggal & Paraf per Jabatan -->
-          <div class="flex-1 flex flex-col">
-            <div
-              v-for="item in hierarchicalLevels"
-              :key="'paraf-' + item.id"
-              class="body-paraf-row flex-1"
-            >
-              <!-- Kolom Tanggal -->
-              <div class="cell-tgl">
-                <span v-if="item.selesai_date">{{ formatDateShort(item.selesai_date) }}</span>
-                <span v-if="item.selesai_date" class="text-[8px] text-slate-600 mt-0.5">{{ formatTimeShort(item.selesai_date) }}</span>
-                <span v-else class="text-slate-400">...</span>
-              </div>
-
-              <!-- Kolom Paraf Digital -->
-              <div class="cell-paraf">
-                <template v-if="item.is_done">
-                  <div class="paraf-badge">
-                    <div class="badge-title">VALIDATED</div>
-                    <div class="badge-name">{{ item.nama_lengkap }}</div>
-                    <div class="badge-disp">NIP {{ item.nip || '-' }}</div>
+                <!-- Isi Catatan Progress Selesai -->
+                <div class="row-content">
+                  <!-- Jika ini Direktur dan ada catatan awal -->
+                  <div v-if="item.jabatan_level >= 5 && disposisi.catatan_direktur && disposisi.catatan_direktur !== item.selesai_note" class="mb-1 text-[9.5px] text-slate-700 italic">
+                    <strong>Instruksi Awal:</strong> {{ disposisi.catatan_direktur }}
                   </div>
-                </template>
-                <template v-else>
-                  <span class="text-[9px] text-slate-400 italic">Paraf</span>
-                </template>
+
+                  <!-- Catatan progress yang statusnya SELESAI -->
+                  <div v-if="item.selesai_note" class="note-box">
+                    <span>{{ item.selesai_note }}</span>
+                  </div>
+                  <div v-else-if="item.is_done" class="text-slate-600 italic text-[9.5px]">
+                    ✓ Tugas telah diselesaikan dan divalidasi.
+                  </div>
+                  <div v-else class="text-slate-400 italic text-[9.5px]">
+                    — Menunggu giliran alur validasi berjenjang —
+                  </div>
+                </div>
+              </div>
+
+              <!-- Ruled Lines Khas Lembar Disposisi Kertas Fisik -->
+              <div class="ruled-lines">
+                <div class="ruled-line"></div>
+                <div class="ruled-line"></div>
               </div>
             </div>
 
-            <!-- Baris Kosong Kolom Kanan untuk pelengkap 5 slot -->
+            <!-- Tambahan baris kosong bergaris jika hierarki kurang dari 5 baris (agar presisi format 5 tingkat) -->
             <template v-if="hierarchicalLevels.length < 5">
               <div
-                v-for="emptyP in (5 - hierarchicalLevels.length)"
-                :key="'empty-paraf-' + emptyP"
-                class="body-paraf-row flex-1"
+                v-for="emptyIdx in (5 - hierarchicalLevels.length)"
+                :key="'empty-' + emptyIdx"
+                class="row-item"
               >
-                <div class="cell-tgl text-slate-300">...</div>
-                <div class="cell-paraf text-slate-300 text-[9px]">...</div>
+                <div class="row-header">
+                  <span>{{ hierarchicalLevels.length + emptyIdx }}.</span>
+                </div>
+                <div class="ruled-lines mt-auto">
+                  <div class="ruled-line"></div>
+                  <div class="ruled-line"></div>
+                </div>
               </div>
             </template>
           </div>
-        </div>
-      </div>
 
-      <!-- FOOTER DOKUMEN -->
-      <div class="footer-section">
-        <div class="footer-meta">
-          <div>
-            Kembali ke TU Tanggal : <span class="font-normal">{{ formatDateIndo(tanggalSelesaiAkhir) }}</span>
-          </div>
-          <div class="text-[9.5px] font-mono text-slate-600">
-            No. Disposisi: <strong>{{ disposisi.nomor_disposisi }}</strong>
+          <!-- AREA KANAN: TABEL TGL & PARAF (26%) -->
+          <div class="col-right">
+            <!-- Header Tabel Kolom Kanan -->
+            <div class="header-paraf">
+              <div>Tgl</div>
+              <div>Paraf</div>
+            </div>
+
+            <!-- Baris Tanggal & Paraf per Jabatan -->
+            <div class="flex-1 flex flex-col">
+              <div
+                v-for="item in hierarchicalLevels"
+                :key="'paraf-' + item.id"
+                class="body-paraf-row flex-1"
+              >
+                <!-- Kolom Tanggal Selesai -->
+                <div class="cell-tgl">
+                  <span v-if="item.selesai_date">{{ formatDateShort(item.selesai_date) }}</span>
+                  <span v-if="item.selesai_date" class="text-[8px] text-slate-600 mt-0.5">{{ formatTimeShort(item.selesai_date) }}</span>
+                  <span v-else class="text-slate-400">...</span>
+                </div>
+
+                <!-- Kolom Paraf Digital -->
+                <div class="cell-paraf">
+                  <template v-if="item.is_done">
+                    <div class="paraf-badge">
+                      <div class="badge-title">VALIDATED</div>
+                      <div class="badge-name">{{ item.nama_lengkap }}</div>
+                      <div class="badge-disp">NIP {{ item.nip || '-' }}</div>
+                    </div>
+                  </template>
+                  <template v-else>
+                    <span class="text-[9px] text-slate-400 italic">Paraf</span>
+                  </template>
+                </div>
+              </div>
+
+              <!-- Baris Kosong Kolom Kanan untuk pelengkap 5 slot -->
+              <template v-if="hierarchicalLevels.length < 5">
+                <div
+                  v-for="emptyP in (5 - hierarchicalLevels.length)"
+                  :key="'empty-paraf-' + emptyP"
+                  class="body-paraf-row flex-1"
+                >
+                  <div class="cell-tgl text-slate-300">...</div>
+                  <div class="cell-paraf text-slate-300 text-[9px]">...</div>
+                </div>
+              </template>
+            </div>
           </div>
         </div>
-        <p class="footer-note">
-          * Berkas Asli terkait {{ disposisi.perihal || 'permohonan' }} disimpan di Seksi Tata Usaha & Arsip Digital SiDispo
-        </p>
+
+        <!-- FOOTER DOKUMEN -->
+        <div class="footer-section">
+          <div class="footer-meta">
+            <div>
+              Kembali ke TU Tanggal : <span class="font-normal">{{ formatDateIndo(tanggalSelesaiAkhir) }}</span>
+            </div>
+            <div class="text-[9.5px] font-mono text-slate-600">
+              No. Disposisi: <strong>{{ disposisi.nomor_disposisi }}</strong>
+            </div>
+          </div>
+          <p class="footer-note">
+            * Berkas Asli terkait {{ disposisi.perihal || 'permohonan' }} disimpan di Seksi Tata Usaha & Arsip Digital SiDispo
+          </p>
+        </div>
       </div>
     </div>
 
     <!-- FOOTER DIALOG (NO PRINT) -->
     <template #footer>
-      <div class="flex justify-between items-center w-full pt-2 border-t border-border no-print">
-        <div class="text-xs text-textMuted flex items-center gap-2">
-          <i class="pi pi-check-circle text-brandGreen"></i>
-          <span>Status Disposisi: <strong class="text-brandGreen">{{ disposisi.status_global || 'SELESAI' }}</strong></span>
+      <div class="flex justify-between items-center w-full px-2 py-1 border-t border-slate-200 dark:border-slate-700 no-print">
+        <div class="text-xs text-slate-500 flex items-center gap-2">
+          <i class="pi pi-check-circle text-emerald-600 text-sm"></i>
+          <span>Status: <strong class="text-emerald-700 uppercase">{{ disposisi.status_global || 'SELESAI' }}</strong></span>
+          <span class="text-slate-300 hidden sm:inline">•</span>
+          <span class="text-slate-500 text-[11px] hidden sm:inline">No. Agenda: <strong>{{ disposisi.nomor_agenda || '-' }}</strong></span>
         </div>
-        <div class="flex gap-2">
-          <Button label="Tutup" severity="secondary" text @click="closeDialog" />
-          <Button label="Cetak Dokumen" icon="pi pi-print" class="btn-gradient" @click="handlePrint" />
+        <div class="flex items-center gap-2">
+          <Button label="Tutup" severity="secondary" text class="!text-xs" @click="closeDialog" />
+          <Button label="Cetak Dokumen" icon="pi pi-print" class="btn-gradient !text-xs !py-1.5 !px-3.5" @click="handlePrint" />
         </div>
       </div>
     </template>
@@ -669,15 +772,61 @@ const handlePrint = () => {
 </template>
 
 <style scoped>
-/* ── Styling Kertas Lembar Disposisi Sesuai Gambar Asli ── */
+/* ── Container Canvas Pratinjau Dokumen ── */
+.lembar-disposisi-viewer-canvas {
+  background-color: #f1f5f9;
+  background-image: radial-gradient(#cbd5e1 1.2px, transparent 1.2px);
+  background-size: 18px 18px;
+  min-height: calc(84vh - 120px);
+  padding: 1.5rem 1rem 3rem 1rem;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  overflow-y: auto;
+  overflow-x: auto;
+  transition: all 0.2s ease;
+}
+
+.is-fullscreen-modal .lembar-disposisi-viewer-canvas {
+  min-height: calc(100vh - 125px);
+  padding: 2.25rem 1rem 5rem 1rem;
+}
+
+:deep(.lembar-disposisi-dialog .p-dialog-content) {
+  padding: 0 !important;
+  background-color: #f1f5f9 !important;
+  overflow-y: auto !important;
+}
+
+:deep(.lembar-disposisi-dialog.p-dialog-maximized .p-dialog-content) {
+  height: calc(100vh - 125px) !important;
+}
+
+:deep(.lembar-disposisi-dialog .p-dialog-header) {
+  padding: 0.75rem 1.25rem !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  background-color: #ffffff !important;
+}
+
+:deep(.lembar-disposisi-dialog .p-dialog-footer) {
+  padding: 0.65rem 1.25rem !important;
+  border-top: 1px solid #e2e8f0 !important;
+  background-color: #ffffff !important;
+}
+
+/* ── Styling Kertas Lembar Disposisi Sesuai Gambar Asli (A4 Proportional) ── */
 .lembar-disposisi-paper {
   background-color: #dbeafe; /* Biru muda lembut khas lembar disposisi rumah sakit */
   color: #0f172a;
   font-family: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
-  padding: 1rem 1.25rem;
+  width: 100%;
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 1.25rem 1.5rem;
   border: 1.5px solid #0f172a;
   border-radius: 4px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 12px 28px -5px rgba(15, 23, 42, 0.16), 0 8px 10px -6px rgba(15, 23, 42, 0.08);
+  transition: transform 0.12s ease-out;
 }
 
 .kop-container {

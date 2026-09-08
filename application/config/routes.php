@@ -182,3 +182,21 @@ $route['api/v1/rtl/(:num)']['post']                        = 'Rtl/update/$1';
 $route['api/v1/rtl/(:num)']['delete']                      = 'Rtl/delete/$1';
 $route['api/v1/rtl/delete/(:num)']['post']                 = 'Rtl/delete/$1';
 
+// ── EKSPEDISI SURAT ──────────────────────────────────────────────
+$route['api/v1/ekspedisi']['get']                          = 'Ekspedisi/index';
+$route['api/v1/ekspedisi']['post']                         = 'Ekspedisi/create';
+$route['api/v1/ekspedisi/siap-kirim']['get']               = 'Ekspedisi/siap_kirim';
+$route['api/v1/ekspedisi/masuk']['get']                    = 'Ekspedisi/masuk';
+$route['api/v1/ekspedisi/unit-options']['get']             = 'Ekspedisi/unit_options';
+$route['api/v1/ekspedisi/user-options']['get']             = 'Ekspedisi/user_options';
+$route['api/v1/ekspedisi/lembar-disposisi/(:num)']['get']   = 'Ekspedisi/lembar_disposisi/$1';
+$route['api/v1/ekspedisi/(:num)']['get']                   = 'Ekspedisi/detail/$1';
+$route['api/v1/ekspedisi/terima/(:num)']['put']            = 'Ekspedisi/terima/$1';
+$route['api/v1/ekspedisi/terima/(:num)']['post']           = 'Ekspedisi/terima/$1';
+$route['api/v1/ekspedisi/tolak/(:num)']['put']             = 'Ekspedisi/tolak/$1';
+$route['api/v1/ekspedisi/tolak/(:num)']['post']            = 'Ekspedisi/tolak/$1';
+$route['api/v1/ekspedisi/(:num)/revisi']['put']            = 'Ekspedisi/revisi/$1';
+$route['api/v1/ekspedisi/(:num)/revisi']['post']           = 'Ekspedisi/revisi/$1';
+$route['api/v1/ekspedisi/(:num)']['delete']                = 'Ekspedisi/destroy/$1';
+$route['api/v1/ekspedisi/delete/(:num)']['post']           = 'Ekspedisi/destroy/$1';
+

@@ -14,6 +14,7 @@ import RtlView from '../views/RtlView.vue'
 import RtlDetailView from '../views/RtlDetailView.vue'
 import DashboardRtlView from '../views/DashboardRtlView.vue'
 import ProfileView from '../views/ProfileView.vue'
+import EkspedisiView from '../views/EkspedisiView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -45,6 +46,12 @@ const router = createRouter({
       path: '/disposisi/:id',
       name: 'disposisi-detail',
       component: DisposisiDetailView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/ekspedisi',
+      name: 'ekspedisi',
+      component: EkspedisiView,
       meta: { requiresAuth: true }
     },
     {

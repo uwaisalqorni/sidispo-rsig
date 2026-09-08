@@ -52,6 +52,7 @@ const mainMenuItems = computed(() => {
     { label: 'Dashboard', icon: 'pi pi-home', id: 'dashboard', to: { path: '/' } },
     { label: 'Surat Masuk', icon: 'pi pi-inbox', id: 'surat-masuk', to: { path: '/surat-masuk' } },
     { label: 'Disposisi', icon: 'pi pi-send', id: 'disposisi', to: { path: '/disposisi' } },
+    { label: 'Ekspedisi', icon: 'pi pi-truck', id: 'ekspedisi', to: { path: '/ekspedisi' } },
     { label: 'Selesai', icon: 'pi pi-check-circle', id: 'selesai', to: { path: '/disposisi', query: { tab: 'Selesai' } } },
     { label: 'Overdue', icon: 'pi pi-exclamation-triangle', id: 'overdue', to: { path: '/disposisi', query: { tab: 'Overdue' } } },
     { label: 'Dashboard RTL', icon: 'pi pi-chart-bar', id: 'dashboard-rtl', to: { path: '/dashboard-rtl' } },

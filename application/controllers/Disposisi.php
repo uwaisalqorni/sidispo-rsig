@@ -65,11 +65,30 @@ class Disposisi extends MY_Controller {
 
         $data = $this->disposisi->get_by_id($id);
         
-        if ($data) {
-            $this->response(['status' => 'success', 'data' => $data], 200);
-        } else {
-            $this->response(['status' => 'error', 'message' => 'Disposisi tidak ditemukan'], 404);
+        if (!$data) {
+            return $this->response(['status' => 'error', 'message' => 'Disposisi tidak ditemukan'], 404);
         }
+
+        // Proteksi: Hanya ADMIN, DIREKTUR, pembuat disposisi, atau user yang terdaftar sebagai penerima disposisi yang boleh melihat detail progres internal disposisi
+        $role = $this->current_user->role;
+        $user_id = (int)$this->current_user->id;
+        if ($role !== 'ADMIN' && $role !== 'DIREKTUR' && (int)$data['dibuat_oleh'] !== $user_id) {
+            $is_penerima = false;
+            foreach ($data['penerima'] ?? [] as $p) {
+                if ((int)$p['user_id'] === $user_id) {
+                    $is_penerima = true;
+                    break;
+                }
+            }
+            if (!$is_penerima) {
+                return $this->response([
+                    'status' => 'error',
+                    'message' => 'Akses ditolak. Anda bukan penerima disposisi ini dan tidak dapat melihat detail progres internal disposisi.'
+                ], 403);
+            }
+        }
+
+        $this->response(['status' => 'success', 'data' => $data], 200);
     }
 
     /**
