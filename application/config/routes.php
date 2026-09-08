@@ -191,6 +191,8 @@ $route['api/v1/ekspedisi/unit-options']['get']             = 'Ekspedisi/unit_opt
 $route['api/v1/ekspedisi/user-options']['get']             = 'Ekspedisi/user_options';
 $route['api/v1/ekspedisi/lembar-disposisi/(:num)']['get']   = 'Ekspedisi/lembar_disposisi/$1';
 $route['api/v1/ekspedisi/(:num)']['get']                   = 'Ekspedisi/detail/$1';
+$route['api/v1/ekspedisi/(:num)']['put']                   = 'Ekspedisi/update/$1';
+$route['api/v1/ekspedisi/(:num)']['post']                  = 'Ekspedisi/update/$1';
 $route['api/v1/ekspedisi/terima/(:num)']['put']            = 'Ekspedisi/terima/$1';
 $route['api/v1/ekspedisi/terima/(:num)']['post']           = 'Ekspedisi/terima/$1';
 $route['api/v1/ekspedisi/tolak/(:num)']['put']             = 'Ekspedisi/tolak/$1';
@@ -199,4 +201,5 @@ $route['api/v1/ekspedisi/(:num)/revisi']['put']            = 'Ekspedisi/revisi/$
 $route['api/v1/ekspedisi/(:num)/revisi']['post']           = 'Ekspedisi/revisi/$1';
 $route['api/v1/ekspedisi/(:num)']['delete']                = 'Ekspedisi/destroy/$1';
 $route['api/v1/ekspedisi/delete/(:num)']['post']           = 'Ekspedisi/destroy/$1';
+
 

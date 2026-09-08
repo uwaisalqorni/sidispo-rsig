@@ -11,7 +11,9 @@ import api from '@/api/axios'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
-  selectedDisposisi: { type: Object, default: null }
+  selectedDisposisi: { type: Object, default: null },
+  editMode: { type: Boolean, default: false },
+  editData: { type: Object, default: null }
 })
 
 const emit = defineEmits(['update:visible', 'saved'])
@@ -40,6 +42,7 @@ const form = ref({
 })
 
 const chosenDisposisi = computed(() => {
+  if (props.editMode && props.editData) return props.editData
   if (props.selectedDisposisi) return props.selectedDisposisi
   if (!form.value.disposisi_id) return null
   return siapKirimList.value.find(d => d.disposisi_id == form.value.disposisi_id)
@@ -82,16 +85,24 @@ watch(() => props.visible, (val) => {
   if (val) {
     errorMessage.value = ''
     loadUsers()
-    if (props.selectedDisposisi) {
-      form.value.disposisi_id = props.selectedDisposisi.disposisi_id || props.selectedDisposisi.id
+    if (props.editMode && props.editData) {
+      form.value.disposisi_id = props.editData.disposisi_id
+      form.value.jenis_pengiriman = props.editData.jenis_pengiriman || 'DIGITAL'
+      form.value.tanggal_kirim = props.editData.tanggal_kirim ? props.editData.tanggal_kirim.slice(0, 10) : todayDateString()
+      form.value.catatan = props.editData.catatan || ''
+      form.value.user_tujuan = (props.editData.tujuan || []).map(t => Number(t.user_tujuan_id || t.id))
     } else {
-      loadSiapKirim()
-      form.value.disposisi_id = null
+      if (props.selectedDisposisi) {
+        form.value.disposisi_id = props.selectedDisposisi.disposisi_id || props.selectedDisposisi.id
+      } else {
+        loadSiapKirim()
+        form.value.disposisi_id = null
+      }
+      form.value.jenis_pengiriman = 'DIGITAL'
+      form.value.user_tujuan = []
+      form.value.tanggal_kirim = todayDateString()
+      form.value.catatan = ''
     }
-    form.value.jenis_pengiriman = 'DIGITAL'
-    form.value.user_tujuan = []
-    form.value.tanggal_kirim = todayDateString()
-    form.value.catatan = ''
   }
 })
 
@@ -120,8 +131,13 @@ const handleSubmit = async () => {
       catatan: form.value.catatan
     }
 
-    const { data } = await api.post('/ekspedisi', payload)
-    emit('saved', data.data)
+    if (props.editMode && props.editData?.id) {
+      const { data } = await api.put(`/ekspedisi/${props.editData.id}`, payload)
+      emit('saved', data.data)
+    } else {
+      const { data } = await api.post('/ekspedisi', payload)
+      emit('saved', data.data)
+    }
     emit('update:visible', false)
   } catch (e) {
     errorMessage.value = e.response?.data?.message || 'Gagal menyimpan ekspedisi.'
@@ -142,12 +158,17 @@ const handleSubmit = async () => {
   >
     <template #header>
       <div class="flex items-center gap-2.5">
-        <div class="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold">
-          <i class="pi pi-send text-lg"></i>
+        <div class="w-9 h-9 rounded-xl flex items-center justify-center font-bold"
+          :class="editMode ? 'bg-amber-500/10 text-amber-600' : 'bg-emerald-500/10 text-emerald-600'">
+          <i :class="editMode ? 'pi pi-pencil text-lg' : 'pi pi-send text-lg'"></i>
         </div>
         <div>
-          <h3 class="text-base font-bold text-textMain leading-tight">Buat Ekspedisi Surat</h3>
-          <p class="text-xs text-textMuted">Kirim surat & disposisi selesai ke user / pegawai tujuan</p>
+          <h3 class="text-base font-bold text-textMain leading-tight">
+            {{ editMode ? 'Edit Ekspedisi Surat' : 'Buat Ekspedisi Surat' }}
+          </h3>
+          <p class="text-xs text-textMuted">
+            {{ editMode ? 'Perbarui data resi, user penerima tujuan, dan metode pengiriman' : 'Kirim surat & disposisi selesai ke user / pegawai tujuan' }}
+          </p>
         </div>
       </div>
     </template>
@@ -165,7 +186,22 @@ const handleSubmit = async () => {
           Surat / Disposisi Selesai <span class="text-red-500">*</span>
         </label>
         
-        <div v-if="selectedDisposisi" class="p-3.5 rounded-2xl bg-surface2/60 border border-border text-xs flex flex-col gap-1">
+        <div v-if="editMode && editData" class="p-3.5 rounded-2xl bg-surface2/60 border border-border text-xs flex flex-col gap-1">
+          <div class="flex items-center justify-between font-bold text-textMain">
+            <span class="truncate">{{ editData.nomor_surat }}</span>
+            <span class="text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded text-[10px] font-mono">
+              {{ editData.nomor_disposisi }}
+            </span>
+          </div>
+          <div class="text-textMuted font-medium truncate">{{ editData.perihal }}</div>
+          <div class="text-textMuted/80 text-[11px] flex items-center gap-2">
+            <span>Asal: {{ editData.asal_surat }}</span>
+            <span>•</span>
+            <span>Resi: <strong class="font-mono text-emerald-600">{{ editData.nomor_ekspedisi }}</strong></span>
+          </div>
+        </div>
+
+        <div v-else-if="selectedDisposisi" class="p-3.5 rounded-2xl bg-surface2/60 border border-border text-xs flex flex-col gap-1">
           <div class="flex items-center justify-between font-bold text-textMain">
             <span class="truncate">{{ selectedDisposisi.nomor_surat }}</span>
             <span class="text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded text-[10px] font-mono">
@@ -339,10 +375,11 @@ const handleSubmit = async () => {
           :disabled="submitting"
         />
         <Button
-          label="Simpan & Kirim Ekspedisi"
-          icon="pi pi-send"
-          severity="success"
-          class="btn-gradient !rounded-xl text-xs font-bold shadow-xs !py-2 !px-4"
+          :label="editMode ? 'Simpan Perubahan' : 'Simpan & Kirim Ekspedisi'"
+          :icon="editMode ? 'pi pi-check' : 'pi pi-send'"
+          :severity="editMode ? 'warn' : 'success'"
+          class="!rounded-xl text-xs font-bold shadow-xs !py-2 !px-4"
+          :class="!editMode ? 'btn-gradient' : ''"
           :loading="submitting"
           @click="handleSubmit"
         />

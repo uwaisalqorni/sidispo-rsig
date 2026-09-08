@@ -19,13 +19,16 @@ import CetakTandaTerimaModal from '@/components/ekspedisi/CetakTandaTerimaModal.
 import TolakEkspedisiModal from '@/components/ekspedisi/TolakEkspedisiModal.vue'
 import LembarDisposisiModal from '@/components/disposisi/LembarDisposisiModal.vue'
 import BerkasSuratModal from '@/components/ekspedisi/BerkasSuratModal.vue'
+import { useToast } from 'primevue/usetoast'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 const { user } = storeToRefs(auth)
+const toast = useToast()
 
 const isAdmin = computed(() => ['ADMIN', 'DIREKTUR'].includes(user.value?.role))
+const isStrictAdmin = computed(() => user.value?.role === 'ADMIN')
 const userUnit = computed(() => user.value?.unit || '')
 
 // Active Tab: 'siap-kirim' | 'riwayat' | 'masuk'
@@ -71,6 +74,12 @@ const statusMasukOptions = [
 // Modal States
 const showBuatModal = ref(false)
 const selectedDisposisiForBuat = ref(null)
+const editMode = ref(false)
+const selectedEkspedisiForEdit = ref(null)
+
+const showDeleteDialog = ref(false)
+const deleteTarget = ref(null)
+const deleting = ref(false)
 
 const showCetakModal = ref(false)
 const selectedEkspedisiForCetak = ref({})
@@ -176,8 +185,65 @@ watch(activeTab, (tab) => {
 // ── ACTIONS ────────────────────────────────────────────────────────────────
 
 const openBuatModal = (disposisi = null) => {
+  editMode.value = false
+  selectedEkspedisiForEdit.value = null
   selectedDisposisiForBuat.value = disposisi
   showBuatModal.value = true
+}
+
+const openEditModal = async (item) => {
+  try {
+    const { data } = await api.get(`/ekspedisi/${item.id}`)
+    selectedEkspedisiForEdit.value = data.data
+    selectedDisposisiForBuat.value = null
+    editMode.value = true
+    showBuatModal.value = true
+    if (showDetailModal.value) {
+      showDetailModal.value = false
+    }
+  } catch (e) {
+    toast.add({
+      severity: 'error',
+      summary: 'Gagal',
+      detail: e.response?.data?.message || 'Gagal memuat data ekspedisi untuk diedit.',
+      life: 3000
+    })
+  }
+}
+
+const confirmDelete = (item) => {
+  deleteTarget.value = item
+  showDeleteDialog.value = true
+}
+
+const handleDelete = async () => {
+  if (!deleteTarget.value) return
+  deleting.value = true
+  try {
+    await api.delete(`/ekspedisi/${deleteTarget.value.id}`)
+    toast.add({
+      severity: 'success',
+      summary: 'Berhasil',
+      detail: `Ekspedisi ${deleteTarget.value.nomor_ekspedisi || ''} berhasil dihapus.`,
+      life: 3000
+    })
+    showDeleteDialog.value = false
+    if (showDetailModal.value && detailEkspedisi.value?.id === deleteTarget.value.id) {
+      showDetailModal.value = false
+    }
+    deleteTarget.value = null
+    loadRiwayat()
+    loadSiapKirim()
+  } catch (e) {
+    toast.add({
+      severity: 'error',
+      summary: 'Gagal Menghapus',
+      detail: e.response?.data?.message || 'Gagal menghapus data ekspedisi.',
+      life: 4000
+    })
+  } finally {
+    deleting.value = false
+  }
 }
 
 const openCetakModal = (item) => {
@@ -196,6 +262,14 @@ const openBerkasModal = (item) => {
 }
 
 const handleEkspedisiSaved = () => {
+  toast.add({
+    severity: 'success',
+    summary: 'Berhasil',
+    detail: editMode.value ? 'Perubahan ekspedisi berhasil disimpan.' : 'Ekspedisi baru berhasil dibuat.',
+    life: 3000
+  })
+  editMode.value = false
+  selectedEkspedisiForEdit.value = null
   loadSiapKirim()
   loadRiwayat()
   activeTab.value = 'riwayat'
@@ -278,58 +352,53 @@ const countPendingMasuk = computed(() => {
 </script>
 
 <template>
-  <div class="p-4 sm:p-6 flex flex-col gap-6 max-w-7xl mx-auto min-h-screen pb-16">
+  <div class="page-container animate-fade-in pb-16">
     
-    <!-- HEADER -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <!-- HERO BANNER -->
+    <div
+      class="page-hero flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+      style="background: linear-gradient(135deg, #1b4332 0%, #2d6a4f 45%, #40916c 100%);"
+    >
       <div>
-        <div class="flex items-center gap-3">
-          <div class="w-11 h-11 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold shadow-xs">
-            <i class="pi pi-truck text-2xl"></i>
-          </div>
-          <div>
-            <div class="flex items-center gap-2">
-              <h1 class="text-xl sm:text-2xl font-black text-textMain tracking-tight">Ekspedisi Surat</h1>
-              <span class="text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-800">
-                DISTRIBUSI
-              </span>
-            </div>
-            <p class="text-xs text-textMuted mt-0.5">Pencatatan serah terima & distribusi dokumen resmi disposisi selesai RSI Gondanglegi</p>
-          </div>
+        <div class="flex items-center gap-2 flex-wrap relative z-10">
+          <h2 class="page-hero-title">Ekspedisi Surat</h2>
+          <span class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full border border-white/30 bg-white/15 text-white">
+            <span class="w-2 h-2 rounded-full bg-emerald-300"></span>
+            DISTRIBUSI RESMI
+          </span>
         </div>
+        <p class="page-hero-sub">Pencatatan serah terima & distribusi dokumen resmi disposisi selesai RSI Gondanglegi.</p>
       </div>
 
-      <div class="flex items-center gap-2.5">
+      <div class="flex items-center gap-2.5 relative z-10">
         <Button
           v-if="isAdmin"
           label="Buat Ekspedisi"
           icon="pi pi-plus"
+          class="!bg-white !text-sidebar !border-0 shadow-glow font-bold text-xs !py-2.5 !px-4 !rounded-xl hover:!bg-white/95 transition-all cursor-pointer"
           @click="openBuatModal(null)"
-          class="btn-gradient !rounded-xl shadow-xs font-bold text-xs !py-2 !px-4"
         />
         <Button
           icon="pi pi-refresh"
-          severity="secondary"
-          outlined
+          class="!bg-white/15 !text-white !border-white/20 hover:!bg-white/25 !rounded-xl !w-10 !h-10"
           @click="refreshCurrentTab"
-          class="!rounded-xl"
           v-tooltip.bottom="'Segarkan Data'"
         />
       </div>
     </div>
 
     <!-- STATS CARDS -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mb-5">
       <div
         v-if="isAdmin"
         @click="activeTab = 'siap-kirim'"
-        class="p-4 rounded-2xl border transition-all cursor-pointer bg-surface border-border shadow-xs hover:shadow-md hover:border-emerald-500/50"
-        :class="activeTab === 'siap-kirim' ? 'ring-2 ring-emerald-500/30 border-emerald-500' : ''"
+        class="glass-card p-4 transition-all cursor-pointer hover:shadow-card-hover hover:-translate-y-0.5 border-l-4"
+        :class="activeTab === 'siap-kirim' ? 'border-l-blue-500 ring-2 ring-blue-500/20' : 'border-l-blue-400'"
       >
         <div class="flex items-center justify-between">
           <span class="text-xs font-bold text-textMuted uppercase tracking-wider">Siap Kirim</span>
-          <div class="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold">
-            <i class="pi pi-inbox text-base"></i>
+          <div class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold">
+            <i class="pi pi-inbox text-lg"></i>
           </div>
         </div>
         <div class="text-2xl font-black text-textMain mt-2 font-mono">{{ siapKirimList.length }}</div>
@@ -339,13 +408,13 @@ const countPendingMasuk = computed(() => {
       <div
         v-if="isAdmin"
         @click="activeTab = 'riwayat'"
-        class="p-4 rounded-2xl border transition-all cursor-pointer bg-surface border-border shadow-xs hover:shadow-md hover:border-emerald-500/50"
-        :class="activeTab === 'riwayat' ? 'ring-2 ring-emerald-500/30 border-emerald-500' : ''"
+        class="glass-card p-4 transition-all cursor-pointer hover:shadow-card-hover hover:-translate-y-0.5 border-l-4"
+        :class="activeTab === 'riwayat' ? 'border-l-purple-500 ring-2 ring-purple-500/20' : 'border-l-purple-400'"
       >
         <div class="flex items-center justify-between">
           <span class="text-xs font-bold text-textMuted uppercase tracking-wider">Riwayat Kirim</span>
-          <div class="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center font-bold">
-            <i class="pi pi-history text-base"></i>
+          <div class="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center font-bold">
+            <i class="pi pi-history text-lg"></i>
           </div>
         </div>
         <div class="text-2xl font-black text-textMain mt-2 font-mono">{{ riwayatList.length }}</div>
@@ -354,13 +423,13 @@ const countPendingMasuk = computed(() => {
 
       <div
         @click="activeTab = 'masuk'"
-        class="p-4 rounded-2xl border transition-all cursor-pointer bg-surface border-border shadow-xs hover:shadow-md hover:border-emerald-500/50"
-        :class="activeTab === 'masuk' ? 'ring-2 ring-emerald-500/30 border-emerald-500' : ''"
+        class="glass-card p-4 transition-all cursor-pointer hover:shadow-card-hover hover:-translate-y-0.5 border-l-4"
+        :class="activeTab === 'masuk' ? 'border-l-emerald-500 ring-2 ring-emerald-500/20' : 'border-l-emerald-400'"
       >
         <div class="flex items-center justify-between">
           <span class="text-xs font-bold text-textMuted uppercase tracking-wider">Ekspedisi Masuk</span>
-          <div class="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold">
-            <i class="pi pi-envelope text-base"></i>
+          <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold">
+            <i class="pi pi-envelope text-lg"></i>
           </div>
         </div>
         <div class="text-2xl font-black text-textMain mt-2 font-mono">{{ masukList.length }}</div>
@@ -369,13 +438,13 @@ const countPendingMasuk = computed(() => {
 
       <div
         @click="activeTab = 'masuk'; filterStatusMasuk = 'PENDING'"
-        class="p-4 rounded-2xl border transition-all cursor-pointer bg-surface border-border shadow-xs hover:shadow-md hover:border-amber-500/50"
-        :class="activeTab === 'masuk' && filterStatusMasuk === 'PENDING' ? 'ring-2 ring-amber-500/30 border-amber-500' : ''"
+        class="glass-card p-4 transition-all cursor-pointer hover:shadow-card-hover hover:-translate-y-0.5 border-l-4"
+        :class="activeTab === 'masuk' && filterStatusMasuk === 'PENDING' ? 'border-l-amber-500 ring-2 ring-amber-500/20' : 'border-l-amber-400'"
       >
         <div class="flex items-center justify-between">
           <span class="text-xs font-bold text-textMuted uppercase tracking-wider">Perlu Konfirmasi</span>
-          <div class="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold">
-            <i class="pi pi-clock text-base"></i>
+          <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold">
+            <i class="pi pi-clock text-lg"></i>
           </div>
         </div>
         <div class="text-2xl font-black text-amber-600 mt-2 font-mono">{{ countPendingMasuk }}</div>
@@ -384,7 +453,7 @@ const countPendingMasuk = computed(() => {
     </div>
 
     <!-- TAB NAVIGATION BAR -->
-    <div class="flex items-center gap-2 overflow-x-auto pb-1">
+    <div class="flex items-center gap-2 overflow-x-auto pb-1 mb-4">
       <button
         v-if="isAdmin"
         type="button"
@@ -454,9 +523,9 @@ const countPendingMasuk = computed(() => {
     <!-- TAB 1: SIAP KIRIM (ADMIN) -->
     <!-- ═══════════════════════════════════════════════════════════════════════════ -->
     <div v-if="activeTab === 'siap-kirim' && isAdmin" class="flex flex-col gap-4">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface p-4 rounded-2xl border border-border shadow-xs">
+      <div class="filter-panel mb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <IconField class="w-full sm:w-80">
-          <InputIcon class="pi pi-search text-textMuted" />
+          <InputIcon class="pi pi-search text-accent" />
           <InputText
             v-model="searchSiapKirim"
             @input="loadSiapKirim"
@@ -470,7 +539,7 @@ const countPendingMasuk = computed(() => {
         </div>
       </div>
 
-      <div class="bg-surface rounded-2xl border border-border overflow-hidden shadow-xs">
+      <div class="glass-card overflow-hidden shadow-card mb-4">
         <div v-if="loadingSiapKirim" class="p-10 text-center text-xs text-textMuted">
           <i class="pi pi-spin pi-spinner text-2xl text-emerald-600 mb-2"></i>
           <div>Memuat data disposisi selesai...</div>
@@ -551,9 +620,9 @@ const countPendingMasuk = computed(() => {
     <!-- ═══════════════════════════════════════════════════════════════════════════ -->
     <div v-if="activeTab === 'riwayat' && isAdmin" class="flex flex-col gap-4">
       <!-- FILTERS -->
-      <div class="flex flex-wrap items-center justify-between gap-3 bg-surface p-4 rounded-2xl border border-border shadow-xs">
+      <div class="filter-panel mb-2 flex flex-wrap items-center justify-between gap-3">
         <IconField class="w-full sm:w-80">
-          <InputIcon class="pi pi-search text-textMuted" />
+          <InputIcon class="pi pi-search text-accent" />
           <InputText
             v-model="searchRiwayat"
             @input="loadRiwayat"
@@ -588,7 +657,7 @@ const countPendingMasuk = computed(() => {
       </div>
 
       <!-- TABLE RIWAYAT -->
-      <div class="bg-surface rounded-2xl border border-border overflow-hidden shadow-xs">
+      <div class="glass-card overflow-hidden shadow-card mb-4">
         <div v-if="loadingRiwayat" class="p-10 text-center text-xs text-textMuted">
           <i class="pi pi-spin pi-spinner text-2xl text-emerald-600 mb-2"></i>
           <div>Memuat riwayat ekspedisi...</div>
@@ -730,6 +799,30 @@ const countPendingMasuk = computed(() => {
                       class="!w-8 !h-8 !p-0 !rounded-lg"
                     />
 
+                    <!-- Tombol Edit (Hanya Admin) -->
+                    <Button
+                      v-if="isStrictAdmin"
+                      icon="pi pi-pencil"
+                      severity="warn"
+                      size="small"
+                      outlined
+                      @click="openEditModal(item)"
+                      v-tooltip.top="'Edit Ekspedisi (Admin)'"
+                      class="!w-8 !h-8 !p-0 !rounded-lg text-amber-600 hover:!bg-amber-500/10 border-amber-500/30"
+                    />
+
+                    <!-- Tombol Hapus (Hanya Admin) -->
+                    <Button
+                      v-if="isStrictAdmin"
+                      icon="pi pi-trash"
+                      severity="danger"
+                      size="small"
+                      outlined
+                      @click="confirmDelete(item)"
+                      v-tooltip.top="'Hapus Ekspedisi (Admin)'"
+                      class="!w-8 !h-8 !p-0 !rounded-lg text-red-600 hover:!bg-red-500/10 border-red-500/30"
+                    />
+
                     <!-- Tombol Revisi & Kirim Ulang jika ditolak -->
                     <Button
                       v-if="item.status_global === 'REJECTED' || (item.tujuan || []).some(t => t.status === 'REJECTED')"
@@ -755,9 +848,9 @@ const countPendingMasuk = computed(() => {
     <!-- ═══════════════════════════════════════════════════════════════════════════ -->
     <div v-if="activeTab === 'masuk' || !isAdmin" class="flex flex-col gap-4">
       <!-- FILTERS -->
-      <div class="flex flex-wrap items-center justify-between gap-3 bg-surface p-4 rounded-2xl border border-border shadow-xs">
+      <div class="filter-panel mb-2 flex flex-wrap items-center justify-between gap-3">
         <IconField class="w-full sm:w-80">
-          <InputIcon class="pi pi-search text-textMuted" />
+          <InputIcon class="pi pi-search text-accent" />
           <InputText
             v-model="searchMasuk"
             @input="loadMasuk"
@@ -780,7 +873,7 @@ const countPendingMasuk = computed(() => {
       </div>
 
       <!-- TABLE EKSPEDISI MASUK -->
-      <div class="bg-surface rounded-2xl border border-border overflow-hidden shadow-xs">
+      <div class="glass-card overflow-hidden shadow-card mb-4">
         <div v-if="loadingMasuk" class="p-10 text-center text-xs text-textMuted">
           <i class="pi pi-spin pi-spinner text-2xl text-emerald-600 mb-2"></i>
           <div>Memuat daftar ekspedisi masuk...</div>
@@ -1087,16 +1180,37 @@ const countPendingMasuk = computed(() => {
 
       <template #footer>
         <div class="flex justify-between items-center w-full pt-3 border-t border-border">
-          <Button
-            v-if="detailEkspedisi?.jenis_pengiriman === 'FISIK'"
-            label="Cetak Tanda Terima"
-            icon="pi pi-print"
-            severity="secondary"
-            size="small"
-            class="!rounded-xl text-xs"
-            @click="openCetakModal(detailEkspedisi)"
-          />
-          <span v-else></span>
+          <div class="flex items-center gap-2">
+            <Button
+              v-if="detailEkspedisi?.jenis_pengiriman === 'FISIK'"
+              label="Cetak Tanda Terima"
+              icon="pi pi-print"
+              severity="secondary"
+              size="small"
+              class="!rounded-xl text-xs"
+              @click="openCetakModal(detailEkspedisi)"
+            />
+            <Button
+              v-if="isStrictAdmin && detailEkspedisi"
+              label="Edit"
+              icon="pi pi-pencil"
+              severity="warn"
+              size="small"
+              outlined
+              class="!rounded-xl text-xs border-amber-500/40 text-amber-600 hover:bg-amber-500/10"
+              @click="openEditModal(detailEkspedisi)"
+            />
+            <Button
+              v-if="isStrictAdmin && detailEkspedisi"
+              label="Hapus"
+              icon="pi pi-trash"
+              severity="danger"
+              size="small"
+              outlined
+              class="!rounded-xl text-xs border-red-500/40 text-red-600 hover:bg-red-500/10"
+              @click="confirmDelete(detailEkspedisi)"
+            />
+          </div>
           <Button label="Tutup" severity="secondary" text class="!rounded-xl text-xs" @click="showDetailModal = false" />
         </div>
       </template>
@@ -1106,6 +1220,8 @@ const countPendingMasuk = computed(() => {
     <BuatEkspedisiModal
       v-model:visible="showBuatModal"
       :selectedDisposisi="selectedDisposisiForBuat"
+      :editMode="editMode"
+      :editData="selectedEkspedisiForEdit"
       @saved="handleEkspedisiSaved"
     />
 
@@ -1131,6 +1247,69 @@ const countPendingMasuk = computed(() => {
       v-model:visible="showLembarModal"
       :disposisi="lembarDisposisiData"
     />
+
+    <!-- DIALOG KONFIRMASI HAPUS EKSPEDISI (ADMIN ONLY) -->
+    <Dialog
+      v-model:visible="showDeleteDialog"
+      modal
+      header="Konfirmasi Hapus Ekspedisi"
+      :style="{ width: '460px', maxWidth: '92vw' }"
+      :closable="!deleting"
+    >
+      <div class="space-y-4 pt-1">
+        <div class="flex items-start gap-3 p-3.5 bg-red-500/10 border border-red-500/20 rounded-xl text-red-700 dark:text-red-400">
+          <i class="pi pi-exclamation-triangle text-xl mt-0.5 shrink-0"></i>
+          <div class="text-xs">
+            <div class="font-bold text-sm mb-1">Apakah Anda yakin ingin menghapus data ekspedisi ini?</div>
+            <p class="leading-relaxed text-red-600/90 dark:text-red-300">
+              Tindakan ini akan menghapus riwayat pengiriman, tanda terima, dan seluruh status pelacakan penerima secara permanen.
+            </p>
+          </div>
+        </div>
+
+        <div v-if="deleteTarget" class="p-3.5 bg-surface2/60 border border-border rounded-xl text-xs space-y-1.5">
+          <div class="flex justify-between">
+            <span class="text-textMuted">No. Ekspedisi:</span>
+            <span class="font-mono font-bold text-textMain">{{ deleteTarget.nomor_ekspedisi }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-textMuted">No. Surat:</span>
+            <span class="font-bold text-textMain truncate max-w-[240px]">{{ deleteTarget.nomor_surat }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-textMuted">Perihal:</span>
+            <span class="text-textMain truncate max-w-[240px]">{{ deleteTarget.perihal }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-textMuted">Jumlah Penerima:</span>
+            <span class="font-bold text-textMain">{{ (deleteTarget.tujuan || []).length }} User</span>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="flex justify-end gap-2 pt-3 border-t border-border">
+          <Button
+            label="Batal"
+            severity="secondary"
+            text
+            size="small"
+            class="!rounded-xl text-xs"
+            :disabled="deleting"
+            @click="showDeleteDialog = false"
+          />
+          <Button
+            label="Hapus Ekspedisi"
+            icon="pi pi-trash"
+            severity="danger"
+            size="small"
+            class="!rounded-xl text-xs font-semibold"
+            :loading="deleting"
+            @click="handleDelete"
+          />
+        </div>
+      </template>
+    </Dialog>
 
   </div>
 </template>

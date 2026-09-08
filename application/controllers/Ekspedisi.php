@@ -359,17 +359,58 @@ class Ekspedisi extends MY_Controller {
     }
 
     /**
-     * DELETE /api/v1/ekspedisi/{id}
-     * Hapus ekspedisi (Admin only)
+     * PUT/POST /api/v1/ekspedisi/{id}
+     * Update data ekspedisi (Hanya Admin)
      */
-    public function destroy($id = null)
+    public function update($id = null)
     {
-        if ($_SERVER['REQUEST_METHOD'] !== 'DELETE') {
+        if (!in_array($_SERVER['REQUEST_METHOD'], ['PUT', 'POST'])) {
             return $this->response(['status' => 'error', 'message' => 'Method not allowed'], 405);
         }
 
         if ($this->current_user->role !== 'ADMIN') {
-            return $this->response(['status' => 'error', 'message' => 'Hanya Admin yang dapat menghapus ekspedisi'], 403);
+            return $this->response(['status' => 'error', 'message' => 'Hanya Admin yang memiliki hak akses untuk mengubah data ekspedisi'], 403);
+        }
+
+        if (!$id) {
+            return $this->response(['status' => 'error', 'message' => 'ID ekspedisi wajib diisi'], 400);
+        }
+
+        $body = json_decode(file_get_contents('php://input'), true);
+        if (empty($body)) $body = $this->input->post();
+
+        $data_update = [];
+        if (isset($body['jenis_pengiriman'])) $data_update['jenis_pengiriman'] = trim($body['jenis_pengiriman']);
+        if (isset($body['tanggal_kirim'])) $data_update['tanggal_kirim'] = trim($body['tanggal_kirim']);
+        if (isset($body['catatan'])) $data_update['catatan'] = trim($body['catatan']);
+
+        $user_tujuan = isset($body['user_tujuan']) ? $body['user_tujuan'] : (isset($body['unit_tujuan']) ? $body['unit_tujuan'] : null);
+
+        $success = $this->ekspedisi_m->update_ekspedisi($id, $data_update, $user_tujuan);
+        if ($success) {
+            $updated = $this->ekspedisi_m->get_detail($id);
+            return $this->response([
+                'status'  => 'success',
+                'message' => 'Data ekspedisi berhasil diperbarui',
+                'data'    => $updated
+            ], 200);
+        }
+
+        return $this->response(['status' => 'error', 'message' => 'Gagal memperbarui data ekspedisi'], 500);
+    }
+
+    /**
+     * DELETE /api/v1/ekspedisi/{id}
+     * Hapus ekspedisi (Hanya Admin)
+     */
+    public function destroy($id = null)
+    {
+        if (!in_array($_SERVER['REQUEST_METHOD'], ['DELETE', 'POST'])) {
+            return $this->response(['status' => 'error', 'message' => 'Method not allowed'], 405);
+        }
+
+        if ($this->current_user->role !== 'ADMIN') {
+            return $this->response(['status' => 'error', 'message' => 'Hanya Admin yang memiliki hak akses untuk menghapus ekspedisi'], 403);
         }
 
         if (!$id) {
@@ -381,6 +422,7 @@ class Ekspedisi extends MY_Controller {
             return $this->response(['status' => 'success', 'message' => 'Ekspedisi berhasil dihapus'], 200);
         }
 
-        return $this->response(['status' => 'error', 'message' => 'Gagal menghapus ekspedisi'], 500);
+        return $this->response(['status' => 'error', 'message' => 'Gagal menghapus data ekspedisi'], 500);
     }
 }
+

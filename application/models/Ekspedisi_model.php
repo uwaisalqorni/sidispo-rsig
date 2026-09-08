@@ -602,6 +602,97 @@ class Ekspedisi_model extends CI_Model {
     }
 
     /**
+     * Update Data Ekspedisi (Admin only)
+     */
+    public function update_ekspedisi($id, $data, $user_tujuan_list = null)
+    {
+        $eksp = $this->db->get_where('ekspedisi', ['id' => $id])->row_array();
+        if (!$eksp) return false;
+
+        $this->db->trans_start();
+
+        $update_data = ['updated_at' => date('Y-m-d H:i:s')];
+        if (isset($data['jenis_pengiriman'])) {
+            $update_data['jenis_pengiriman'] = strtoupper($data['jenis_pengiriman']) === 'FISIK' ? 'FISIK' : 'DIGITAL';
+        }
+        if (isset($data['catatan'])) {
+            $update_data['catatan'] = $data['catatan'];
+        }
+        if (!empty($data['tanggal_kirim'])) {
+            $parsed = strtotime($data['tanggal_kirim']);
+            if ($parsed !== false) {
+                if (strlen($data['tanggal_kirim']) === 10) {
+                    $update_data['tanggal_kirim'] = date('Y-m-d', $parsed) . ' ' . date('H:i:s');
+                } else {
+                    $update_data['tanggal_kirim'] = date('Y-m-d H:i:s', $parsed);
+                }
+            }
+        }
+
+        $this->db->where('id', $id)->update('ekspedisi', $update_data);
+
+        // Jika user_tujuan_list diubah
+        if ($user_tujuan_list !== null && is_array($user_tujuan_list)) {
+            $new_user_ids = array_unique(array_filter(array_map('intval', $user_tujuan_list)));
+            
+            // Ambil data tujuan saat ini
+            $existing_tujuan = $this->db->get_where('ekspedisi_tujuan', ['ekspedisi_id' => $id])->result_array();
+            $existing_user_ids = [];
+            foreach ($existing_tujuan as $et) {
+                if (!empty($et['user_tujuan_id'])) {
+                    $existing_user_ids[] = (int)$et['user_tujuan_id'];
+                }
+            }
+
+            // User yang di-remove: hanya remove yang statusnya PENDING
+            foreach ($existing_tujuan as $et) {
+                if (!in_array((int)$et['user_tujuan_id'], $new_user_ids) && $et['status'] === 'PENDING') {
+                    $this->db->where('id', $et['id'])->delete('ekspedisi_tujuan');
+                }
+            }
+
+            // User yang baru ditambahkan
+            $to_add = array_diff($new_user_ids, $existing_user_ids);
+            if (!empty($to_add)) {
+                $users_data = $this->db->select('id, nama_lengkap, nip, jabatan, unit')
+                                       ->where_in('id', $to_add)
+                                       ->where('is_active', 1)
+                                       ->get('users')
+                                       ->result_array();
+                $batch_tujuan = [];
+                foreach ($users_data as $u) {
+                    $batch_tujuan[] = [
+                        'ekspedisi_id'   => $id,
+                        'user_tujuan_id' => $u['id'],
+                        'unit_tujuan'    => !empty($u['unit']) ? $u['unit'] : (!empty($u['jabatan']) ? $u['jabatan'] : 'Unit'),
+                        'status'         => 'PENDING',
+                        'created_at'     => date('Y-m-d H:i:s')
+                    ];
+                }
+                if (!empty($batch_tujuan)) {
+                    $this->db->insert_batch('ekspedisi_tujuan', $batch_tujuan);
+                }
+
+                // Kirim notifikasi ke user baru
+                $disp = $this->db->select('d.id, sm.nomor_surat, sm.asal_surat, sm.perihal')
+                                 ->from('disposisi d')
+                                 ->join('surat_masuk sm', 'sm.id = d.surat_masuk_id')
+                                 ->where('d.id', $eksp['disposisi_id'])
+                                 ->get()
+                                 ->row_array();
+                if ($disp) {
+                    $this->kirim_notifikasi_ekspedisi_baru_user($id, $disp, $update_data['jenis_pengiriman'] ?? $eksp['jenis_pengiriman'], $users_data);
+                }
+            }
+        }
+
+        $this->update_status_global_ekspedisi($id);
+
+        $this->db->trans_complete();
+        return $this->db->trans_status();
+    }
+
+    /**
      * Hapus Ekspedisi
      */
     public function delete($id)
