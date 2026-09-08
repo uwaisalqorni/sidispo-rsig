@@ -123,9 +123,318 @@ const tanggalSelesaiAkhir = computed(() => {
   return latest
 })
 
-// Fungsi print cetak
+// Fungsi cetak dokumen yang rapi, pas 1 halaman A4, dan anti-terpotong
 const handlePrint = () => {
-  window.print()
+  const printContent = document.getElementById('lembar-disposisi-print-area')
+  if (!printContent) {
+    window.print()
+    return
+  }
+
+  // Buat iframe tersembunyi untuk mencetak secara terisolasi tanpa terpengaruh modal/CSS app
+  const iframe = document.createElement('iframe')
+  iframe.style.position = 'fixed'
+  iframe.style.right = '0'
+  iframe.style.bottom = '0'
+  iframe.style.width = '0'
+  iframe.style.height = '0'
+  iframe.style.border = '0'
+  document.body.appendChild(iframe)
+
+  const doc = iframe.contentWindow.document
+  doc.open()
+  doc.write(`
+    <!DOCTYPE html>
+    <html lang="id">
+      <head>
+        <meta charset="UTF-8">
+        <title>Lembar Disposisi - ${props.disposisi?.nomor_disposisi || 'RSI Gondanglegi'}</title>
+        <style>
+          @page {
+            size: A4 portrait;
+            margin: 6mm 8mm 6mm 8mm;
+          }
+          * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+          }
+          body {
+            font-family: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
+            background-color: #ffffff;
+            color: #0f172a;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .lembar-disposisi-paper {
+            background-color: #dbeafe !important;
+            width: 100%;
+            max-width: 194mm;
+            margin: 0 auto;
+            padding: 10px 14px;
+            border: 1.5px solid #0f172a;
+            border-radius: 4px;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .kop-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 6px;
+            border-bottom: 2px solid #0f172a;
+          }
+          .logo-wrapper {
+            width: 60px;
+            height: 60px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          .logo-wrapper img {
+            width: 54px;
+            height: 54px;
+            object-fit: contain;
+          }
+          .kop-text {
+            flex: 1;
+            text-align: center;
+            padding: 0 8px;
+          }
+          .kop-text h2 {
+            font-size: 13px;
+            font-weight: 900;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            line-height: 1.2;
+          }
+          .kop-text h3 {
+            font-size: 11.5px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            line-height: 1.2;
+            margin-top: 1px;
+          }
+          .kop-text h4 {
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            line-height: 1.2;
+            margin-top: 1px;
+          }
+          .kop-text p {
+            font-size: 9px;
+            color: #334155;
+            margin-top: 2px;
+            line-height: 1.2;
+          }
+          .kop-meta {
+            font-size: 8.5px;
+            color: #334155;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            margin-top: 2px;
+          }
+          .double-line {
+            border-bottom: 3px double #0f172a;
+            margin-bottom: 6px;
+          }
+          .title-section {
+            text-align: center;
+            margin: 6px 0;
+          }
+          .title-section h1 {
+            font-size: 13.5px;
+            font-weight: 900;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            line-height: 1.3;
+          }
+          .info-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 10.5px;
+            font-weight: 700;
+            border-top: 1px solid #0f172a;
+            border-bottom: 1px solid #0f172a;
+            padding: 3px 6px;
+            margin: 4px 0 6px 0;
+          }
+          .table-disposisi {
+            display: grid;
+            grid-template-columns: 74% 26%;
+            border: 1.5px solid #0f172a;
+            margin-bottom: 6px;
+          }
+          .col-left {
+            border-right: 1.5px solid #0f172a;
+          }
+          .row-item {
+            padding: 5px 8px;
+            min-height: 74px;
+            border-bottom: 1px solid #0f172a;
+            display: flex;
+            flex-col;
+            justify-content: space-between;
+          }
+          .row-item:last-child {
+            border-bottom: none;
+          }
+          .row-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11.5px;
+            font-weight: 800;
+          }
+          .row-pejabat {
+            font-size: 10px;
+            font-weight: 600;
+            font-style: italic;
+            color: #334155;
+          }
+          .row-content {
+            margin-top: 3px;
+            padding-left: 6px;
+            font-size: 10.5px;
+            color: #0f172a;
+          }
+          .note-box {
+            background-color: rgba(255, 255, 255, 0.65);
+            padding: 2px 5px;
+            border-radius: 3px;
+            border: 1px solid #cbd5e1;
+            line-height: 1.25;
+          }
+          .ruled-lines {
+            margin-top: 4px;
+          }
+          .ruled-line {
+            border-bottom: 1px dashed #94a3b8;
+            margin-top: 3px;
+            height: 1px;
+            opacity: 0.6;
+          }
+          .col-right {
+            display: flex;
+            flex-direction: column;
+          }
+          .header-paraf {
+            display: grid;
+            grid-template-columns: 42% 58%;
+            border-bottom: 1.5px solid #0f172a;
+            text-align: center;
+            font-size: 10px;
+            font-weight: 800;
+            font-style: italic;
+            background-color: rgba(241, 245, 249, 0.6);
+            padding: 2px 0;
+          }
+          .header-paraf > div:first-child {
+            border-right: 1px solid #0f172a;
+          }
+          .body-paraf-row {
+            display: grid;
+            grid-template-columns: 42% 58%;
+            min-height: 74px;
+            border-bottom: 1px solid #0f172a;
+            text-align: center;
+          }
+          .body-paraf-row:last-child {
+            border-bottom: none;
+          }
+          .cell-tgl {
+            border-right: 1px solid #0f172a;
+            padding: 4px 2px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 9.5px;
+            font-weight: 700;
+          }
+          .cell-paraf {
+            padding: 3px 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          .paraf-badge {
+            border: 1px solid #059669;
+            border-radius: 4px;
+            padding: 2px 4px;
+            background-color: rgba(255, 255, 255, 0.85);
+            text-align: center;
+          }
+          .paraf-badge .badge-title {
+            font-size: 7.5px;
+            font-weight: 900;
+            color: #065f46;
+            text-transform: uppercase;
+            line-height: 1;
+          }
+          .paraf-badge .badge-name {
+            font-size: 8px;
+            font-weight: 800;
+            color: #0f172a;
+            margin-top: 1px;
+            line-height: 1.1;
+            max-width: 85px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+          .paraf-badge .badge-disp {
+            font-size: 6.5px;
+            font-family: monospace;
+            color: #047857;
+            line-height: 1;
+            margin-top: 1px;
+            max-width: 85px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+          .footer-section {
+            border-top: 1.5px solid #0f172a;
+            padding-top: 4px;
+            font-size: 10px;
+            font-weight: 700;
+          }
+          .footer-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          }
+          .footer-note {
+            font-size: 9px;
+            font-style: italic;
+            color: #334155;
+            margin-top: 3px;
+          }
+        </style>
+      </head>
+      <body>
+        ${printContent.outerHTML}
+      </body>
+    </html>
+  `)
+  doc.close()
+
+  // Tunggu gambar & layout siap, lalu buka dialog cetak
+  setTimeout(() => {
+    iframe.contentWindow.focus()
+    iframe.contentWindow.print()
+    setTimeout(() => {
+      document.body.removeChild(iframe)
+    }, 1200)
+  }, 350)
 }
 </script>
 
@@ -134,58 +443,51 @@ const handlePrint = () => {
     :visible="visible"
     @update:visible="emit('update:visible', $event)"
     modal
-    :style="{ width: '880px', maxWidth: '95vw' }"
+    :style="{ width: '840px', maxWidth: '96vw' }"
     :closable="true"
     class="lembar-disposisi-dialog"
   >
     <template #header>
-      <div class="flex items-center justify-between w-full pr-4">
+      <div class="flex items-center justify-between w-full pr-3">
         <div class="flex items-center gap-2.5">
-          <i class="pi pi-file-check text-brandGreen text-xl"></i>
+          <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+            <i class="pi pi-file-check text-base"></i>
+          </div>
           <div>
-            <h3 class="text-base font-bold text-textMain m-0">Lembar Disposisi Selesai</h3>
-            <p class="text-xs text-textMuted m-0">Format resmi Berkas Disposisi Rumah Sakit Islam Gondanglegi</p>
+            <h3 class="text-base font-bold text-textMain m-0">Pratinjau Lembar Disposisi Selesai</h3>
+            <p class="text-xs text-textMuted m-0">Format Formulir Dinas Rumah Sakit Islam Gondanglegi (Siap Cetak A4)</p>
           </div>
         </div>
         <div class="flex items-center gap-2 no-print">
           <Button
             label="Cetak Lembar Disposisi"
             icon="pi pi-print"
-            class="btn-gradient !text-xs !py-1.5 !px-3"
+            class="btn-gradient !text-xs !py-2 !px-4 shadow-sm"
             @click="handlePrint"
           />
         </div>
       </div>
     </template>
 
-    <!-- AREA DOKUMEN CETAK LEMBAR DISPOSISI -->
+    <!-- AREA DOKUMEN CETAK LEMBAR DISPOSISI (A4 PROPORTIONAL) -->
     <div id="lembar-disposisi-print-area" class="lembar-disposisi-paper mx-auto my-1">
       <!-- KOP SURAT RESMI RSI GONDANGLEGI -->
-      <div class="kop-container relative flex items-center justify-between px-6 py-3 border-b-2 border-slate-800">
+      <div class="kop-container">
         <!-- Logo RSI -->
-        <div class="logo-wrapper w-20 h-20 flex items-center justify-center shrink-0">
+        <div class="logo-wrapper">
           <img
             :src="logoRsi"
             alt="Logo RSI Gondanglegi"
-            class="w-18 h-18 object-contain"
           />
         </div>
 
         <!-- Teks Kop Surat -->
-        <div class="kop-text flex-1 text-center px-2">
-          <h2 class="text-[15px] font-extrabold tracking-wide uppercase text-slate-900 leading-tight m-0">
-            YAYASAN RUMAH SAKIT ISLAM GONDANGLEGI
-          </h2>
-          <h3 class="text-[13px] font-bold tracking-wider uppercase text-slate-900 leading-tight mt-0.5 m-0">
-            BIDANG KESEKRETARIATAN
-          </h3>
-          <h4 class="text-[14px] font-extrabold tracking-wider uppercase text-slate-900 leading-tight mt-0.5 m-0">
-            SEKSI TATA USAHA & HUKUM
-          </h4>
-          <p class="text-[10px] text-slate-700 leading-snug mt-1 m-0">
-            Jl. Hayam Wuruk No. 122 Telp. (0341) 875129
-          </p>
-          <div class="text-[9.5px] text-slate-700 flex items-center justify-center gap-2 mt-0.5 flex-wrap">
+        <div class="kop-text">
+          <h2>YAYASAN RUMAH SAKIT ISLAM GONDANGLEGI</h2>
+          <h3>BIDANG KESEKRETARIATAN</h3>
+          <h4>SEKSI TATA USAHA & HUKUM</h4>
+          <p>Jl. Hayam Wuruk No. 122 Telp. (0341) 875129</p>
+          <div class="kop-meta">
             <span>Email : <strong>rsigondanglegi@gmail.com</strong></span>
             <span>•</span>
             <span>Website : <strong>www.rsigondanglegi.com</strong></span>
@@ -194,139 +496,127 @@ const handlePrint = () => {
           </div>
         </div>
 
-        <!-- Space holder penyeimbang logo di kanan -->
-        <div class="w-16 shrink-0 hidden sm:block"></div>
+        <!-- Spacer penyeimbang di kanan -->
+        <div class="w-14 shrink-0 hidden sm:block"></div>
       </div>
 
       <!-- Garis Ganda Pembatas Kop -->
-      <div class="border-b-[3px] border-double border-slate-900 mb-3"></div>
+      <div class="double-line"></div>
 
       <!-- JUDUL LEMBAR DISPOSISI -->
-      <div class="text-center px-4 my-3">
-        <h1 class="text-[16px] sm:text-[17px] font-black tracking-wide text-slate-900 uppercase leading-snug m-0">
+      <div class="title-section">
+        <h1>
           LEMBAR DISPOSISI {{ (disposisi.perihal || 'SURAT MASUK').toUpperCase() }}
         </h1>
       </div>
 
       <!-- INFO TANGGAL & AGENDA NO -->
-      <div class="flex items-center justify-between px-4 py-1.5 text-xs font-semibold text-slate-900 border-b border-t border-slate-700 my-2">
-        <div class="flex items-center gap-1.5">
-          <span>Tanggal :</span>
+      <div class="info-bar">
+        <div>
+          <span>Tanggal : </span>
           <span class="font-normal">{{ formatDateIndo(disposisi.tanggal_surat || disposisi.tanggal_disposisi) }}</span>
         </div>
-        <div class="flex items-center gap-1.5">
-          <span>Agenda No. :</span>
-          <span class="font-bold">{{ disposisi.nomor_agenda || '—' }}</span>
+        <div>
+          <span>Agenda No. : </span>
+          <span class="font-bold font-mono">{{ disposisi.nomor_agenda || '.........' }}</span>
         </div>
       </div>
 
       <!-- BADAN TABEL DISPOSISI BERJENJANG -->
-      <div class="grid grid-cols-12 border border-slate-800 my-3">
-        <!-- AREA KIRI: HIERARKI JABATAN & CATATAN PROGRESS SELESAI (9 Kolom) -->
-        <div class="col-span-8 sm:col-span-9 divide-y divide-slate-800 border-r border-slate-800">
+      <div class="table-disposisi">
+        <!-- AREA KIRI: HIERARKI JABATAN & CATATAN PROGRESS SELESAI (74%) -->
+        <div class="col-left">
           <!-- Loop Jenjang Jabatan -->
           <div
             v-for="(item, idx) in hierarchicalLevels"
             :key="item.id"
-            class="p-2.5 min-h-[105px] flex flex-col justify-between"
+            class="row-item"
           >
             <div>
               <!-- Judul Jabatan & Nama Pejabat -->
-              <div class="flex items-center justify-between">
-                <span class="font-bold text-[13px] text-slate-900">
-                  {{ idx + 1 }}. {{ item.display_jabatan }}
-                </span>
-                <span class="text-[11px] font-medium text-slate-700 italic">
-                  ({{ item.nama_lengkap }})
-                </span>
+              <div class="row-header">
+                <span>{{ idx + 1 }}. {{ item.display_jabatan }}</span>
+                <span class="row-pejabat">({{ item.nama_lengkap }})</span>
               </div>
 
               <!-- Isi Catatan Progress Selesai -->
-              <div class="mt-1.5 pl-3 pr-1 text-[12px] text-slate-800">
+              <div class="row-content">
                 <!-- Jika ini Direktur dan ada catatan awal -->
-                <div v-if="item.jabatan_level >= 5 && disposisi.catatan_direktur && disposisi.catatan_direktur !== item.selesai_note" class="mb-1 text-[11px] text-slate-600 italic">
+                <div v-if="item.jabatan_level >= 5 && disposisi.catatan_direktur && disposisi.catatan_direktur !== item.selesai_note" class="mb-1 text-[9.5px] text-slate-700 italic">
                   <strong>Instruksi Awal:</strong> {{ disposisi.catatan_direktur }}
                 </div>
 
                 <!-- Catatan progress yang statusnya SELESAI -->
-                <div v-if="item.selesai_note" class="font-medium leading-relaxed bg-white/50 p-1 rounded border border-slate-200">
-                  <span class="text-slate-900">{{ item.selesai_note }}</span>
+                <div v-if="item.selesai_note" class="note-box">
+                  <span>{{ item.selesai_note }}</span>
                 </div>
-                <div v-else-if="item.is_done" class="text-slate-600 italic text-[11px]">
+                <div v-else-if="item.is_done" class="text-slate-600 italic text-[9.5px]">
                   ✓ Tugas telah diselesaikan dan divalidasi.
                 </div>
-                <div v-else class="text-slate-400 italic text-[11px]">
+                <div v-else class="text-slate-400 italic text-[9.5px]">
                   — Menunggu giliran alur validasi berjenjang —
                 </div>
               </div>
             </div>
 
             <!-- Ruled Lines Khas Lembar Disposisi Kertas Fisik -->
-            <div class="mt-2 space-y-1.5 opacity-40">
-              <div class="border-b border-dashed border-slate-400"></div>
-              <div class="border-b border-dashed border-slate-400"></div>
+            <div class="ruled-lines">
+              <div class="ruled-line"></div>
+              <div class="ruled-line"></div>
             </div>
           </div>
 
-          <!-- Tambahan baris kosong bergaris jika hierarki kurang dari 5 baris (agar sesuai format 5 tingkat) -->
+          <!-- Tambahan baris kosong bergaris jika hierarki kurang dari 5 baris (agar presisi format 5 tingkat) -->
           <template v-if="hierarchicalLevels.length < 5">
             <div
               v-for="emptyIdx in (5 - hierarchicalLevels.length)"
               :key="'empty-' + emptyIdx"
-              class="p-2.5 min-h-[90px] flex flex-col justify-between"
+              class="row-item"
             >
-              <div class="font-bold text-[13px] text-slate-900">
-                {{ hierarchicalLevels.length + emptyIdx }}.
+              <div class="row-header">
+                <span>{{ hierarchicalLevels.length + emptyIdx }}.</span>
               </div>
-              <div class="mt-auto space-y-2 opacity-35">
-                <div class="border-b border-dashed border-slate-400"></div>
-                <div class="border-b border-dashed border-slate-400"></div>
+              <div class="ruled-lines mt-auto">
+                <div class="ruled-line"></div>
+                <div class="ruled-line"></div>
               </div>
             </div>
           </template>
         </div>
 
-        <!-- AREA KANAN: TABEL TGL & PARAF (3 atau 4 Kolom) -->
-        <div class="col-span-4 sm:col-span-3 flex flex-col">
+        <!-- AREA KANAN: TABEL TGL & PARAF (26%) -->
+        <div class="col-right">
           <!-- Header Tabel Kolom Kanan -->
-          <div class="grid grid-cols-2 text-center text-xs font-bold uppercase text-slate-900 border-b border-slate-800 bg-slate-100/50 py-1">
-            <div class="border-r border-slate-800 italic">Tgl</div>
-            <div class="italic">Paraf</div>
+          <div class="header-paraf">
+            <div>Tgl</div>
+            <div>Paraf</div>
           </div>
 
           <!-- Baris Tanggal & Paraf per Jabatan -->
-          <div class="flex-1 flex flex-col divide-y divide-slate-800">
+          <div class="flex-1 flex flex-col">
             <div
               v-for="item in hierarchicalLevels"
               :key="'paraf-' + item.id"
-              class="grid grid-cols-2 min-h-[105px] text-center"
+              class="body-paraf-row flex-1"
             >
               <!-- Kolom Tanggal -->
-              <div class="border-r border-slate-800 p-1.5 flex flex-col items-center justify-center text-[10.5px] font-semibold text-slate-800">
+              <div class="cell-tgl">
                 <span v-if="item.selesai_date">{{ formatDateShort(item.selesai_date) }}</span>
-                <span v-if="item.selesai_date" class="text-[9px] text-slate-500">{{ formatTimeShort(item.selesai_date) }}</span>
-                <span v-else class="text-slate-300">...</span>
+                <span v-if="item.selesai_date" class="text-[8px] text-slate-600 mt-0.5">{{ formatTimeShort(item.selesai_date) }}</span>
+                <span v-else class="text-slate-400">...</span>
               </div>
 
               <!-- Kolom Paraf Digital -->
-              <div class="p-1 flex flex-col items-center justify-center">
+              <div class="cell-paraf">
                 <template v-if="item.is_done">
-                  <div class="paraf-stamp border border-emerald-600 rounded p-1 text-center bg-white/70 shadow-2xs">
-                    <div class="text-[8.5px] font-extrabold text-emerald-800 tracking-tighter uppercase leading-none">
-                      VALIDATED
-                    </div>
-                    <div class="text-[9px] font-bold text-slate-900 truncate max-w-[85px] mt-0.5 leading-tight">
-                      {{ item.nama_lengkap }}
-                    </div>
-                    <div class="text-[7.5px] text-emerald-700 font-mono leading-none mt-0.5">
-                      DISP-RSI
-                    </div>
+                  <div class="paraf-badge">
+                    <div class="badge-title">VALIDATED</div>
+                    <div class="badge-name">{{ item.nama_lengkap }}</div>
+                    <div class="badge-disp">NIP {{ item.nip || '-' }}</div>
                   </div>
                 </template>
                 <template v-else>
-                  <div class="text-[10px] text-slate-300 italic">
-                    Paraf
-                  </div>
+                  <span class="text-[9px] text-slate-400 italic">Paraf</span>
                 </template>
               </div>
             </div>
@@ -336,10 +626,10 @@ const handlePrint = () => {
               <div
                 v-for="emptyP in (5 - hierarchicalLevels.length)"
                 :key="'empty-paraf-' + emptyP"
-                class="grid grid-cols-2 min-h-[90px] text-center"
+                class="body-paraf-row flex-1"
               >
-                <div class="border-r border-slate-800 p-1 flex items-center justify-center text-[10px] text-slate-300">...</div>
-                <div class="p-1 flex items-center justify-center text-[10px] text-slate-300">...</div>
+                <div class="cell-tgl text-slate-300">...</div>
+                <div class="cell-paraf text-slate-300 text-[9px]">...</div>
               </div>
             </template>
           </div>
@@ -347,16 +637,16 @@ const handlePrint = () => {
       </div>
 
       <!-- FOOTER DOKUMEN -->
-      <div class="border-t-[2px] border-slate-800 pt-2 px-2 mt-2">
-        <div class="flex items-center justify-between text-xs text-slate-900 font-semibold">
+      <div class="footer-section">
+        <div class="footer-meta">
           <div>
             Kembali ke TU Tanggal : <span class="font-normal">{{ formatDateIndo(tanggalSelesaiAkhir) }}</span>
           </div>
-          <div class="text-[10px] font-mono text-slate-500">
-            No. Disposisi: {{ disposisi.nomor_disposisi }}
+          <div class="text-[9.5px] font-mono text-slate-600">
+            No. Disposisi: <strong>{{ disposisi.nomor_disposisi }}</strong>
           </div>
         </div>
-        <p class="text-[10px] text-slate-700 italic mt-1.5 m-0">
+        <p class="footer-note">
           * Berkas Asli terkait {{ disposisi.perihal || 'permohonan' }} disimpan di Seksi Tata Usaha & Arsip Digital SiDispo
         </p>
       </div>
@@ -383,43 +673,339 @@ const handlePrint = () => {
 .lembar-disposisi-paper {
   background-color: #dbeafe; /* Biru muda lembut khas lembar disposisi rumah sakit */
   color: #0f172a;
-  font-family: 'Plus Jakarta Sans', 'Segoe UI', Arial, sans-serif;
-  padding: 1.5rem 1.75rem;
-  border: 1px solid #1e293b;
-  border-radius: 6px;
+  font-family: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
+  padding: 1rem 1.25rem;
+  border: 1.5px solid #0f172a;
+  border-radius: 4px;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
 }
 
-/* ── Aturan Cetak (Print Media) ── */
+.kop-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 6px;
+  border-bottom: 2px solid #0f172a;
+}
+
+.logo-wrapper {
+  width: 58px;
+  height: 58px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-wrapper img {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+}
+
+.kop-text {
+  flex: 1;
+  text-align: center;
+  padding: 0 8px;
+}
+
+.kop-text h2 {
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.kop-text h3 {
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  line-height: 1.2;
+  margin: 1px 0 0 0;
+}
+
+.kop-text h4 {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  line-height: 1.2;
+  margin: 1px 0 0 0;
+}
+
+.kop-text p {
+  font-size: 9px;
+  color: #334155;
+  margin: 2px 0 0 0;
+  line-height: 1.2;
+}
+
+.kop-meta {
+  font-size: 8.5px;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.double-line {
+  border-bottom: 3px double #0f172a;
+  margin-bottom: 6px;
+}
+
+.title-section {
+  text-align: center;
+  margin: 6px 0;
+}
+
+.title-section h1 {
+  font-size: 13.5px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  line-height: 1.3;
+  margin: 0;
+}
+
+.info-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  border-top: 1px solid #0f172a;
+  border-bottom: 1px solid #0f172a;
+  padding: 3px 6px;
+  margin: 4px 0 6px 0;
+}
+
+.table-disposisi {
+  display: grid;
+  grid-template-columns: 74% 26%;
+  border: 1.5px solid #0f172a;
+  margin-bottom: 6px;
+}
+
+.col-left {
+  border-right: 1.5px solid #0f172a;
+}
+
+.row-item {
+  padding: 5px 8px;
+  min-height: 74px;
+  border-bottom: 1px solid #0f172a;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.row-item:last-child {
+  border-bottom: none;
+}
+
+.row-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11.5px;
+  font-weight: 800;
+}
+
+.row-pejabat {
+  font-size: 10px;
+  font-weight: 600;
+  font-style: italic;
+  color: #334155;
+}
+
+.row-content {
+  margin-top: 3px;
+  padding-left: 6px;
+  font-size: 10.5px;
+  color: #0f172a;
+}
+
+.note-box {
+  background-color: rgba(255, 255, 255, 0.65);
+  padding: 2px 5px;
+  border-radius: 3px;
+  border: 1px solid #cbd5e1;
+  line-height: 1.25;
+}
+
+.ruled-lines {
+  margin-top: 4px;
+}
+
+.ruled-line {
+  border-bottom: 1px dashed #94a3b8;
+  margin-top: 3px;
+  height: 1px;
+  opacity: 0.6;
+}
+
+.col-right {
+  display: flex;
+  flex-direction: column;
+}
+
+.header-paraf {
+  display: grid;
+  grid-template-columns: 42% 58%;
+  border-bottom: 1.5px solid #0f172a;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 800;
+  font-style: italic;
+  background-color: rgba(241, 245, 249, 0.6);
+  padding: 2px 0;
+}
+
+.header-paraf > div:first-child {
+  border-right: 1px solid #0f172a;
+}
+
+.body-paraf-row {
+  display: grid;
+  grid-template-columns: 42% 58%;
+  min-height: 74px;
+  border-bottom: 1px solid #0f172a;
+  text-align: center;
+}
+
+.body-paraf-row:last-child {
+  border-bottom: none;
+}
+
+.cell-tgl {
+  border-right: 1px solid #0f172a;
+  padding: 4px 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 9.5px;
+  font-weight: 700;
+}
+
+.cell-paraf {
+  padding: 3px 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.paraf-badge {
+  border: 1px solid #059669;
+  border-radius: 4px;
+  padding: 2px 4px;
+  background-color: rgba(255, 255, 255, 0.85);
+  text-align: center;
+}
+
+.paraf-badge .badge-title {
+  font-size: 7.5px;
+  font-weight: 900;
+  color: #065f46;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.paraf-badge .badge-name {
+  font-size: 8px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-top: 1px;
+  line-height: 1.1;
+  max-width: 85px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.paraf-badge .badge-disp {
+  font-size: 6.5px;
+  font-family: monospace;
+  color: #047857;
+  line-height: 1;
+  margin-top: 1px;
+  max-width: 85px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.footer-section {
+  border-top: 1.5px solid #0f172a;
+  padding-top: 4px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.footer-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.footer-note {
+  font-size: 9px;
+  font-style: italic;
+  color: #334155;
+  margin-top: 3px;
+}
+
+/* ── Aturan Cetak (Fallback jika menggunakan Ctrl+P langsung) ── */
 @media print {
-  /* Sembunyikan semua elemen aplikasi di layar */
+  @page {
+    size: A4 portrait;
+    margin: 6mm 8mm 6mm 8mm;
+  }
+
+  html, body, #app, .p-dialog-mask, .p-dialog, .p-dialog-content {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    position: static !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+  }
+
   body * {
     visibility: hidden;
   }
 
-  /* Tampilkan hanya area lembar disposisi */
   #lembar-disposisi-print-area,
   #lembar-disposisi-print-area * {
     visibility: visible;
   }
 
   #lembar-disposisi-print-area {
-    position: fixed;
-    left: 0;
-    top: 0;
-    width: 100vw;
-    height: 100vh;
-    margin: 0;
-    padding: 12mm 15mm;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 194mm !important;
+    margin: 0 auto !important;
+    padding: 10px 14px !important;
     background-color: #dbeafe !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     box-shadow: none !important;
-    border: none !important;
-    z-index: 999999;
+    border: 1.5px solid #0f172a !important;
   }
 
-  .no-print {
+  .no-print,
+  .p-dialog-header,
+  .p-dialog-footer {
     display: none !important;
   }
 }

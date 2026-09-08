@@ -199,7 +199,7 @@ class Disposisi_model extends CI_Model {
         
         if ($disposisi) {
             // Get penerima list with jabatan info
-            $this->db->select('dp.*, u.nama_lengkap, u.jabatan, u.unit, u.jabatan_id, mj.nama as jabatan_master, mj.level as jabatan_level');
+            $this->db->select('dp.*, u.nama_lengkap, u.nip, u.jabatan, u.unit, u.jabatan_id, mj.nama as jabatan_master, mj.level as jabatan_level');
             $this->db->from('disposisi_penerima dp');
             $this->db->join('users u', 'u.id = dp.user_id');
             $this->db->join('master_jabatan mj', 'mj.id = u.jabatan_id', 'left');
