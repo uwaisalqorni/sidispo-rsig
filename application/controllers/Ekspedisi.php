@@ -424,5 +424,60 @@ class Ekspedisi extends MY_Controller {
 
         return $this->response(['status' => 'error', 'message' => 'Gagal menghapus data ekspedisi'], 500);
     }
+
+    /**
+     * GET /api/v1/ekspedisi/report
+     * Laporan komprehensif semua ekspedisi masuk dengan filter dan statistik
+     */
+    public function report()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+            return $this->response(['status' => 'error', 'message' => 'Method not allowed'], 405);
+        }
+
+        $limit = $this->input->get('limit') ? (int)$this->input->get('limit') : 20;
+        $offset = $this->input->get('offset') ? (int)$this->input->get('offset') : 0;
+
+        $filters = [];
+        $q = $this->input->get('q');
+        $status = $this->input->get('status');
+        $jenis = $this->input->get('jenis');
+        $unit = $this->input->get('unit');
+        $user_id = $this->input->get('user_id');
+        $tanggal_dari = $this->input->get('tanggal_dari');
+        $tanggal_sampai = $this->input->get('tanggal_sampai');
+
+        if (!empty($q)) $filters['q'] = trim($q);
+        if (!empty($status)) $filters['status'] = trim($status);
+        if (!empty($jenis)) $filters['jenis'] = trim($jenis);
+        if (!empty($unit)) $filters['unit'] = trim($unit);
+        if (!empty($user_id)) $filters['user_id'] = (int)$user_id;
+        if (!empty($tanggal_dari)) $filters['tanggal_dari'] = $tanggal_dari;
+        if (!empty($tanggal_sampai)) $filters['tanggal_sampai'] = $tanggal_sampai;
+
+        // Jika bukan ADMIN atau DIREKTUR, batasi ke unit / user sendiri jika belum difilter
+        if ($this->current_user->role !== 'ADMIN' && $this->current_user->role !== 'DIREKTUR') {
+            if (empty($filters['unit']) && empty($filters['user_id'])) {
+                if (!empty($this->current_user->unit)) {
+                    $filters['unit'] = $this->current_user->unit;
+                } else {
+                    $filters['user_id'] = $this->current_user->id;
+                }
+            }
+        }
+
+        $data = $this->ekspedisi_m->get_report_ekspedisi($limit, $offset, $filters);
+        $total = $this->ekspedisi_m->count_report_ekspedisi($filters);
+        $stats = $this->ekspedisi_m->get_report_stats($filters);
+        $units = $this->ekspedisi_m->get_distinct_units();
+
+        return $this->response([
+            'status' => 'success',
+            'data'   => $data,
+            'total'  => $total,
+            'stats'  => $stats,
+            'units'  => $units
+        ], 200);
+    }
 }
 

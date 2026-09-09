@@ -189,6 +189,7 @@ $route['api/v1/ekspedisi']['get']                          = 'Ekspedisi/index';
 $route['api/v1/ekspedisi']['post']                         = 'Ekspedisi/create';
 $route['api/v1/ekspedisi/siap-kirim']['get']               = 'Ekspedisi/siap_kirim';
 $route['api/v1/ekspedisi/masuk']['get']                    = 'Ekspedisi/masuk';
+$route['api/v1/ekspedisi/report']['get']                   = 'Ekspedisi/report';
 $route['api/v1/ekspedisi/unit-options']['get']             = 'Ekspedisi/unit_options';
 $route['api/v1/ekspedisi/user-options']['get']             = 'Ekspedisi/user_options';
 $route['api/v1/ekspedisi/lembar-disposisi/(:num)']['get']   = 'Ekspedisi/lembar_disposisi/$1';

@@ -33,6 +33,10 @@ const pageMeta = computed(() => {
     'admin-folders': { title: 'Kelola Folder', icon: 'pi pi-folder', color: 'from-yellow-500 to-orange-500' },
     'admin-perihal': { title: 'Master Perihal', icon: 'pi pi-book', color: 'from-indigo-500 to-blue-600' },
     'admin-settings':{ title: 'Konfigurasi', icon: 'pi pi-cog', color: 'from-gray-500 to-slate-600' },
+    'admin-jabatan': { title: 'Master Jabatan', icon: 'pi pi-sitemap', color: 'from-teal-500 to-green-600' },
+    'admin-asal-surat': { title: 'Master Asal Surat', icon: 'pi pi-building', color: 'from-sky-500 to-blue-600' },
+    ekspedisi:       { title: 'Ekspedisi Surat', icon: 'pi pi-truck', color: 'from-emerald-500 to-teal-600' },
+    'report-ekspedisi': { title: 'Report Ekspedisi', icon: 'pi pi-chart-bar', color: 'from-purple-500 to-violet-600' },
   }
   return map[route.name] || { title: 'SiDispo', icon: 'pi pi-building', color: 'from-emerald-500 to-green-600' }
 })

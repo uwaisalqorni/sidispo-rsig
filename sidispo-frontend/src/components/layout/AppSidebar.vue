@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useNotifikasiStore } from '@/stores/notifikasi'
@@ -38,15 +38,45 @@ const userInitials = computed(() => {
 
 const fotoProfilUrl = computed(() => auth.fotoProfilUrl)
 
+// ── COLLAPSIBLE SECTIONS ─────────────────────────────────────────────────────
+const STORAGE_KEY = 'sidispo_sidebar_collapsed'
+
+const loadCollapsed = () => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    return saved ? JSON.parse(saved) : {}
+  } catch { return {} }
+}
+
+const collapsedSections = ref(loadCollapsed())
+
+const isCollapsed = (section) => !!collapsedSections.value[section]
+
+const toggleSection = (section) => {
+  collapsedSections.value[section] = !collapsedSections.value[section]
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(collapsedSections.value))
+}
+
+// ── MENU ACTIVE STATE ────────────────────────────────────────────────────────
 const isMenuActive = (item) => {
   if (item.id === 'selesai') return route.path === '/disposisi' && route.query.tab === 'Selesai'
   if (item.id === 'overdue') return route.path === '/disposisi' && route.query.tab === 'Overdue'
   if (item.id === 'disposisi') return route.path === '/disposisi' && !route.query.tab
   if (item.id === 'dashboard') return route.path === '/'
   if (item.id === 'dashboard-rtl') return route.path === '/dashboard-rtl'
+  if (item.id === 'report-ekspedisi') return route.path === '/report/ekspedisi'
   return route.path.startsWith('/' + item.id)
 }
 
+// ── Menu helper: convert item config to PrimeVue Menu model ──────────────────
+const toMenuItem = (item) => ({
+  label: item.label,
+  icon: item.icon,
+  class: isMenuActive(item) ? 'sidispo-menu-active' : '',
+  command: () => router.push(item.to),
+})
+
+// ── MENU UTAMA (tanpa RTL & Report) ──────────────────────────────────────────
 const mainMenuItems = computed(() => {
   const items = [
     { label: 'Dashboard', icon: 'pi pi-home', id: 'dashboard', to: { path: '/' } },
@@ -55,18 +85,23 @@ const mainMenuItems = computed(() => {
     { label: 'Ekspedisi', icon: 'pi pi-truck', id: 'ekspedisi', to: { path: '/ekspedisi' } },
     { label: 'Selesai', icon: 'pi pi-check-circle', id: 'selesai', to: { path: '/disposisi', query: { tab: 'Selesai' } } },
     { label: 'Overdue', icon: 'pi pi-exclamation-triangle', id: 'overdue', to: { path: '/disposisi', query: { tab: 'Overdue' } } },
-    { label: 'Dashboard RTL', icon: 'pi pi-chart-bar', id: 'dashboard-rtl', to: { path: '/dashboard-rtl' } },
-    { label: 'Daftar RTL', icon: 'pi pi-list', id: 'rtl', to: { path: '/rtl' } },
   ]
   const filtered = isSekretariat.value ? items : items.filter(i => i.id !== 'surat-masuk')
-  return filtered.map(item => ({
-    label: item.label,
-    icon: item.icon,
-    class: isMenuActive(item) ? 'sidispo-menu-active' : '',
-    command: () => router.push(item.to),
-  }))
+  return filtered.map(toMenuItem)
 })
 
+// ── RTL MENU ─────────────────────────────────────────────────────────────────
+const rtlMenuItems = computed(() => [
+  { label: 'Dashboard RTL', icon: 'pi pi-chart-bar', id: 'dashboard-rtl', to: { path: '/dashboard-rtl' } },
+  { label: 'Daftar RTL', icon: 'pi pi-list', id: 'rtl', to: { path: '/rtl' } },
+].map(toMenuItem))
+
+// ── REPORT MENU ──────────────────────────────────────────────────────────────
+const reportMenuItems = computed(() => [
+  { label: 'Report Ekspedisi', icon: 'pi pi-file-excel', id: 'report-ekspedisi', to: { path: '/report/ekspedisi' } },
+].map(toMenuItem))
+
+// ── ADMIN MENU ───────────────────────────────────────────────────────────────
 const adminMenuItems = computed(() => [
   { label: 'Pengguna', icon: 'pi pi-users', command: () => router.push('/admin/users') },
   { label: 'Master Jabatan', icon: 'pi pi-sitemap', command: () => router.push('/admin/jabatan') },
@@ -106,73 +141,150 @@ const goFolder = (id) => router.push({ path: '/surat-masuk', query: { folder: id
     </div>
 
     <div class="flex-1 overflow-y-auto py-4 px-3 sidispo-scroll">
-      <div class="section-label !text-sidebar-accent/80">Menu Utama</div>
-      <div class="sidispo-menu-panel">
-        <Menu :model="mainMenuItems" class="sidispo-sidebar-menu border-0 w-full" />
-      </div>
 
-      <!-- Overdue badge floating on menu area -->
-      <div v-if="overdueBadge" class="mx-2 mt-1 mb-2">
-        <div
-          class="flex items-center gap-2 px-3 py-2 rounded-xl bg-red-500/20 border border-red-400/30 cursor-pointer hover:bg-red-500/30 transition-all"
-          @click="router.push({ path: '/disposisi', query: { tab: 'Overdue' } })"
-        >
-          <i class="pi pi-exclamation-triangle text-red-300 text-sm"></i>
-          <span class="text-xs font-semibold text-red-200">{{ overdueBadge }} disposisi overdue</span>
-          <Badge :value="overdueBadge" severity="danger" class="ml-auto" />
+      <!-- ═══════════════════════════════════════════════════════════ -->
+      <!-- SECTION: Menu Utama                                        -->
+      <!-- ═══════════════════════════════════════════════════════════ -->
+      <button
+        class="section-toggle"
+        @click="toggleSection('main')"
+      >
+        <div class="flex items-center gap-1.5">
+          <i class="pi text-[10px]" :class="isCollapsed('main') ? 'pi-chevron-right' : 'pi-chevron-down'"></i>
+          <span>Menu Utama</span>
+        </div>
+      </button>
+      <div class="collapsible-body" :class="{ collapsed: isCollapsed('main') }">
+        <div class="sidispo-menu-panel">
+          <Menu :model="mainMenuItems" class="sidispo-sidebar-menu border-0 w-full" />
+        </div>
+
+        <!-- Overdue badge -->
+        <div v-if="overdueBadge" class="mx-2 mt-1 mb-1">
+          <div
+            class="flex items-center gap-2 px-3 py-2 rounded-xl bg-red-500/20 border border-red-400/30 cursor-pointer hover:bg-red-500/30 transition-all"
+            @click="router.push({ path: '/disposisi', query: { tab: 'Overdue' } })"
+          >
+            <i class="pi pi-exclamation-triangle text-red-300 text-sm"></i>
+            <span class="text-xs font-semibold text-red-200">{{ overdueBadge }} disposisi overdue</span>
+            <Badge :value="overdueBadge" severity="danger" class="ml-auto" />
+          </div>
         </div>
       </div>
 
+      <!-- ═══════════════════════════════════════════════════════════ -->
+      <!-- SECTION: RTL                                                -->
+      <!-- ═══════════════════════════════════════════════════════════ -->
+      <Divider class="!my-3 !border-white/10" />
+      <button
+        class="section-toggle"
+        @click="toggleSection('rtl')"
+      >
+        <div class="flex items-center gap-1.5">
+          <i class="pi text-[10px]" :class="isCollapsed('rtl') ? 'pi-chevron-right' : 'pi-chevron-down'"></i>
+          <span>RTL</span>
+        </div>
+      </button>
+      <div class="collapsible-body" :class="{ collapsed: isCollapsed('rtl') }">
+        <div class="sidispo-menu-panel">
+          <Menu :model="rtlMenuItems" class="sidispo-sidebar-menu border-0 w-full" />
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════ -->
+      <!-- SECTION: Report                                             -->
+      <!-- ═══════════════════════════════════════════════════════════ -->
+      <Divider class="!my-3 !border-white/10" />
+      <button
+        class="section-toggle !text-purple-300/80"
+        @click="toggleSection('report')"
+      >
+        <div class="flex items-center gap-1.5">
+          <i class="pi text-[10px]" :class="isCollapsed('report') ? 'pi-chevron-right' : 'pi-chevron-down'"></i>
+          <span>Report</span>
+        </div>
+      </button>
+      <div class="collapsible-body" :class="{ collapsed: isCollapsed('report') }">
+        <div class="sidispo-menu-panel sidispo-menu-panel-report">
+          <Menu :model="reportMenuItems" class="sidispo-sidebar-menu sidispo-report-menu border-0 w-full" />
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════ -->
+      <!-- SECTION: Folder (Sekretariat only)                          -->
+      <!-- ═══════════════════════════════════════════════════════════ -->
       <template v-if="isSekretariat">
         <Divider class="!my-3 !border-white/10" />
-        <div class="section-label !text-sidebar-accent/80">Folder</div>
+        <button
+          class="section-toggle"
+          @click="toggleSection('folder')"
+        >
+          <div class="flex items-center gap-1.5">
+            <i class="pi text-[10px]" :class="isCollapsed('folder') ? 'pi-chevron-right' : 'pi-chevron-down'"></i>
+            <span>Folder</span>
+          </div>
+        </button>
+        <div class="collapsible-body" :class="{ collapsed: isCollapsed('folder') }">
+          <div v-if="loadingFolders" class="px-2 flex flex-col gap-2 mt-1">
+            <Skeleton v-for="i in 3" :key="i" height="1.75rem" class="rounded-lg !bg-white/10" />
+          </div>
 
-        <div v-if="loadingFolders" class="px-2 flex flex-col gap-2">
-          <Skeleton v-for="i in 3" :key="i" height="1.75rem" class="rounded-lg !bg-white/10" />
-        </div>
+          <div v-else-if="folders.length === 0" class="px-3 text-xs text-white/40 italic mt-1">
+            Belum ada folder.
+          </div>
 
-        <div v-else-if="folders.length === 0" class="px-3 text-xs text-white/40 italic">
-          Belum ada folder.
-        </div>
+          <div v-else class="flex flex-col gap-0.5 mt-1">
+            <template v-for="parent in parentFolders" :key="parent.id">
+              <button
+                class="sidispo-folder-btn"
+                :class="{ active: route.query.folder == parent.id }"
+                @click="goFolder(parent.id)"
+              >
+                <span class="w-3 h-3 rounded-full shrink-0 ring-2 ring-white/20" :style="{ background: parent.warna || '#52b788' }"></span>
+                <span class="truncate">{{ parent.nama }}</span>
+              </button>
+              <button
+                v-for="child in childOf(parent.id)"
+                :key="child.id"
+                class="sidispo-folder-btn pl-7"
+                :class="{ active: route.query.folder == child.id }"
+                @click="goFolder(child.id)"
+              >
+                <span class="w-2 h-2 rounded-full shrink-0" :style="{ background: child.warna || '#52b788' }"></span>
+                <span class="truncate text-sm">{{ child.nama }}</span>
+              </button>
+            </template>
 
-        <div v-else class="flex flex-col gap-0.5">
-          <template v-for="parent in parentFolders" :key="parent.id">
             <button
-              class="sidispo-folder-btn"
-              :class="{ active: route.query.folder == parent.id }"
-              @click="goFolder(parent.id)"
+              v-if="isAdmin"
+              class="sidispo-folder-btn text-sidebar-accent mt-1"
+              @click="router.push('/admin/folders')"
             >
-              <span class="w-3 h-3 rounded-full shrink-0 ring-2 ring-white/20" :style="{ background: parent.warna || '#52b788' }"></span>
-              <span class="truncate">{{ parent.nama }}</span>
+              <i class="pi pi-plus text-xs"></i>
+              <span>Kelola Folder</span>
             </button>
-            <button
-              v-for="child in childOf(parent.id)"
-              :key="child.id"
-              class="sidispo-folder-btn pl-7"
-              :class="{ active: route.query.folder == child.id }"
-              @click="goFolder(child.id)"
-            >
-              <span class="w-2 h-2 rounded-full shrink-0" :style="{ background: child.warna || '#52b788' }"></span>
-              <span class="truncate text-sm">{{ child.nama }}</span>
-            </button>
-          </template>
-
-          <button
-            v-if="isAdmin"
-            class="sidispo-folder-btn text-sidebar-accent mt-1"
-            @click="router.push('/admin/folders')"
-          >
-            <i class="pi pi-plus text-xs"></i>
-            <span>Kelola Folder</span>
-          </button>
+          </div>
         </div>
       </template>
 
+      <!-- ═══════════════════════════════════════════════════════════ -->
+      <!-- SECTION: Admin Panel (Admin only)                           -->
+      <!-- ═══════════════════════════════════════════════════════════ -->
       <template v-if="isAdmin">
         <Divider class="!my-3 !border-white/10" />
-        <div class="section-label !text-amber-300/80">Admin Panel</div>
-        <div class="sidispo-menu-panel sidispo-menu-panel-admin">
-          <Menu :model="adminMenuItems" class="sidispo-sidebar-menu sidispo-admin-menu border-0 w-full" />
+        <button
+          class="section-toggle !text-amber-300/80"
+          @click="toggleSection('admin')"
+        >
+          <div class="flex items-center gap-1.5">
+            <i class="pi text-[10px]" :class="isCollapsed('admin') ? 'pi-chevron-right' : 'pi-chevron-down'"></i>
+            <span>Admin Panel</span>
+          </div>
+        </button>
+        <div class="collapsible-body" :class="{ collapsed: isCollapsed('admin') }">
+          <div class="sidispo-menu-panel sidispo-menu-panel-admin">
+            <Menu :model="adminMenuItems" class="sidispo-sidebar-menu sidispo-admin-menu border-0 w-full" />
+          </div>
         </div>
       </template>
     </div>
@@ -212,6 +324,32 @@ const goFolder = (id) => router.push({ path: '/surat-masuk', query: { folder: id
 </template>
 
 <style scoped>
+/* ── Section Toggle Button ─────────────────────────────────────────────── */
+.section-toggle {
+  @apply w-full flex items-center justify-between px-2 py-1.5 mb-1.5
+         text-[10px] font-bold uppercase tracking-widest
+         text-sidebar-accent/80 cursor-pointer
+         rounded-lg hover:bg-white/5 transition-all duration-150;
+  background: transparent;
+  border: none;
+  outline: none;
+}
+
+/* ── Collapsible Body ──────────────────────────────────────────────────── */
+.collapsible-body {
+  max-height: 600px;
+  overflow: hidden;
+  transition: max-height 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.22s ease;
+  opacity: 1;
+}
+
+.collapsible-body.collapsed {
+  max-height: 0 !important;
+  opacity: 0;
+}
+
+/* ── Menu Panels ───────────────────────────────────────────────────────── */
 .sidispo-menu-panel {
   @apply rounded-xl p-1.5 border border-white/10;
   background: rgba(0, 0, 0, 0.18);
@@ -222,9 +360,18 @@ const goFolder = (id) => router.push({ path: '/surat-masuk', query: { folder: id
   background: rgba(0, 0, 0, 0.22);
 }
 
+.sidispo-menu-panel-report {
+  @apply border-purple-400/20;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+/* ── Folder Buttons ────────────────────────────────────────────────────── */
 .sidispo-folder-btn {
   @apply flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-sm font-medium transition-all duration-150 text-left;
   color: #d8f3dc;
+  background: transparent;
+  border: none;
+  cursor: pointer;
 }
 .sidispo-folder-btn:hover {
   @apply bg-white/10;
@@ -298,12 +445,27 @@ const goFolder = (id) => router.push({ path: '/surat-masuk', query: { folder: id
   color: #b7e4c7 !important;
 }
 
+/* ── Admin menu icon colors ────────────────────────────────────────────── */
 :deep(.sidispo-admin-menu .p-menu-item-icon) {
   color: #fbbf24 !important;
 }
 
 :deep(.sidispo-admin-menu .sidispo-menu-active .p-menu-item-icon) {
   color: #fde68a !important;
+}
+
+/* ── Report menu icon colors ───────────────────────────────────────────── */
+:deep(.sidispo-report-menu .p-menu-item-icon) {
+  color: #c084fc !important;
+}
+
+:deep(.sidispo-report-menu .sidispo-menu-active > .p-menu-item-content) {
+  background: linear-gradient(90deg, rgba(168, 85, 247, 0.35) 0%, rgba(168, 85, 247, 0.12) 100%) !important;
+  border: 1px solid rgba(168, 85, 247, 0.45);
+}
+
+:deep(.sidispo-report-menu .sidispo-menu-active .p-menu-item-icon) {
+  color: #e9d5ff !important;
 }
 
 .sidispo-scroll::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); }

@@ -721,4 +721,222 @@ class Ekspedisi_model extends CI_Model {
         $this->db->trans_complete();
         return $this->db->trans_status();
     }
+
+    /**
+     * Report Ekspedisi: Daftar semua serah terima ekspedisi masuk lengkap
+     */
+    public function get_report_ekspedisi($limit = 500, $offset = 0, $filters = [])
+    {
+        $this->db->select('
+            et.id as ekspedisi_tujuan_id,
+            et.ekspedisi_id,
+            et.user_tujuan_id,
+            et.unit_tujuan,
+            et.status as status_tujuan,
+            et.received_at,
+            et.received_by_user_id,
+            et.rejected_at,
+            et.rejected_by_user_id,
+            et.alasan_tolak,
+            et.catatan as catatan_tujuan,
+            e.nomor_ekspedisi,
+            e.jenis_pengiriman,
+            e.status_global,
+            e.catatan as catatan_pengirim,
+            e.tanggal_kirim,
+            sm.id as surat_masuk_id,
+            sm.nomor_surat,
+            sm.nomor_agenda,
+            sm.asal_surat,
+            sm.perihal,
+            sm.tanggal_surat,
+            sm.tanggal_terima,
+            sm.keterangan as keterangan_surat,
+            f.nama as nama_folder,
+            f.warna as warna_folder,
+            d.id as disposisi_id,
+            d.nomor_disposisi,
+            d.prioritas,
+            d.batas_waktu,
+            d.isi_disposisi,
+            u_tujuan.nama_lengkap as nama_user_tujuan,
+            u_tujuan.nip as nip_user_tujuan,
+            u_tujuan.jabatan as jabatan_user_tujuan,
+            u_tujuan.unit as unit_user_tujuan,
+            u_pengirim.nama_lengkap as nama_pengirim,
+            u_pengirim.nip as nip_pengirim,
+            u_rec.nama_lengkap as nama_penerima,
+            u_rec.nip as nip_penerima,
+            u_rec.jabatan as jabatan_penerima,
+            u_rej.nama_lengkap as nama_penolak,
+            u_rej.nip as nip_penolak
+        ');
+        $this->db->from('ekspedisi_tujuan et');
+        $this->db->join('ekspedisi e', 'e.id = et.ekspedisi_id');
+        $this->db->join('surat_masuk sm', 'sm.id = e.surat_masuk_id');
+        $this->db->join('disposisi d', 'd.id = e.disposisi_id');
+        $this->db->join('folders f', 'f.id = sm.folder_id', 'left');
+        $this->db->join('users u_tujuan', 'u_tujuan.id = et.user_tujuan_id', 'left');
+        $this->db->join('users u_pengirim', 'u_pengirim.id = e.pengirim_id', 'left');
+        $this->db->join('users u_rec', 'u_rec.id = et.received_by_user_id', 'left');
+        $this->db->join('users u_rej', 'u_rej.id = et.rejected_by_user_id', 'left');
+
+        $this->apply_report_filters($filters);
+
+        $this->db->order_by('e.tanggal_kirim', 'DESC');
+        $this->db->order_by('et.id', 'DESC');
+        $this->db->limit($limit, $offset);
+        $list = $this->db->get()->result_array();
+
+        if (!empty($list)) {
+            $sm_ids = array_unique(array_column($list, 'surat_masuk_id'));
+            $files_map = $this->get_files_by_surat_masuk_ids($sm_ids);
+
+            $ekspedisi_ids = array_unique(array_column($list, 'ekspedisi_id'));
+            $all_tujuan = $this->get_tujuan_by_ekspedisi_ids($ekspedisi_ids);
+            $grouped_tujuan = [];
+            foreach ($all_tujuan as $t) {
+                $grouped_tujuan[$t['ekspedisi_id']][] = $t;
+            }
+
+            foreach ($list as &$item) {
+                $item['files'] = $files_map[$item['surat_masuk_id']] ?? [];
+                $item['tujuan'] = $grouped_tujuan[$item['ekspedisi_id']] ?? [];
+            }
+            unset($item);
+        }
+
+        return $list;
+    }
+
+    /**
+     * Hitung total baris laporan ekspedisi berdasarkan filter
+     */
+    public function count_report_ekspedisi($filters = [])
+    {
+        $this->db->from('ekspedisi_tujuan et');
+        $this->db->join('ekspedisi e', 'e.id = et.ekspedisi_id');
+        $this->db->join('surat_masuk sm', 'sm.id = e.surat_masuk_id');
+        $this->db->join('disposisi d', 'd.id = e.disposisi_id');
+        $this->db->join('users u_tujuan', 'u_tujuan.id = et.user_tujuan_id', 'left');
+        $this->db->join('users u_pengirim', 'u_pengirim.id = e.pengirim_id', 'left');
+        $this->db->join('users u_rec', 'u_rec.id = et.received_by_user_id', 'left');
+
+        $this->apply_report_filters($filters);
+        return $this->db->count_all_results();
+    }
+
+    /**
+     * Statistik ringkasan untuk kartu metrik laporan ekspedisi
+     */
+    public function get_report_stats($filters = [])
+    {
+        $this->db->select('
+            COUNT(et.id) as total,
+            SUM(CASE WHEN et.status = "RECEIVED" THEN 1 ELSE 0 END) as total_received,
+            SUM(CASE WHEN et.status = "PENDING" THEN 1 ELSE 0 END) as total_pending,
+            SUM(CASE WHEN et.status = "REJECTED" THEN 1 ELSE 0 END) as total_rejected,
+            SUM(CASE WHEN e.jenis_pengiriman = "DIGITAL" THEN 1 ELSE 0 END) as total_digital,
+            SUM(CASE WHEN e.jenis_pengiriman = "FISIK" THEN 1 ELSE 0 END) as total_fisik
+        ');
+        $this->db->from('ekspedisi_tujuan et');
+        $this->db->join('ekspedisi e', 'e.id = et.ekspedisi_id');
+        $this->db->join('surat_masuk sm', 'sm.id = e.surat_masuk_id');
+        $this->db->join('disposisi d', 'd.id = e.disposisi_id');
+        $this->db->join('users u_tujuan', 'u_tujuan.id = et.user_tujuan_id', 'left');
+        $this->db->join('users u_rec', 'u_rec.id = et.received_by_user_id', 'left');
+
+        if (!empty($filters['unit'])) {
+            $this->db->where('et.unit_tujuan', $filters['unit']);
+        }
+        if (!empty($filters['user_id'])) {
+            $this->db->where('et.user_tujuan_id', (int)$filters['user_id']);
+        }
+        if (!empty($filters['tanggal_dari'])) {
+            $this->db->where('DATE(e.tanggal_kirim) >=', $filters['tanggal_dari']);
+        }
+        if (!empty($filters['tanggal_sampai'])) {
+            $this->db->where('DATE(e.tanggal_kirim) <=', $filters['tanggal_sampai']);
+        }
+        if (!empty($filters['q'])) {
+            $q = trim($filters['q']);
+            $this->db->group_start();
+            $this->db->like('e.nomor_ekspedisi', $q);
+            $this->db->or_like('sm.nomor_surat', $q);
+            $this->db->or_like('sm.asal_surat', $q);
+            $this->db->or_like('sm.perihal', $q);
+            $this->db->or_like('sm.nomor_agenda', $q);
+            $this->db->or_like('sm.keterangan', $q);
+            $this->db->or_like('d.nomor_disposisi', $q);
+            $this->db->or_like('u_tujuan.nama_lengkap', $q);
+            $this->db->or_like('u_rec.nama_lengkap', $q);
+            $this->db->or_like('et.unit_tujuan', $q);
+            $this->db->group_end();
+        }
+
+        $row = $this->db->get()->row_array();
+        return [
+            'total'    => (int)($row['total'] ?? 0),
+            'received' => (int)($row['total_received'] ?? 0),
+            'pending'  => (int)($row['total_pending'] ?? 0),
+            'rejected' => (int)($row['total_rejected'] ?? 0),
+            'digital'  => (int)($row['total_digital'] ?? 0),
+            'fisik'    => (int)($row['total_fisik'] ?? 0),
+        ];
+    }
+
+    /**
+     * Ambil daftar unit unik untuk dropdown filter
+     */
+    public function get_distinct_units()
+    {
+        $this->db->distinct();
+        $this->db->select('unit_tujuan');
+        $this->db->from('ekspedisi_tujuan');
+        $this->db->where('unit_tujuan IS NOT NULL', null, false);
+        $this->db->where('unit_tujuan !=', '');
+        $this->db->order_by('unit_tujuan', 'ASC');
+        $rows = $this->db->get()->result_array();
+        return array_values(array_filter(array_column($rows, 'unit_tujuan')));
+    }
+
+    /**
+     * Helper privat untuk klausul filter laporan
+     */
+    private function apply_report_filters($filters = [])
+    {
+        if (!empty($filters['status'])) {
+            $this->db->where('et.status', $filters['status']);
+        }
+        if (!empty($filters['jenis'])) {
+            $this->db->where('e.jenis_pengiriman', $filters['jenis']);
+        }
+        if (!empty($filters['unit'])) {
+            $this->db->where('et.unit_tujuan', $filters['unit']);
+        }
+        if (!empty($filters['user_id'])) {
+            $this->db->where('et.user_tujuan_id', (int)$filters['user_id']);
+        }
+        if (!empty($filters['tanggal_dari'])) {
+            $this->db->where('DATE(e.tanggal_kirim) >=', $filters['tanggal_dari']);
+        }
+        if (!empty($filters['tanggal_sampai'])) {
+            $this->db->where('DATE(e.tanggal_kirim) <=', $filters['tanggal_sampai']);
+        }
+        if (!empty($filters['q'])) {
+            $q = trim($filters['q']);
+            $this->db->group_start();
+            $this->db->like('e.nomor_ekspedisi', $q);
+            $this->db->or_like('sm.nomor_surat', $q);
+            $this->db->or_like('sm.asal_surat', $q);
+            $this->db->or_like('sm.perihal', $q);
+            $this->db->or_like('sm.nomor_agenda', $q);
+            $this->db->or_like('sm.keterangan', $q);
+            $this->db->or_like('d.nomor_disposisi', $q);
+            $this->db->or_like('u_tujuan.nama_lengkap', $q);
+            $this->db->or_like('u_rec.nama_lengkap', $q);
+            $this->db->or_like('et.unit_tujuan', $q);
+            $this->db->group_end();
+        }
+    }
 }

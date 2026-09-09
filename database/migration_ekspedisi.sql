@@ -27,7 +27,8 @@ CREATE TABLE IF NOT EXISTS `ekspedisi` (
 CREATE TABLE IF NOT EXISTS `ekspedisi_tujuan` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `ekspedisi_id` bigint(20) unsigned NOT NULL,
-  `unit_tujuan` varchar(100) NOT NULL,
+  `user_tujuan_id` bigint(20) unsigned DEFAULT NULL,
+  `unit_tujuan` varchar(100) DEFAULT NULL,
   `status` enum('PENDING','RECEIVED','REJECTED') NOT NULL DEFAULT 'PENDING',
   `received_at` timestamp NULL DEFAULT NULL,
   `received_by_user_id` bigint(20) unsigned DEFAULT NULL,
