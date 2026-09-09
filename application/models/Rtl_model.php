@@ -436,4 +436,12 @@ class Rtl_model extends CI_Model {
         $this->db->order_by('nama_lengkap', 'ASC');
         return $this->db->get('users')->result_array();
     }
+
+    /**
+     * Get a single rtl_penerima row by its ID.
+     */
+    public function get_penerima_by_id($id)
+    {
+        return $this->db->get_where('rtl_penerima', ['id' => $id])->row_array();
+    }
 }

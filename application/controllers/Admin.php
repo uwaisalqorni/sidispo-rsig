@@ -423,6 +423,84 @@ class Admin extends MY_Controller {
         }
     }
 
+    /** POST /api/v1/admin/settings/test-wa-db — Uji coba koneksi database WA Gateway */
+    public function settings_test_wa_db() {
+        $this->require_admin();
+
+        $data = json_decode(file_get_contents('php://input'), true) ?? [];
+        $this->load->model('Wa_model');
+
+        $res = $this->Wa_model->test_connection($data);
+        if ($res['success']) {
+            $this->response([
+                'status'  => 'success',
+                'message' => $res['message'],
+                'stats'   => $res['stats'] ?? null
+            ]);
+        } else {
+            $this->response([
+                'status'  => 'error',
+                'message' => $res['message']
+            ], 400);
+        }
+    }
+
+    /** POST /api/v1/admin/settings/test-send-wa — Uji coba kirim pesan WhatsApp ke antrean */
+    public function settings_test_send_wa() {
+        $this->require_admin();
+
+        $data = json_decode(file_get_contents('php://input'), true) ?? [];
+        $target_phone = $data['target_phone'] ?? '';
+        $message      = $data['message'] ?? '';
+
+        if (empty($target_phone)) {
+            $this->response(['status' => 'error', 'message' => 'Nomor WhatsApp tujuan wajib diisi.'], 422);
+            return;
+        }
+
+        if (empty($message)) {
+            $message = "Halo! Ini adalah pesan uji coba integrasi WhatsApp Gateway SiDispo RSI Gondanglegi.\nWaktu kirim: " . date('d-m-Y H:i:s') . " WIB.";
+        }
+
+        $send_sample_file = !empty($data['send_sample_file']);
+        $this->load->model('Wa_model');
+
+        if ($send_sample_file) {
+            $sample_file = null;
+            $upload_files = glob(FCPATH . 'uploads/surat/*.pdf');
+            if (!empty($upload_files)) {
+                $sample_file = $upload_files[0];
+            } else {
+                $all_files = glob(FCPATH . 'uploads/surat/*.*');
+                if (!empty($all_files)) {
+                    $sample_file = $all_files[0];
+                }
+            }
+
+            if ($sample_file && file_exists($sample_file)) {
+                $res = $this->Wa_model->schedule_wa_file($target_phone, $message, $sample_file, 'Uji_Coba_Dokumen_SiDispo.pdf', null, $data);
+            } else {
+                $res = $this->Wa_model->schedule_wa($target_phone, $message, null, $data);
+            }
+        } else {
+            $res = $this->Wa_model->schedule_wa($target_phone, $message, null, $data);
+        }
+
+        if ($res['success']) {
+            $file_info = !empty($res['file']) ? " beserta file '{$res['file']}'" : "";
+            $this->response([
+                'status'  => 'success',
+                'message' => "Pesan uji coba{$file_info} berhasil dimasukkan ke antrean outbox untuk nomor {$res['nowa']}.",
+                'data'    => $res
+            ]);
+        } else {
+            $this->response([
+                'status'  => 'error',
+                'message' => $res['message']
+            ], 400);
+        }
+    }
+
     /** GET /api/v1/admin/stats — Statistik sistem untuk admin */
     public function system_stats() {
         $this->require_admin();

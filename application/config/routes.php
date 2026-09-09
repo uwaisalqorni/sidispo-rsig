@@ -152,6 +152,8 @@ $route['api/v1/admin/folders/(:num)']['delete']            = 'Admin/folders_dele
 $route['api/v1/admin/settings']['get']                     = 'Admin/settings_index';        // GET    – Semua konfigurasi
 $route['api/v1/admin/settings']['put']                     = 'Admin/settings_update';       // PUT    – Update konfigurasi (bulk)
 $route['api/v1/admin/settings/test-email']['post']          = 'Admin/settings_test_email';   // POST   – Uji coba kirim email SMTP
+$route['api/v1/admin/settings/test-wa-db']['post']          = 'Admin/settings_test_wa_db';   // POST   – Uji coba koneksi DB WA
+$route['api/v1/admin/settings/test-send-wa']['post']        = 'Admin/settings_test_send_wa'; // POST   – Uji coba kirim pesan WA
 
 // ── USERS (general – accessible by all authenticated users) ──────────────
 $route['api/v1/users']['get']                              = 'Admin/users_active';          // GET    – Daftar user aktif (untuk pilih penerima disposisi)

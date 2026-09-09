@@ -47,9 +47,13 @@ class Surat extends MY_Controller {
         $folder_id       = $this->input->get('folder_id');
         $tanggal_dari    = $this->input->get('tanggal_dari');
         $tanggal_sampai  = $this->input->get('tanggal_sampai');
+        $keterangan      = $this->input->get('keterangan');
 
         if (!empty($q)) {
             $filters['q'] = trim($q);
+        }
+        if (!empty($keterangan)) {
+            $filters['keterangan'] = trim($keterangan);
         }
         if (!empty($folder_id)) {
             $filters['folder_id'] = (int)$folder_id;

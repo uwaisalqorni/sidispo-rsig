@@ -250,7 +250,7 @@ class Rtl extends MY_Controller {
             return $this->response(['status' => 'error', 'message' => 'Method not allowed'], 405);
         }
 
-        $penerima = $this->db->get_where('rtl_penerima', ['id' => $id])->row_array();
+        $penerima = $this->rtl->get_penerima_by_id($id);
         if (!$penerima) {
             return $this->response(['status' => 'error', 'message' => 'Penerima RTL tidak ditemukan'], 404);
         }

@@ -60,7 +60,8 @@ const loadUsers = async () => {
       unit: u.unit,
       level: u.jabatan_level,
       role: u.role,
-      labelSearch: `${u.nama_lengkap} ${u.nip || ''} ${u.jabatan || ''} ${u.unit || ''}`
+      no_hp: u.no_hp || '',
+      labelSearch: `${u.nama_lengkap} ${u.nip || ''} ${u.jabatan || ''} ${u.unit || ''} ${u.no_hp || ''}`
     }))
   } catch (e) {
     console.error('Gagal memuat daftar user', e)
@@ -332,20 +333,40 @@ const handleSubmit = async () => {
                   <span v-if="slotProps.option.unit" class="text-textMuted/80">• {{ slotProps.option.unit }}</span>
                 </div>
               </div>
-              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase shrink-0"
-                :class="slotProps.option.role === 'DIREKTUR' 
-                  ? 'bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-500/20' 
-                  : (slotProps.option.role === 'PEJABAT' 
-                    ? 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20' 
-                    : 'bg-surface2 text-textMuted border border-border')">
-                {{ slotProps.option.role }}
-              </span>
+              <div class="flex items-center gap-1.5 shrink-0">
+                <span
+                  v-if="slotProps.option.no_hp"
+                  class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1"
+                  :title="'WhatsApp aktif: ' + slotProps.option.no_hp"
+                >
+                  <i class="pi pi-whatsapp text-[10px]"></i>
+                  <span>{{ slotProps.option.no_hp }}</span>
+                </span>
+                <span
+                  v-else
+                  class="text-[10px] text-textMuted/70 italic px-1.5 py-0.5 rounded border border-border/40"
+                  title="Nomor WhatsApp belum terdaftar di profil"
+                >
+                  Tanpa WA
+                </span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase"
+                  :class="slotProps.option.role === 'DIREKTUR' 
+                    ? 'bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-500/20' 
+                    : (slotProps.option.role === 'PEJABAT' 
+                      ? 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20' 
+                      : 'bg-surface2 text-textMuted border border-border')">
+                  {{ slotProps.option.role }}
+                </span>
+              </div>
             </div>
           </template>
         </MultiSelect>
-        <span class="text-[11px] text-textMuted italic">
-          Surat akan langsung diekspedisikan ke akun pengguna terpilih, dan mereka dapat melihat file surat serta melakukan konfirmasi terima.
-        </span>
+        <div class="p-2.5 rounded-xl bg-emerald-500/5 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[11px] flex items-center gap-2 mt-1">
+          <i class="pi pi-whatsapp text-sm text-emerald-600 shrink-0"></i>
+          <span>
+            Notifikasi WhatsApp otomatis akan dikirimkan beserta <b>lampiran file berkas surat</b> untuk setiap user penerima yang memiliki nomor WhatsApp terdaftar.
+          </span>
+        </div>
       </div>
 
       <!-- Catatan Pengiriman -->

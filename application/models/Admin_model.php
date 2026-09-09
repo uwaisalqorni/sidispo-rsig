@@ -125,6 +125,18 @@ class Admin_model extends CI_Model {
             'max_upload_mb'       => '10',
             'versi_aplikasi'      => '1.0.0',
             'maintenance_mode'    => '0',
+            'wa_enabled'            => '1',
+            'wa_db_host'            => '192.168.0.194',
+            'wa_db_port'            => '3306',
+            'wa_db_user'            => 'root',
+            'wa_db_pass'            => 'bismillah',
+            'wa_db_name'            => 'wa_delphi3',
+            'wa_outbox_table'       => 'wa_outbox',
+            'wa_sender'             => 'NODEJS',
+            'wa_source'             => 'SIDISPO',
+            'wa_media_path'         => 'c:/xampp/htdocs/nodejs-gateway/media',
+            'wa_send_file'          => '1',
+            'wa_template_ekspedisi' => "*NOTIFIKASI EKSPEDISI SURAT MASUK*\n{nama_rs}\n\nYth. *{nama_penerima}*\n({jabatan} - {unit})\n\nDokumen resmi disposisi telah diekspedisikan kepada Anda dengan rincian:\n━━━━━━━━━━━━━━━━━━━━━━━\n📌 *No. Ekspedisi:* {nomor_ekspedisi}\n📨 *No. Surat:* {nomor_surat}\n🏢 *Asal Surat:* {asal_surat}\n📝 *Perihal:* {perihal}\n📅 *Tanggal Kirim:* {tanggal_kirim}\n📦 *Jenis Pengiriman:* {jenis_pengiriman}\n{catatan_pengiriman}\n━━━━━━━━━━━━━━━━━━━━━━━\n{keterangan_tambahan}\n\nSilakan akses sistem *SiDispo* pada menu *Ekspedisi Masuk* untuk memeriksa berkas digital dan melakukan konfirmasi serah terima dokumen.\n\nTerima kasih.\n_Sistem Informasi Disposisi RSI Gondanglegi_",
         ];
     }
 

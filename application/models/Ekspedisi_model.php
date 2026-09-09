@@ -335,7 +335,7 @@ class Ekspedisi_model extends CI_Model {
             return false;
         }
 
-        $users_data = $this->db->select('id, nama_lengkap, nip, jabatan, unit')
+        $users_data = $this->db->select('id, nama_lengkap, nip, jabatan, unit, no_hp')
                                ->where_in('id', $clean_user_ids)
                                ->where('is_active', 1)
                                ->get('users')
@@ -360,8 +360,18 @@ class Ekspedisi_model extends CI_Model {
         $this->db->trans_complete();
 
         if ($this->db->trans_status()) {
-            // 4. Kirim Notifikasi ke user-user tujuan terpilih
+            // 4. Kirim Notifikasi in-app ke user-user tujuan terpilih
             $this->kirim_notifikasi_ekspedisi_baru_user($ekspedisi_id, $disp, $data_ekspedisi['jenis_pengiriman'], $notif_users);
+
+            // 5. Kirim Notifikasi WhatsApp ke antrean wa_outbox (beserta berkas lampiran jika ada)
+            try {
+                $this->load->model('Wa_model');
+                $files_sm = $this->db->get_where('dokumen_file', ['surat_masuk_id' => $disp['surat_masuk_id']])->result_array();
+                $this->Wa_model->kirim_notifikasi_ekspedisi($ekspedisi_id, $disp, $data_ekspedisi['jenis_pengiriman'], $notif_users, $catatan, $files_sm);
+            } catch (Throwable $e) {
+                log_message('error', 'Gagal kirim WA ekspedisi: ' . $e->getMessage());
+            }
+
             return $ekspedisi_id;
         }
 
@@ -654,7 +664,7 @@ class Ekspedisi_model extends CI_Model {
             // User yang baru ditambahkan
             $to_add = array_diff($new_user_ids, $existing_user_ids);
             if (!empty($to_add)) {
-                $users_data = $this->db->select('id, nama_lengkap, nip, jabatan, unit')
+                $users_data = $this->db->select('id, nama_lengkap, nip, jabatan, unit, no_hp')
                                        ->where_in('id', $to_add)
                                        ->where('is_active', 1)
                                        ->get('users')
@@ -682,6 +692,14 @@ class Ekspedisi_model extends CI_Model {
                                  ->row_array();
                 if ($disp) {
                     $this->kirim_notifikasi_ekspedisi_baru_user($id, $disp, $update_data['jenis_pengiriman'] ?? $eksp['jenis_pengiriman'], $users_data);
+
+                    try {
+                        $this->load->model('Wa_model');
+                        $files_sm = $this->db->get_where('dokumen_file', ['surat_masuk_id' => $eksp['surat_masuk_id']])->result_array();
+                        $this->Wa_model->kirim_notifikasi_ekspedisi($id, $disp, $update_data['jenis_pengiriman'] ?? $eksp['jenis_pengiriman'], $users_data, $update_data['catatan'] ?? $eksp['catatan'], $files_sm);
+                    } catch (Throwable $e) {
+                        log_message('error', 'Gagal kirim WA ekspedisi update: ' . $e->getMessage());
+                    }
                 }
             }
         }

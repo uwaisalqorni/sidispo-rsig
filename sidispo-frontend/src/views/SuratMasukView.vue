@@ -55,6 +55,7 @@ const agendaMode     = ref('auto') // 'auto' | 'manual'
 
 // Filter & Search
 const searchQuery       = ref('')
+const filterKeterangan  = ref('')
 const selectedFolderId  = ref(null)
 const filterDari        = ref('')
 const filterSampai      = ref('')
@@ -68,7 +69,7 @@ const activeFolder = computed(() => {
 })
 
 const filterActive = computed(() => {
-  return !!(searchQuery.value.trim() || selectedFolderId.value || filterDari.value || filterSampai.value || route.query.folder)
+  return !!(searchQuery.value.trim() || filterKeterangan.value.trim() || selectedFolderId.value || filterDari.value || filterSampai.value || route.query.folder)
 })
 
 // Filtered list (kombinasi filter instan frontend dan server)
@@ -78,6 +79,11 @@ const displayList = computed(() => {
   const targetFolder = selectedFolderId.value || route.query.folder
   if (targetFolder) {
     list = list.filter(s => s.folder_id == targetFolder)
+  }
+
+  if (filterKeterangan.value.trim()) {
+    const ketQ = filterKeterangan.value.trim().toLowerCase()
+    list = list.filter(s => (s.keterangan || '').toLowerCase().includes(ketQ))
   }
 
   if (searchQuery.value.trim()) {
@@ -143,6 +149,7 @@ const loadSurat = async () => {
   try {
     const params = {}
     if (searchQuery.value.trim()) params.q = searchQuery.value.trim()
+    if (filterKeterangan.value.trim()) params.keterangan = filterKeterangan.value.trim()
     const targetFolder = selectedFolderId.value || route.query.folder
     if (targetFolder) params.folder_id = targetFolder
     if (filterDari.value)   params.tanggal_dari    = filterDari.value
@@ -160,6 +167,7 @@ const applyFilter = () => {
 
 const resetFilter = () => {
   searchQuery.value = ''
+  filterKeterangan.value = ''
   selectedFolderId.value = null
   filterDari.value = ''
   filterSampai.value = ''
@@ -426,7 +434,7 @@ function fileUrl(path) {
               <InputIcon class="pi pi-search text-accent" />
               <InputText
                 v-model="searchQuery"
-                placeholder="Cari nomor surat, agenda, perihal, asal surat..."
+                placeholder="Cari nomor surat, agenda, perihal, asal surat, keterangan..."
                 class="w-full !bg-surface2 !text-textMain !rounded-xl text-sm"
                 @keyup.enter="applyFilter"
               />
@@ -447,7 +455,7 @@ function fileUrl(path) {
           </div>
         </div>
 
-        <!-- Baris 2: Rentang Tanggal & Tombol Aksi -->
+        <!-- Baris 2: Rentang Tanggal, Filter Keterangan & Tombol Aksi -->
         <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border/40">
           <div class="flex flex-wrap items-center gap-3">
             <div class="flex items-center gap-1.5 text-xs font-bold text-textMuted uppercase">
@@ -460,6 +468,17 @@ function fileUrl(path) {
               <span class="text-xs text-textMuted">s/d</span>
               <InputText v-model="filterSampai" type="date" class="!bg-surface2 text-xs !py-1.5 !rounded-lg" />
             </div>
+
+            <div class="flex items-center gap-1.5 text-xs font-bold text-textMuted uppercase">
+              <i class="pi pi-comment text-brandCyan"></i>
+              <span>Keterangan:</span>
+            </div>
+            <InputText
+              v-model="filterKeterangan"
+              placeholder="Filter keterangan..."
+              class="!bg-surface2 text-xs !py-1.5 !rounded-lg w-36 md:w-44"
+              @keyup.enter="applyFilter"
+            />
 
             <div class="flex items-center gap-2">
               <Button label="Cari" icon="pi pi-filter" size="small" class="btn-gradient !py-1.5 !px-3.5" @click="applyFilter" />
@@ -540,6 +559,15 @@ function fileUrl(path) {
           <Column field="asal_surat" header="Asal Surat" style="min-width: 160px">
             <template #body="{ data }">
               <span class="text-textMain font-medium">{{ data.asal_surat }}</span>
+            </template>
+          </Column>
+
+          <Column field="keterangan" header="Keterangan" style="min-width: 180px">
+            <template #body="{ data }">
+              <span v-if="data.keterangan" class="text-xs text-textMuted max-w-[220px] truncate block" :title="data.keterangan">
+                {{ data.keterangan }}
+              </span>
+              <span v-else class="text-xs text-textDim italic">—</span>
             </template>
           </Column>
 

@@ -38,6 +38,11 @@ class Surat_model extends CI_Model {
             $this->db->group_end();
         }
 
+        // Filter keterangan spesifik
+        if (!empty($filters['keterangan'])) {
+            $this->db->like('surat_masuk.keterangan', trim($filters['keterangan']));
+        }
+
         // Filter folder/kategori
         if (!empty($filters['folder_id'])) {
             $this->db->where('surat_masuk.folder_id', $filters['folder_id']);
@@ -72,6 +77,10 @@ class Surat_model extends CI_Model {
             $this->db->or_like('surat_masuk.asal_surat', $q);
             $this->db->or_like('surat_masuk.keterangan', $q);
             $this->db->group_end();
+        }
+
+        if (!empty($filters['keterangan'])) {
+            $this->db->like('surat_masuk.keterangan', trim($filters['keterangan']));
         }
 
         if (!empty($filters['folder_id'])) {
