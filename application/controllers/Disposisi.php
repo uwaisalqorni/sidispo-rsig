@@ -292,5 +292,27 @@ class Disposisi extends MY_Controller {
 
         $this->response(['status' => 'success', 'data' => $data], 200);
     }
+
+    /**
+     * GET /disposisi/surat-options
+     * Get list of surat masuk for creating disposisi with search filter (nomor_surat, nomor_agenda, perihal, asal_surat, keterangan)
+     */
+    public function surat_options()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+            return $this->response(['status' => 'error', 'message' => 'Method not allowed'], 405);
+        }
+
+        $q = $this->input->get('q');
+        $limit = $this->input->get('limit') ? (int)$this->input->get('limit') : 200;
+
+        $filters = [];
+        if (!empty($q)) {
+            $filters['q'] = trim($q);
+        }
+
+        $data = $this->disposisi->get_surat_options($filters, $limit);
+        $this->response(['status' => 'success', 'data' => $data], 200);
+    }
 }
 

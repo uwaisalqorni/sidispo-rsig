@@ -135,15 +135,56 @@ const canManage = computed(() => {
   return ['ADMIN', 'DIREKTUR'].includes(auth.role)
 })
 
+// Pencarian dan filter surat masuk untuk disposisi
+const loadingSuratSearch = ref(false)
+let searchSuratTimeout = null
+
+const onSuratSearchInput = (val) => {
+  if (searchSuratTimeout) clearTimeout(searchSuratTimeout)
+  const q = (val || '').trim()
+  if (!q || q.length < 2) return
+
+  searchSuratTimeout = setTimeout(async () => {
+    try {
+      loadingSuratSearch.value = true
+      const { data } = await api.get('/disposisi/surat-options', { params: { q } })
+        .catch(() => api.get('/surat', { params: { q } }))
+      if (data?.data && Array.isArray(data.data)) {
+        const existingIds = new Set(suratList.value.map(s => Number(s.id)))
+        const newItems = data.data.filter(s => !existingIds.has(Number(s.id)))
+        if (newItems.length > 0) {
+          suratList.value = [...newItems, ...suratList.value]
+        }
+      }
+    } catch {
+      // silent
+    } finally {
+      loadingSuratSearch.value = false
+    }
+  }, 350)
+}
+
+watch(suratSearch, (newVal) => {
+  onSuratSearchInput(newVal)
+})
+
 const filteredSurat = computed(() => {
-  if (!suratSearch.value) return suratList.value
-  const q = suratSearch.value.toLowerCase()
+  if (!suratSearch.value.trim()) return suratList.value
+  const q = suratSearch.value.trim().toLowerCase()
   return suratList.value.filter(s =>
-    s.nomor_agenda?.toLowerCase().includes(q) ||
-    s.perihal?.toLowerCase().includes(q) ||
-    s.asal_surat?.toLowerCase().includes(q) ||
-    s.nomor_surat?.toLowerCase().includes(q)
+    (s.nomor_agenda || '').toLowerCase().includes(q) ||
+    (s.nomor_surat || '').toLowerCase().includes(q) ||
+    (s.perihal || '').toLowerCase().includes(q) ||
+    (s.asal_surat || '').toLowerCase().includes(q) ||
+    (s.keterangan || '').toLowerCase().includes(q) ||
+    (s.nama_folder || '').toLowerCase().includes(q)
   )
+})
+
+// Objek surat masuk terpilih untuk pratinjau
+const selectedSuratObject = computed(() => {
+  if (!formDisposisi.value.surat_masuk_id) return null
+  return suratList.value.find(s => Number(s.id) === Number(formDisposisi.value.surat_masuk_id)) || null
 })
 
 const masterJabatanList = ref([])
@@ -324,7 +365,12 @@ watch(() => route.query.tab, syncTabFromQuery)
 const loadFormData = async () => {
   const promises = []
   if (suratList.value.length === 0) {
-    promises.push(api.get('/surat').then(({ data }) => { suratList.value = data.data || [] }).catch(() => {}))
+    promises.push(
+      api.get('/disposisi/surat-options')
+        .catch(() => api.get('/surat'))
+        .then(({ data }) => { suratList.value = data.data || [] })
+        .catch(() => {})
+    )
   }
   if (usersList.value.length === 0) {
     promises.push(
@@ -748,32 +794,158 @@ function formatDate(d) {
         <Message v-if="submitError" severity="error" :closable="false">{{ submitError }}</Message>
 
         <!-- Pilih Surat Masuk (Hanya mode tambah atau info di mode edit) -->
-        <div class="flex flex-col gap-1.5">
-          <label class="text-xs font-bold text-textMuted uppercase">Surat Masuk Terkait *</label>
+        <div class="flex flex-col gap-2">
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-bold text-textMuted uppercase flex items-center gap-1.5">
+              <i class="pi pi-inbox text-brandBlue"></i>
+              <span>Surat Masuk Terkait <span class="text-red-500">*</span></span>
+            </label>
+            <span v-if="!editMode && filteredSurat.length > 0" class="text-[11px] text-textMuted">
+              {{ filteredSurat.length }} surat tersedia
+            </span>
+          </div>
+
           <template v-if="!editMode">
-            <InputText v-model="suratSearch" placeholder="Ketik untuk mencari agenda, perihal, atau pengirim..." class="w-full !bg-surface2 text-xs mb-1.5" />
+            <!-- Search Box cepat -->
+            <div class="relative">
+              <IconField class="w-full">
+                <InputIcon :class="loadingSuratSearch ? 'pi pi-spin pi-spinner text-brandBlue' : 'pi pi-search text-textMuted'" />
+                <InputText
+                  v-model="suratSearch"
+                  placeholder="Cari nomor surat, agenda, perihal, keterangan, atau pengirim..."
+                  class="w-full !bg-surface2 !text-textMain text-xs !rounded-xl !pl-8"
+                />
+              </IconField>
+              <button
+                v-if="suratSearch"
+                type="button"
+                class="absolute right-2.5 top-1/2 -translate-y-1/2 text-textMuted hover:text-textMain text-xs"
+                @click="suratSearch = ''"
+              >
+                <i class="pi pi-times-circle"></i>
+              </button>
+            </div>
+
+            <!-- Select Dropdown dengan filter multi-fields -->
             <Select
               v-model="formDisposisi.surat_masuk_id"
               :options="filteredSurat"
               option-label="perihal"
               option-value="id"
-              placeholder="Pilih surat masuk"
-              class="w-full !bg-surface2"
+              placeholder="-- Pilih Surat Masuk Terkait --"
+              class="w-full !bg-surface2 !rounded-xl text-xs"
               filter
+              :filter-fields="['nomor_agenda', 'nomor_surat', 'perihal', 'asal_surat', 'keterangan']"
+              filter-placeholder="Ketik cari no. surat, agenda, perihal, keterangan..."
             >
+              <template #value="{ value, placeholder }">
+                <div v-if="selectedSuratObject" class="flex items-center gap-2 text-xs truncate">
+                  <span v-if="selectedSuratObject.nomor_agenda" class="font-mono font-bold text-brandBlue bg-brandBlueBg px-1.5 py-0.5 rounded shrink-0">
+                    [{{ selectedSuratObject.nomor_agenda }}]
+                  </span>
+                  <span class="font-semibold text-textMain shrink-0">{{ selectedSuratObject.nomor_surat }}</span>
+                  <span class="text-textMuted truncate">— {{ selectedSuratObject.perihal }}</span>
+                </div>
+                <span v-else class="text-textMuted">{{ placeholder }}</span>
+              </template>
+
               <template #option="{ option }">
-                <span class="text-xs">
-                  <strong class="font-mono text-brandBlue">[{{ option.nomor_agenda }}]</strong> {{ option.perihal }} — <span class="text-textMuted">{{ option.asal_surat }}</span>
-                </span>
+                <div class="flex flex-col gap-1 py-1.5 text-xs w-full border-b border-border/30 last:border-0">
+                  <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                      <span v-if="option.nomor_agenda" class="font-mono font-bold text-[10px] text-brandBlue bg-brandBlueBg px-1.5 py-0.2 rounded border border-brandBlue/30">
+                        {{ option.nomor_agenda }}
+                      </span>
+                      <span class="font-bold text-textMain text-xs">{{ option.nomor_surat }}</span>
+                    </div>
+                    <span v-if="option.nama_folder" class="text-[10px] px-1.5 py-0.2 rounded bg-surface2 text-textMuted border border-border/50 shrink-0">
+                      📁 {{ option.nama_folder }}
+                    </span>
+                  </div>
+
+                  <div class="text-textMain font-medium text-[11px] leading-snug line-clamp-2">
+                    {{ option.perihal }}
+                  </div>
+
+                  <div class="flex items-center justify-between text-[10px] text-textMuted pt-0.5">
+                    <span>Asal: <strong class="text-textMain">{{ option.asal_surat }}</strong></span>
+                    <span v-if="option.tanggal_terima">{{ formatDate(option.tanggal_terima) }}</span>
+                  </div>
+
+                  <!-- Highlight Keterangan jika ada -->
+                  <div v-if="option.keterangan" class="text-[10px] text-amber-700 dark:text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded flex items-start gap-1">
+                    <i class="pi pi-comment text-[9px] mt-0.5 shrink-0"></i>
+                    <span class="italic truncate" :title="option.keterangan">Ket: {{ option.keterangan }}</span>
+                  </div>
+                </div>
+              </template>
+
+              <template #empty>
+                <div class="text-center py-4 text-xs text-textMuted">
+                  Tidak ada surat masuk yang cocok dengan pencarian.
+                </div>
               </template>
             </Select>
+
+            <!-- Card Pratinjau Surat yang Dipilih -->
+            <div v-if="selectedSuratObject" class="p-3 rounded-xl bg-surface2/70 border border-brandBlue/30 text-xs flex flex-col gap-1.5 animate-fade-in shadow-2xs">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold text-brandBlue uppercase tracking-wide flex items-center gap-1">
+                  <i class="pi pi-check-circle"></i> Surat Terpilih
+                </span>
+                <Button
+                  icon="pi pi-times"
+                  label="Ganti / Batal"
+                  size="small"
+                  severity="secondary"
+                  text
+                  class="!text-[10px] !py-0.5 !px-1.5"
+                  @click="formDisposisi.surat_masuk_id = ''"
+                />
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-border/50">
+                <div>
+                  <span class="text-textMuted text-[10px] block">No. Agenda:</span>
+                  <span class="font-mono font-bold text-brandBlue">{{ selectedSuratObject.nomor_agenda || '— (Tanpa Agenda)' }}</span>
+                </div>
+                <div>
+                  <span class="text-textMuted text-[10px] block">No. Surat:</span>
+                  <span class="font-bold text-textMain">{{ selectedSuratObject.nomor_surat }}</span>
+                </div>
+                <div>
+                  <span class="text-textMuted text-[10px] block">Asal Surat:</span>
+                  <span class="text-textMain font-medium">{{ selectedSuratObject.asal_surat }}</span>
+                </div>
+                <div>
+                  <span class="text-textMuted text-[10px] block">Tgl Terima:</span>
+                  <span class="text-textMain">{{ formatDate(selectedSuratObject.tanggal_terima) }}</span>
+                </div>
+                <div class="sm:col-span-2">
+                  <span class="text-textMuted text-[10px] block">Perihal:</span>
+                  <span class="text-textMain font-semibold">{{ selectedSuratObject.perihal }}</span>
+                </div>
+                <div v-if="selectedSuratObject.keterangan" class="sm:col-span-2 p-1.5 rounded bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-800 dark:text-amber-300">
+                  <span class="font-bold">Keterangan:</span> {{ selectedSuratObject.keterangan }}
+                </div>
+              </div>
+            </div>
           </template>
+
           <template v-else>
-            <div class="p-3 rounded-xl bg-surface2 border border-border text-xs flex flex-col gap-1">
+            <!-- Mode Edit -->
+            <div class="p-3 rounded-xl bg-surface2 border border-border text-xs flex flex-col gap-1.5">
               <span class="text-textMuted font-bold">Surat Masuk Terkait:</span>
-              <span class="font-semibold text-textMain text-sm">
-                {{ suratList.find(s => s.id == formDisposisi.surat_masuk_id)?.perihal || 'ID Surat: ' + formDisposisi.surat_masuk_id }}
-              </span>
+              <div class="font-semibold text-textMain text-sm">
+                {{ selectedSuratObject?.perihal || suratList.find(s => s.id == formDisposisi.surat_masuk_id)?.perihal || 'ID Surat: ' + formDisposisi.surat_masuk_id }}
+              </div>
+              <div v-if="selectedSuratObject" class="flex flex-wrap gap-2 text-[11px] text-textMuted pt-1 border-t border-border/40">
+                <span>Agenda: <strong class="font-mono text-brandBlue">{{ selectedSuratObject.nomor_agenda || '—' }}</strong></span>
+                <span>•</span>
+                <span>No. Surat: <strong class="text-textMain">{{ selectedSuratObject.nomor_surat }}</strong></span>
+                <span>•</span>
+                <span>Asal: <strong>{{ selectedSuratObject.asal_surat }}</strong></span>
+              </div>
             </div>
           </template>
         </div>

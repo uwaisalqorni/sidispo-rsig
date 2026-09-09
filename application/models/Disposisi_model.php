@@ -22,7 +22,9 @@ class Disposisi_model extends CI_Model {
 
         if (!empty($filters['q'])) {
             $q = '%' . trim($filters['q']) . '%';
-            $where_clauses[] = "(d.nomor_disposisi LIKE ? OR sm.perihal LIKE ? OR sm.asal_surat LIKE ? OR sm.nomor_surat LIKE ? OR d.isi_disposisi LIKE ? OR u.nama_lengkap LIKE ?)";
+            $where_clauses[] = "(d.nomor_disposisi LIKE ? OR sm.perihal LIKE ? OR sm.asal_surat LIKE ? OR sm.nomor_surat LIKE ? OR sm.nomor_agenda LIKE ? OR sm.keterangan LIKE ? OR d.isi_disposisi LIKE ? OR u.nama_lengkap LIKE ?)";
+            $params[] = $q;
+            $params[] = $q;
             $params[] = $q;
             $params[] = $q;
             $params[] = $q;
@@ -67,6 +69,7 @@ class Disposisi_model extends CI_Model {
                 sm.nomor_agenda,
                 sm.tanggal_surat,
                 sm.tanggal_terima,
+                sm.keterangan AS keterangan_surat,
                 u.nama_lengkap AS pembuat,
                 f.nama AS nama_folder,
                 d.prioritas,
@@ -107,7 +110,8 @@ class Disposisi_model extends CI_Model {
 
         if (!empty($filters['q'])) {
             $q = '%' . trim($filters['q']) . '%';
-            $where_clauses[] = "(d.nomor_disposisi LIKE ? OR sm.perihal LIKE ? OR sm.asal_surat LIKE ? OR sm.nomor_surat LIKE ? OR sm.nomor_agenda LIKE ? OR d.isi_disposisi LIKE ? OR u.nama_lengkap LIKE ?)";
+            $where_clauses[] = "(d.nomor_disposisi LIKE ? OR sm.perihal LIKE ? OR sm.asal_surat LIKE ? OR sm.nomor_surat LIKE ? OR sm.nomor_agenda LIKE ? OR sm.keterangan LIKE ? OR d.isi_disposisi LIKE ? OR u.nama_lengkap LIKE ?)";
+            $params[] = $q;
             $params[] = $q;
             $params[] = $q;
             $params[] = $q;
@@ -153,6 +157,7 @@ class Disposisi_model extends CI_Model {
                 sm.nomor_agenda,
                 sm.tanggal_surat,
                 sm.tanggal_terima,
+                sm.keterangan AS keterangan_surat,
                 u.nama_lengkap AS pembuat,
                 f.nama AS nama_folder,
                 d.prioritas,
@@ -508,6 +513,46 @@ class Disposisi_model extends CI_Model {
         $this->db->order_by('role', 'ASC');
         $this->db->order_by('nama_lengkap', 'ASC');
         return $this->db->get('users')->result_array();
+    }
+
+    /**
+     * Get surat masuk options for disposisi creation
+     * Searches nomor_surat, nomor_agenda, perihal, asal_surat, and keterangan
+     */
+    public function get_surat_options($filters = [], $limit = 200)
+    {
+        $this->db->select('
+            sm.id,
+            sm.nomor_agenda,
+            sm.nomor_surat,
+            sm.tanggal_surat,
+            sm.tanggal_terima,
+            sm.asal_surat,
+            sm.perihal,
+            sm.keterangan,
+            sm.folder_id,
+            f.nama as nama_folder,
+            f.warna as warna_folder,
+            (SELECT COUNT(*) FROM dokumen_file WHERE surat_masuk_id = sm.id) as jumlah_file,
+            (SELECT COUNT(*) FROM disposisi WHERE surat_masuk_id = sm.id) as jumlah_disposisi
+        ');
+        $this->db->from('surat_masuk sm');
+        $this->db->join('folders f', 'f.id = sm.folder_id', 'left');
+
+        if (!empty($filters['q'])) {
+            $q = trim($filters['q']);
+            $this->db->group_start();
+            $this->db->like('sm.nomor_surat', $q);
+            $this->db->or_like('sm.nomor_agenda', $q);
+            $this->db->or_like('sm.perihal', $q);
+            $this->db->or_like('sm.asal_surat', $q);
+            $this->db->or_like('sm.keterangan', $q);
+            $this->db->group_end();
+        }
+
+        $this->db->order_by('sm.id', 'DESC');
+        $this->db->limit($limit);
+        return $this->db->get()->result_array();
     }
 }
 
