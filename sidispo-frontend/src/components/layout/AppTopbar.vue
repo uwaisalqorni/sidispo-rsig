@@ -72,19 +72,32 @@ const userInitials = computed(() => {
 })
 
 const fotoProfilUrl = computed(() => authStore.fotoProfilUrl)
+
+const emit = defineEmits(['toggle-sidebar'])
 </script>
 
 <template>
   <div class="relative z-20 shrink-0">
     <Toolbar class="!rounded-none !border-0 !px-4 md:!px-6 !py-3 !bg-white/80 !backdrop-blur-md border-b border-border/60 shadow-sm">
       <template #start>
-        <div class="flex items-center gap-3">
-          <div :class="['w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center shadow-sm text-white', pageMeta.color]">
+        <div class="flex items-center gap-2 md:gap-3">
+          <!-- Hamburger Menu Button (Mobile only) -->
+          <Button
+            type="button"
+            icon="pi pi-bars"
+            text
+            rounded
+            class="md:!hidden !w-10 !h-10 !p-0 !text-textMain hover:!bg-surface2 shrink-0"
+            aria-label="Menu"
+            @click="emit('toggle-sidebar')"
+          />
+
+          <div :class="['w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center shadow-sm text-white shrink-0', pageMeta.color]">
             <i :class="pageMeta.icon"></i>
           </div>
-          <div>
-            <h1 class="text-base md:text-lg font-extrabold text-textMain m-0 leading-tight">{{ pageMeta.title }}</h1>
-            <p class="text-[11px] text-textMuted m-0 hidden sm:block">{{ greeting }}, {{ user?.nama_lengkap?.split(' ')[0] }}</p>
+          <div class="min-w-0">
+            <h1 class="text-base md:text-lg font-extrabold text-textMain m-0 leading-tight truncate">{{ pageMeta.title }}</h1>
+            <p class="text-[11px] text-textMuted m-0 hidden sm:block truncate">{{ greeting }}, {{ user?.nama_lengkap?.split(' ')[0] }}</p>
           </div>
         </div>
       </template>

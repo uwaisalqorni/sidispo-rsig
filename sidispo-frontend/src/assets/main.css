@@ -39,6 +39,10 @@
   }
 
   /* ── Page layout ───────────────────────────────────────── */
+  .sidebar-backdrop {
+    @apply fixed inset-0 bg-black/50 backdrop-blur-sm z-40 md:hidden;
+  }
+
   .page-container {
     @apply relative z-10 flex-1 overflow-y-auto p-4 md:p-6;
   }

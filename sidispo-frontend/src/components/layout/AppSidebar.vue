@@ -18,6 +18,15 @@ const router = useRouter()
 const route  = useRoute()
 const { user } = storeToRefs(auth)
 
+const props = defineProps({
+  open: {
+    type: Boolean,
+    default: false
+  }
+})
+
+const emit = defineEmits(['close'])
+
 const isAdmin = computed(() => user.value?.role === 'ADMIN')
 const isSekretariat = computed(() => ['ADMIN', 'DIREKTUR'].includes(user.value?.role))
 
@@ -73,7 +82,10 @@ const toMenuItem = (item) => ({
   label: item.label,
   icon: item.icon,
   class: isMenuActive(item) ? 'sidispo-menu-active' : '',
-  command: () => router.push(item.to),
+  command: () => {
+    emit('close')
+    router.push(item.to)
+  },
 })
 
 // ── MENU UTAMA (tanpa RTL & Report) ──────────────────────────────────────────
@@ -103,12 +115,12 @@ const reportMenuItems = computed(() => [
 
 // ── ADMIN MENU ───────────────────────────────────────────────────────────────
 const adminMenuItems = computed(() => [
-  { label: 'Pengguna', icon: 'pi pi-users', command: () => router.push('/admin/users') },
-  { label: 'Master Jabatan', icon: 'pi pi-sitemap', command: () => router.push('/admin/jabatan') },
-  { label: 'Folder', icon: 'pi pi-folder', command: () => router.push('/admin/folders') },
-  { label: 'Master Perihal', icon: 'pi pi-book', command: () => router.push('/admin/perihal') },
-  { label: 'Master Asal Surat', icon: 'pi pi-building', command: () => router.push('/admin/asal-surat') },
-  { label: 'Konfigurasi', icon: 'pi pi-cog', command: () => router.push('/admin/settings') },
+  { label: 'Pengguna', icon: 'pi pi-users', command: () => { emit('close'); router.push('/admin/users') } },
+  { label: 'Master Jabatan', icon: 'pi pi-sitemap', command: () => { emit('close'); router.push('/admin/jabatan') } },
+  { label: 'Folder', icon: 'pi pi-folder', command: () => { emit('close'); router.push('/admin/folders') } },
+  { label: 'Master Perihal', icon: 'pi pi-book', command: () => { emit('close'); router.push('/admin/perihal') } },
+  { label: 'Master Asal Surat', icon: 'pi pi-building', command: () => { emit('close'); router.push('/admin/asal-surat') } },
+  { label: 'Konfigurasi', icon: 'pi pi-cog', command: () => { emit('close'); router.push('/admin/settings') } },
 ])
 
 onMounted(async () => {
@@ -121,16 +133,22 @@ onMounted(async () => {
   }
 })
 
-const goFolder = (id) => router.push({ path: '/surat-masuk', query: { folder: id } })
+const goFolder = (id) => {
+  emit('close')
+  router.push({ path: '/surat-masuk', query: { folder: id } })
+}
 </script>
 
 <template>
-  <aside class="w-[272px] min-w-[272px] flex flex-col h-screen overflow-hidden bg-gradient-to-b from-sidebar-dark via-sidebar to-sidebar-light shadow-sidebar text-white">
+  <aside
+    class="fixed inset-y-0 left-0 z-50 w-[272px] min-w-[272px] flex flex-col h-screen overflow-hidden bg-gradient-to-b from-sidebar-dark via-sidebar to-sidebar-light shadow-sidebar text-white transition-transform duration-300 ease-in-out md:static md:translate-x-0"
+    :class="props.open ? 'translate-x-0' : '-translate-x-full md:translate-x-0'"
+  >
 
     <!-- Brand -->
-    <div class="p-5 border-b border-white/10">
+    <div class="p-5 border-b border-white/10 flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-sidebar-accent to-emerald-300 flex items-center justify-center shadow-glow animate-float">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-sidebar-accent to-emerald-300 flex items-center justify-center shadow-glow animate-float shrink-0">
           <i class="pi pi-building text-sidebar-dark text-xl font-bold"></i>
         </div>
         <div>
@@ -138,6 +156,15 @@ const goFolder = (id) => router.push({ path: '/surat-masuk', query: { folder: id
           <div class="text-[10px] text-sidebar-accent font-semibold tracking-widest uppercase">RSI Gondanglegi</div>
         </div>
       </div>
+      <!-- Tombol Tutup Sidebar di Mobile -->
+      <button
+        type="button"
+        class="md:hidden w-8 h-8 flex items-center justify-center rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+        aria-label="Tutup Menu"
+        @click="emit('close')"
+      >
+        <i class="pi pi-times text-base"></i>
+      </button>
     </div>
 
     <div class="flex-1 overflow-y-auto py-4 px-3 sidispo-scroll">
@@ -258,7 +285,7 @@ const goFolder = (id) => router.push({ path: '/surat-masuk', query: { folder: id
             <button
               v-if="isAdmin"
               class="sidispo-folder-btn text-sidebar-accent mt-1"
-              @click="router.push('/admin/folders')"
+              @click="emit('close'); router.push('/admin/folders')"
             >
               <i class="pi pi-plus text-xs"></i>
               <span>Kelola Folder</span>
@@ -293,7 +320,7 @@ const goFolder = (id) => router.push({ path: '/surat-masuk', query: { folder: id
     <div class="p-4 border-t border-white/10 bg-black/20">
       <div
         class="flex items-center gap-3 mb-3 p-2 rounded-xl bg-white/5 cursor-pointer hover:bg-white/10 transition-all"
-        @click="router.push({ name: 'profile' })"
+        @click="emit('close'); router.push({ name: 'profile' })"
         title="Profil Saya"
       >
         <div class="w-9 h-9 rounded-full overflow-hidden shrink-0">

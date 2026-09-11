@@ -83,6 +83,8 @@ const fileUrl = (path) => {
 
 let searchTimeout = null
 
+const unitsFetched = ref(false)
+
 const loadReport = async () => {
   loading.value = true
   try {
@@ -101,8 +103,15 @@ const loadReport = async () => {
     reportList.value = data.data || []
     totalRows.value = data.total || 0
     stats.value = data.stats || { total: 0, received: 0, pending: 0, rejected: 0, digital: 0, fisik: 0 }
-    unitOptions.value = (data.units || []).map(u => ({ label: u, value: u }))
-    unitOptions.value.unshift({ label: 'Semua Unit', value: '' })
+
+    // Only populate unit dropdown on first load (units are static)
+    if (!unitsFetched.value && data.units?.length) {
+      unitOptions.value = [
+        { label: 'Semua Unit', value: '' },
+        ...(data.units || []).map(u => ({ label: u, value: u }))
+      ]
+      unitsFetched.value = true
+    }
   } catch (e) {
     console.error('Gagal memuat report ekspedisi', e)
     toast.add({
@@ -125,8 +134,11 @@ const debouncedSearch = () => {
 }
 
 const applyFilters = () => {
-  currentPage.value = 1
-  loadReport()
+  clearTimeout(searchTimeout)
+  searchTimeout = setTimeout(() => {
+    currentPage.value = 1
+    loadReport()
+  }, 250)
 }
 
 const resetFilters = () => {
@@ -247,24 +259,33 @@ const printReport = () => {
   window.print()
 }
 
-// ── FORMATTERS ───────────────────────────────────────────────────────────────
+// ── FORMATTERS (cached) ──────────────────────────────────────────────────────
+
+const _dateCache = new Map()
+const _dtCache = new Map()
 
 const formatDate = (val) => {
   if (!val) return '-'
+  if (_dateCache.has(val)) return _dateCache.get(val)
   try {
     const d = new Date(val)
-    return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
+    const r = d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
+    _dateCache.set(val, r)
+    return r
   } catch { return val }
 }
 
 const formatDateTime = (val) => {
   if (!val) return '-'
+  if (_dtCache.has(val)) return _dtCache.get(val)
   try {
     const d = new Date(val)
-    return d.toLocaleDateString('id-ID', {
+    const r = d.toLocaleDateString('id-ID', {
       day: '2-digit', month: 'short', year: 'numeric',
       hour: '2-digit', minute: '2-digit'
     })
+    _dtCache.set(val, r)
+    return r
   } catch { return val }
 }
 
@@ -565,7 +586,7 @@ const rejectedPct = computed(() => stats.value.total ? Math.round((stats.value.r
             <tr
               v-for="(item, idx) in reportList"
               :key="item.ekspedisi_tujuan_id"
-              class="hover:bg-surface2/50 transition-colors text-textMain"
+              class="hover:bg-surface2/50 text-textMain"
               :class="{
                 'bg-amber-500/5 dark:bg-amber-500/10': item.status_tujuan === 'PENDING',
                 'bg-red-500/5 dark:bg-red-500/5': item.status_tujuan === 'REJECTED'
@@ -649,7 +670,7 @@ const rejectedPct = computed(() => stats.value.total ? Math.round((stats.value.r
 
                 <!-- PENDING -->
                 <div v-else-if="item.status_tujuan === 'PENDING'" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 font-bold text-[11px]">
-                  <i class="pi pi-clock text-amber-500 text-sm animate-pulse"></i>
+                  <i class="pi pi-clock text-amber-500 text-sm"></i>
                   <span>Menunggu Konfirmasi</span>
                 </div>
 
