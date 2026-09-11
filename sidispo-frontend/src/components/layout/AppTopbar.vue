@@ -81,14 +81,15 @@ const emit = defineEmits(['toggle-sidebar'])
     <Toolbar class="!rounded-none !border-0 !px-4 md:!px-6 !py-3 !bg-white/80 !backdrop-blur-md border-b border-border/60 shadow-sm">
       <template #start>
         <div class="flex items-center gap-2 md:gap-3">
-          <!-- Hamburger Menu Button (Mobile only) -->
+          <!-- Hamburger Menu Button (Mobile & Desktop) -->
           <Button
             type="button"
             icon="pi pi-bars"
             text
             rounded
-            class="md:!hidden !w-10 !h-10 !p-0 !text-textMain hover:!bg-surface2 shrink-0"
+            class="!w-10 !h-10 !p-0 !text-textMain hover:!bg-surface2 shrink-0 cursor-pointer"
             aria-label="Menu"
+            title="Menu Sidebar"
             @click="emit('toggle-sidebar')"
           />
 

@@ -11,6 +11,7 @@ import Button from 'primevue/button'
 import Divider from 'primevue/divider'
 import Skeleton from 'primevue/skeleton'
 import Badge from 'primevue/badge'
+import logoRsi from '@/assets/logorsi.png'
 
 const auth = useAuthStore()
 const notifStore = useNotifikasiStore()
@@ -26,6 +27,14 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['close'])
+
+const isMobile = () => typeof window !== 'undefined' && window.innerWidth < 768
+
+const navCloseOnMobile = () => {
+  if (isMobile()) {
+    emit('close')
+  }
+}
 
 const isAdmin = computed(() => user.value?.role === 'ADMIN')
 const isSekretariat = computed(() => ['ADMIN', 'DIREKTUR'].includes(user.value?.role))
@@ -83,7 +92,7 @@ const toMenuItem = (item) => ({
   icon: item.icon,
   class: isMenuActive(item) ? 'sidispo-menu-active' : '',
   command: () => {
-    emit('close')
+    navCloseOnMobile()
     router.push(item.to)
   },
 })
@@ -115,12 +124,12 @@ const reportMenuItems = computed(() => [
 
 // ── ADMIN MENU ───────────────────────────────────────────────────────────────
 const adminMenuItems = computed(() => [
-  { label: 'Pengguna', icon: 'pi pi-users', command: () => { emit('close'); router.push('/admin/users') } },
-  { label: 'Master Jabatan', icon: 'pi pi-sitemap', command: () => { emit('close'); router.push('/admin/jabatan') } },
-  { label: 'Folder', icon: 'pi pi-folder', command: () => { emit('close'); router.push('/admin/folders') } },
-  { label: 'Master Perihal', icon: 'pi pi-book', command: () => { emit('close'); router.push('/admin/perihal') } },
-  { label: 'Master Asal Surat', icon: 'pi pi-building', command: () => { emit('close'); router.push('/admin/asal-surat') } },
-  { label: 'Konfigurasi', icon: 'pi pi-cog', command: () => { emit('close'); router.push('/admin/settings') } },
+  { label: 'Pengguna', icon: 'pi pi-users', command: () => { navCloseOnMobile(); router.push('/admin/users') } },
+  { label: 'Master Jabatan', icon: 'pi pi-sitemap', command: () => { navCloseOnMobile(); router.push('/admin/jabatan') } },
+  { label: 'Folder', icon: 'pi pi-folder', command: () => { navCloseOnMobile(); router.push('/admin/folders') } },
+  { label: 'Master Perihal', icon: 'pi pi-book', command: () => { navCloseOnMobile(); router.push('/admin/perihal') } },
+  { label: 'Master Asal Surat', icon: 'pi pi-building', command: () => { navCloseOnMobile(); router.push('/admin/asal-surat') } },
+  { label: 'Konfigurasi', icon: 'pi pi-cog', command: () => { navCloseOnMobile(); router.push('/admin/settings') } },
 ])
 
 onMounted(async () => {
@@ -134,32 +143,36 @@ onMounted(async () => {
 })
 
 const goFolder = (id) => {
-  emit('close')
+  navCloseOnMobile()
   router.push({ path: '/surat-masuk', query: { folder: id } })
 }
 </script>
 
 <template>
   <aside
-    class="fixed inset-y-0 left-0 z-50 w-[272px] min-w-[272px] flex flex-col h-screen overflow-hidden bg-gradient-to-b from-sidebar-dark via-sidebar to-sidebar-light shadow-sidebar text-white transition-transform duration-300 ease-in-out md:static md:translate-x-0"
-    :class="props.open ? 'translate-x-0' : '-translate-x-full md:translate-x-0'"
+    class="fixed inset-y-0 left-0 z-50 w-[272px] min-w-[272px] flex flex-col h-screen overflow-hidden bg-gradient-to-b from-sidebar-dark via-sidebar to-sidebar-light shadow-sidebar text-white transition-all duration-300 ease-in-out md:static md:z-auto"
+    :class="[
+      props.open
+        ? 'translate-x-0 md:ml-0'
+        : '-translate-x-full md:translate-x-0 md:-ml-[272px] md:opacity-0 md:pointer-events-none'
+    ]"
   >
 
     <!-- Brand -->
     <div class="p-5 border-b border-white/10 flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-sidebar-accent to-emerald-300 flex items-center justify-center shadow-glow animate-float shrink-0">
-          <i class="pi pi-building text-sidebar-dark text-xl font-bold"></i>
+        <div class="w-12 h-12 rounded-2xl bg-white/10 p-1.5 backdrop-blur-sm flex items-center justify-center shadow-glow shrink-0 border border-white/15">
+          <img :src="logoRsi" alt="Logo RSI Gondanglegi" class="w-full h-full object-contain" />
         </div>
         <div>
-          <div class="text-lg font-extrabold tracking-tight text-white">SiDispo</div>
+          <div class="text-lg font-extrabold tracking-tight text-white leading-tight">SiDispo</div>
           <div class="text-[10px] text-sidebar-accent font-semibold tracking-widest uppercase">RSI Gondanglegi</div>
         </div>
       </div>
-      <!-- Tombol Tutup Sidebar di Mobile -->
+      <!-- Tombol Tutup Sidebar (Khusus Mobile) -->
       <button
         type="button"
-        class="md:hidden w-8 h-8 flex items-center justify-center rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+        class="md:hidden w-8 h-8 flex items-center justify-center rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
         aria-label="Tutup Menu"
         @click="emit('close')"
       >
@@ -285,7 +298,7 @@ const goFolder = (id) => {
             <button
               v-if="isAdmin"
               class="sidispo-folder-btn text-sidebar-accent mt-1"
-              @click="emit('close'); router.push('/admin/folders')"
+              @click="navCloseOnMobile(); router.push('/admin/folders')"
             >
               <i class="pi pi-plus text-xs"></i>
               <span>Kelola Folder</span>
@@ -320,7 +333,7 @@ const goFolder = (id) => {
     <div class="p-4 border-t border-white/10 bg-black/20">
       <div
         class="flex items-center gap-3 mb-3 p-2 rounded-xl bg-white/5 cursor-pointer hover:bg-white/10 transition-all"
-        @click="emit('close'); router.push({ name: 'profile' })"
+        @click="navCloseOnMobile(); router.push({ name: 'profile' })"
         title="Profil Saya"
       >
         <div class="w-9 h-9 rounded-full overflow-hidden shrink-0">

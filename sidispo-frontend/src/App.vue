@@ -11,11 +11,28 @@ const route = useRoute()
 const authStore = useAuthStore()
 const notifStore = useNotifikasiStore()
 
-const sidebarOpen = ref(false)
+// Default: terbuka di desktop (atau sesuai localStorage), tertutup di mobile
+const getInitialSidebarState = () => {
+  if (typeof window === 'undefined') return true
+  if (window.innerWidth < 768) return false
+  const saved = localStorage.getItem('sidispo_sidebar_open')
+  return saved !== null ? saved === 'true' : true
+}
 
-// Tutup sidebar mobile secara otomatis setiap kali rute berpindah
+const sidebarOpen = ref(getInitialSidebarState())
+
+const toggleSidebar = () => {
+  sidebarOpen.value = !sidebarOpen.value
+  if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+    localStorage.setItem('sidispo_sidebar_open', String(sidebarOpen.value))
+  }
+}
+
+// Hanya tutup sidebar secara otomatis di HP/mobile setiap kali rute berpindah
 watch(() => route.fullPath, () => {
-  sidebarOpen.value = false
+  if (typeof window !== 'undefined' && window.innerWidth < 768) {
+    sidebarOpen.value = false
+  }
 })
 
 const isAuthRoute = computed(() => route.name === 'login')
@@ -38,8 +55,20 @@ const stopPolling = () => {
   }
 }
 
-onMounted(() => startPolling())
-onUnmounted(() => stopPolling())
+const onKeyDown = (e) => {
+  if (e.key === 'Escape' && sidebarOpen.value && typeof window !== 'undefined' && window.innerWidth < 768) {
+    sidebarOpen.value = false
+  }
+}
+
+onMounted(() => {
+  startPolling()
+  window.addEventListener('keydown', onKeyDown)
+})
+onUnmounted(() => {
+  stopPolling()
+  window.removeEventListener('keydown', onKeyDown)
+})
 watch(isAuthenticated, (v) => (v ? startPolling() : stopPolling()))
 </script>
 
@@ -51,7 +80,7 @@ watch(isAuthenticated, (v) => (v ? startPolling() : stopPolling()))
   </div>
 
   <div v-else class="flex w-full h-screen overflow-hidden relative">
-    <!-- Backdrop overlay untuk mobile sidebar -->
+    <!-- Backdrop overlay untuk mobile sidebar saja -->
     <transition
       enter-active-class="transition-opacity duration-300 ease-out"
       enter-from-class="opacity-0"
@@ -68,8 +97,8 @@ watch(isAuthenticated, (v) => (v ? startPolling() : stopPolling()))
     </transition>
 
     <AppSidebar :open="sidebarOpen" @close="sidebarOpen = false" />
-    <div class="app-main-bg">
-      <AppTopbar @toggle-sidebar="sidebarOpen = !sidebarOpen" />
+    <div class="app-main-bg transition-all duration-300">
+      <AppTopbar @toggle-sidebar="toggleSidebar" />
       <RouterView />
     </div>
   </div>

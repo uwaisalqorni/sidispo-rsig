@@ -38,7 +38,7 @@
     background-size: 28px 28px;
   }
 
-  /* ── Page layout ───────────────────────────────────────── */
+  /* ── Sidebar Backdrop (Mobile Only) ─────────────────────── */
   .sidebar-backdrop {
     @apply fixed inset-0 bg-black/50 backdrop-blur-sm z-40 md:hidden;
   }
