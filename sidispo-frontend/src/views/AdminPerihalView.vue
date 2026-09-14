@@ -1,5 +1,6 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import Paginator from 'primevue/paginator'
 import api from '@/api/axios'
 
 const perihalList  = ref([])
@@ -23,6 +24,18 @@ const filteredList = computed(() => {
     p.nama.toLowerCase().includes(q) ||
     (p.keterangan || '').toLowerCase().includes(q)
   )
+})
+
+// ── Pagination ─────────────────────────────────────────────────────────────
+const first = ref(0)
+const rows = ref(10)
+
+const paginatedList = computed(() => {
+  return filteredList.value.slice(first.value, first.value + rows.value)
+})
+
+watch(searchQuery, () => {
+  first.value = 0
 })
 
 const load = async () => {
@@ -155,9 +168,9 @@ function formatDate(d) {
             </tr>
 
             <!-- Data rows -->
-            <tr v-else v-for="(p, idx) in filteredList" :key="p.id"
+            <tr v-else v-for="(p, idx) in paginatedList" :key="p.id"
               class="border-b border-border hover:bg-surface2 transition-all">
-              <td class="px-5 py-3 text-textDim text-xs font-mono">{{ idx + 1 }}</td>
+              <td class="px-5 py-3 text-textDim text-xs font-mono">{{ first + idx + 1 }}</td>
               <td class="px-5 py-3">
                 <span class="font-semibold text-textMain">{{ p.nama }}</span>
               </td>
@@ -199,9 +212,17 @@ function formatDate(d) {
           </tbody>
         </table>
       </div>
-      <!-- Footer count -->
-      <div v-if="!loading" class="px-5 py-3 border-t border-border text-xs text-textMuted bg-surface2">
-        Menampilkan {{ filteredList.length }} dari {{ perihalList.length }} perihal
+      <!-- Paginator -->
+      <div v-if="!loading && filteredList.length > 0" class="border-t border-border bg-surface2 px-4 py-2">
+        <Paginator
+          v-model:first="first"
+          v-model:rows="rows"
+          :totalRecords="filteredList.length"
+          :rowsPerPageOptions="[10, 25, 50]"
+          currentPageReportTemplate="Menampilkan {first} sampai {last} dari {totalRecords} perihal"
+          template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+          class="!bg-transparent !p-0 text-xs"
+        />
       </div>
     </div>
 

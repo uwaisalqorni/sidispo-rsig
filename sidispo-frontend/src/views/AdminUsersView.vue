@@ -1,5 +1,6 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import Paginator from 'primevue/paginator'
 import api from '@/api/axios'
 
 // ── State ─────────────────────────────────────────────────────────────────
@@ -47,6 +48,18 @@ const filtered = computed(() => {
     )
   }
   return list
+})
+
+// ── Pagination ─────────────────────────────────────────────────────────────
+const first = ref(0)
+const rows = ref(10)
+
+const paginatedUsers = computed(() => {
+  return filtered.value.slice(first.value, first.value + rows.value)
+})
+
+watch([search, filterRole], () => {
+  first.value = 0
 })
 
 // ── Load data ─────────────────────────────────────────────────────────────
@@ -234,7 +247,7 @@ function initials(nama) {
                 <div class="h-3 bg-surface3 rounded animate-pulse w-full"></div>
               </td>
             </tr>
-            <tr v-else v-for="u in filtered" :key="u.id"
+            <tr v-else v-for="u in paginatedUsers" :key="u.id"
               class="border-b border-border last:border-b-0 hover:bg-surface2 transition-all">
               <td class="px-5 py-3">
                 <div class="flex items-center gap-3">
@@ -295,6 +308,19 @@ function initials(nama) {
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- Paginator -->
+      <div v-if="!loading && filtered.length > 0" class="border-t border-border bg-surface2 px-4 py-2">
+        <Paginator
+          v-model:first="first"
+          v-model:rows="rows"
+          :totalRecords="filtered.length"
+          :rowsPerPageOptions="[10, 25, 50]"
+          currentPageReportTemplate="Menampilkan {first} sampai {last} dari {totalRecords} pengguna"
+          template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+          class="!bg-transparent !p-0 text-xs"
+        />
       </div>
     </div>
 

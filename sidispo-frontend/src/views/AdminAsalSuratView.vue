@@ -1,5 +1,6 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import Paginator from 'primevue/paginator'
 import api from '@/api/axios'
 
 const asalList     = ref([])
@@ -46,6 +47,18 @@ const filteredList = computed(() => {
     (a.kategori || '').toLowerCase().includes(q) ||
     (a.keterangan || '').toLowerCase().includes(q)
   )
+})
+
+// ── Pagination ─────────────────────────────────────────────────────────────
+const first = ref(0)
+const rows = ref(10)
+
+const paginatedList = computed(() => {
+  return filteredList.value.slice(first.value, first.value + rows.value)
+})
+
+watch(searchQuery, () => {
+  first.value = 0
 })
 
 const load = async () => {
@@ -205,10 +218,10 @@ function formatDate(d) {
               </td>
             </tr>
 
-            <tr v-for="(a, idx) in filteredList" :key="a.id"
+            <tr v-for="(a, idx) in paginatedList" :key="a.id"
               class="hover:bg-surface3/50 transition-colors"
               :class="{ 'opacity-50 bg-surface3/20': !Number(a.is_active) }">
-              <td class="px-5 py-3.5 text-center text-textMuted font-mono text-xs">{{ idx + 1 }}</td>
+              <td class="px-5 py-3.5 text-center text-textMuted font-mono text-xs">{{ first + idx + 1 }}</td>
               <td class="px-5 py-3.5 font-medium text-textMain">
                 <div class="font-semibold">{{ a.nama }}</div>
                 <div v-if="a.keterangan" class="text-xs text-textMuted mt-0.5">{{ a.keterangan }}</div>
@@ -258,6 +271,19 @@ function formatDate(d) {
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- Paginator -->
+      <div v-if="!loading && filteredList.length > 0" class="border-t border-border bg-surface2 px-4 py-2">
+        <Paginator
+          v-model:first="first"
+          v-model:rows="rows"
+          :totalRecords="filteredList.length"
+          :rowsPerPageOptions="[10, 25, 50]"
+          currentPageReportTemplate="Menampilkan {first} sampai {last} dari {totalRecords} asal surat"
+          template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+          class="!bg-transparent !p-0 text-xs"
+        />
       </div>
 
       <!-- Table footer info -->
