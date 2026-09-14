@@ -10,6 +10,8 @@ import Divider from 'primevue/divider'
 import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
 import Dialog from 'primevue/dialog'
+import RsiLogoLoading from '@/components/common/RsiLogoLoading.vue'
+import logoRsi from '@/assets/logorsi.png'
 
 const auth = useAuthStore()
 const { loading, error } = storeToRefs(auth)
@@ -29,6 +31,9 @@ const features = [
 </script>
 
 <template>
+  <!-- Loading Spinner dengan Logo RSI -->
+  <RsiLogoLoading :visible="loading" />
+
   <div class="min-h-screen w-full flex font-sans">
     <!-- Left branding -->
     <div class="hidden lg:flex flex-1 relative overflow-hidden flex-col justify-center items-center p-12 bg-gradient-rsi">
@@ -38,8 +43,8 @@ const features = [
       <div class="absolute top-1/3 right-1/4 w-48 h-48 rounded-full bg-white/5 blur-2xl"></div>
 
       <div class="absolute top-8 left-8 z-10 flex items-center gap-3">
-        <div class="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur border border-white/30 flex items-center justify-center shadow-glow">
-          <i class="pi pi-building text-white text-2xl"></i>
+        <div class="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur border border-white/30 p-2 flex items-center justify-center shadow-glow">
+          <img :src="logoRsi" alt="Logo RSI Gondanglegi" class="w-full h-full object-contain filter drop-shadow" />
         </div>
         <div>
           <div class="text-2xl font-extrabold text-white">SiDispo</div>
@@ -84,8 +89,8 @@ const features = [
       <div class="w-full max-w-md animate-fade-in">
         <!-- Mobile logo -->
         <div class="lg:hidden flex items-center gap-3 mb-8 justify-center">
-          <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-sidebar to-accent flex items-center justify-center shadow-glow">
-            <i class="pi pi-building text-white text-2xl"></i>
+          <div class="w-14 h-14 rounded-2xl bg-white/90 border border-emerald-200/50 p-2 flex items-center justify-center shadow-glow">
+            <img :src="logoRsi" alt="Logo RSI Gondanglegi" class="w-full h-full object-contain filter drop-shadow-sm" />
           </div>
           <div>
             <div class="text-2xl font-extrabold text-textMain">SiDispo</div>
