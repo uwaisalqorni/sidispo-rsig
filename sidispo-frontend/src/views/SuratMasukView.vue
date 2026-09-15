@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/axios'
 import Card from 'primevue/card'
@@ -108,6 +108,7 @@ const filteredPerihalList = computed(() => {
   const q = perihalSearch.value.toLowerCase()
   return perihalList.value.filter(p =>
     p.nama.toLowerCase().includes(q) ||
+    (p.kode || '').toLowerCase().includes(q) ||
     (p.keterangan || '').toLowerCase().includes(q)
   )
 })
@@ -137,6 +138,20 @@ const form = ref({
 })
 const files = ref([])
 const existingFiles = ref([])
+
+// Auto / Manual Nomor Surat State
+const nomorSuratMode      = ref('auto') // 'auto' | 'manual'
+const selectedUnitKode    = ref('')
+const selectedPerihalKode = ref('')
+const previewNomorSurat   = ref('')
+const loadingNomorSurat   = ref(false)
+
+const setNomorSuratMode = (mode) => {
+  nomorSuratMode.value = mode
+  if (mode === 'auto') {
+    triggerUpdateNomorSurat()
+  }
+}
 
 // Delete state
 const showDeleteDialog = ref(false)
@@ -218,12 +233,87 @@ const onAsalComplete = (e) => {
 
 const selectPerihalFromMaster = (p) => {
   form.value.perihal = p.nama
+  selectedPerihalKode.value = p.kode || ''
   showPerihalPicker.value = false
+  triggerUpdateNomorSurat()
 }
 
 const selectAsalFromMaster = (a) => {
   form.value.asal_surat = a.nama
+  selectedUnitKode.value = a.kode || ''
   showAsalPicker.value = false
+  triggerUpdateNomorSurat()
+}
+
+// Watcher untuk auto-detect kode unit saat asal surat berubah / diketik manual
+watch(() => form.value.asal_surat, (newVal) => {
+  if (!newVal) {
+    selectedUnitKode.value = ''
+    triggerUpdateNomorSurat()
+    return
+  }
+  const match = asalSuratList.value.find(a => a.nama.trim().toLowerCase() === newVal.trim().toLowerCase())
+  if (match && match.kode) {
+    selectedUnitKode.value = match.kode
+  } else if (!match) {
+    selectedUnitKode.value = ''
+  }
+  triggerUpdateNomorSurat()
+})
+
+// Watcher untuk auto-detect kode perihal saat perihal berubah / diketik manual
+watch(() => form.value.perihal, (newVal) => {
+  if (!newVal) {
+    selectedPerihalKode.value = ''
+    triggerUpdateNomorSurat()
+    return
+  }
+  const match = perihalList.value.find(p => p.nama.trim().toLowerCase() === newVal.trim().toLowerCase())
+  if (match && match.kode) {
+    selectedPerihalKode.value = match.kode
+  } else if (!match) {
+    selectedPerihalKode.value = ''
+  }
+  triggerUpdateNomorSurat()
+})
+
+// Watcher tanggal surat agar bulan Romawi / tahun otomatis sinkron
+watch(() => form.value.tanggal_surat, () => {
+  if (nomorSuratMode.value === 'auto') {
+    triggerUpdateNomorSurat()
+  }
+})
+
+// Memanggil endpoint preview nomor surat otomatis
+const triggerUpdateNomorSurat = async () => {
+  if (nomorSuratMode.value !== 'auto') return
+
+  if (!selectedUnitKode.value || !selectedPerihalKode.value) {
+    previewNomorSurat.value = ''
+    if (!editMode.value) {
+      form.value.nomor_surat = ''
+    }
+    return
+  }
+
+  loadingNomorSurat.value = true
+  try {
+    const res = await api.get('/surat/preview-nomor', {
+      params: {
+        unit_kode: selectedUnitKode.value,
+        perihal_kode: selectedPerihalKode.value,
+        tanggal_surat: form.value.tanggal_surat || new Date().toISOString().slice(0, 10)
+      }
+    })
+    if (res.data?.data?.nomor_surat) {
+      previewNomorSurat.value = res.data.data.nomor_surat
+      form.value.nomor_surat = previewNomorSurat.value
+    }
+  } catch (err) {
+    console.error('Gagal memuat preview nomor surat:', err)
+  } finally {
+    loadingNomorSurat.value = false
+  }
 }
 
 // ── Modal Create / Edit Handlers ──────────────────────────────────
@@ -232,6 +322,10 @@ const openCreate = () => {
   editId.value   = null
   hasNomorAgenda.value = true
   agendaMode.value     = 'auto'
+  nomorSuratMode.value = 'auto'
+  selectedUnitKode.value = ''
+  selectedPerihalKode.value = ''
+  previewNomorSurat.value = ''
   submitMsg.value = { type: '', text: '' }
   form.value = {
     nomor_agenda: '',
@@ -253,6 +347,7 @@ const openEdit = async (item) => {
   editId.value   = item.id
   hasNomorAgenda.value = !!item.nomor_agenda
   agendaMode.value     = item.nomor_agenda ? 'manual' : 'auto'
+  nomorSuratMode.value = 'manual'
   submitMsg.value = { type: '', text: '' }
   files.value = []
   existingFiles.value = []
@@ -268,6 +363,13 @@ const openEdit = async (item) => {
     folder_id: item.folder_id ? Number(item.folder_id) : null,
     keterangan: item.keterangan || ''
   }
+
+  // Deteksi kode dari master jika ada
+  const asalMatch = asalSuratList.value.find(a => a.nama.trim().toLowerCase() === (item.asal_surat || '').trim().toLowerCase())
+  selectedUnitKode.value = asalMatch?.kode || ''
+  const perihalMatch = perihalList.value.find(p => p.nama.trim().toLowerCase() === (item.perihal || '').trim().toLowerCase())
+  selectedPerihalKode.value = perihalMatch?.kode || ''
+  previewNomorSurat.value = item.nomor_surat || ''
 
   showModal.value = true
 
@@ -287,6 +389,12 @@ const openEdit = async (item) => {
       form.value.folder_id      = d.folder_id ? Number(d.folder_id) : null
       form.value.keterangan     = d.keterangan || ''
       existingFiles.value       = d.files || []
+
+      const dAsalMatch = asalSuratList.value.find(a => a.nama.trim().toLowerCase() === (d.asal_surat || '').trim().toLowerCase())
+      selectedUnitKode.value = dAsalMatch?.kode || ''
+      const dPerihalMatch = perihalList.value.find(p => p.nama.trim().toLowerCase() === (d.perihal || '').trim().toLowerCase())
+      selectedPerihalKode.value = dPerihalMatch?.kode || ''
+      previewNomorSurat.value = d.nomor_surat || ''
     }
   } catch { /* silent */ }
 }
@@ -306,6 +414,16 @@ const deleteExistingFile = async (fileId) => {
 }
 
 const handleSubmit = async () => {
+  if (nomorSuratMode.value === 'auto' && !editMode.value) {
+    if (!selectedUnitKode.value || !selectedPerihalKode.value) {
+      submitMsg.value = {
+        type: 'error',
+        text: 'Mode No. Surat Otomatis memerlukan Asal Surat (Unit) dan Perihal yang memiliki kode master (misal: Unit ITI, Perihal TSF). Silakan pilih dari Master atau ubah ke mode Manual.'
+      }
+      return
+    }
+  }
+
   if (!form.value.nomor_surat || !form.value.perihal || !form.value.asal_surat) {
     submitMsg.value = { type: 'error', text: 'Mohon lengkapi Nomor Surat, Perihal, dan Asal Surat.' }
     return
@@ -327,6 +445,11 @@ const handleSubmit = async () => {
       fd.append('nomor_agenda', form.value.nomor_agenda.trim() || '__AUTO__')
     }
   }
+
+  // Atur nomor surat mode & kode
+  fd.append('nomor_surat_mode', nomorSuratMode.value)
+  if (selectedUnitKode.value) fd.append('unit_kode', selectedUnitKode.value)
+  if (selectedPerihalKode.value) fd.append('perihal_kode', selectedPerihalKode.value)
 
   Object.entries(form.value).forEach(([k, v]) => {
     if (k === 'nomor_agenda') return // Sudah di-handle di atas
@@ -755,23 +878,109 @@ function fileUrl(path) {
           </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div class="flex flex-col gap-1.5">
-            <label class="text-xs font-bold text-textMuted uppercase">No. Surat *</label>
-            <InputText v-model="form.nomor_surat" placeholder="BPJS/KES/2026/001" class="w-full !bg-surface2" required />
+        <!-- Nomor Surat Section (Auto / Manual) -->
+        <div class="p-3.5 rounded-xl bg-surface2 border border-border flex flex-col gap-3">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <div class="flex items-center gap-2">
+              <i class="pi pi-hashtag text-accent text-sm"></i>
+              <label class="text-xs font-bold text-textMain uppercase tracking-wide">Nomor Surat *</label>
+            </div>
+            <!-- Toggle Auto / Manual -->
+            <div class="flex items-center bg-surface border border-border rounded-lg p-0.5 text-xs">
+              <button
+                type="button"
+                @click="setNomorSuratMode('auto')"
+                :class="[
+                  'px-2.5 py-1 rounded-md font-semibold transition-all flex items-center gap-1.5 cursor-pointer border-0',
+                  nomorSuratMode === 'auto'
+                    ? 'bg-accent text-white shadow-sm'
+                    : 'bg-transparent text-textMuted hover:text-textMain'
+                ]"
+              >
+                <i class="pi pi-bolt text-[11px]"></i>
+                Otomatis
+              </button>
+              <button
+                type="button"
+                @click="setNomorSuratMode('manual')"
+                :class="[
+                  'px-2.5 py-1 rounded-md font-semibold transition-all flex items-center gap-1.5 cursor-pointer border-0',
+                  nomorSuratMode === 'manual'
+                    ? 'bg-accent text-white shadow-sm'
+                    : 'bg-transparent text-textMuted hover:text-textMain'
+                ]"
+              >
+                <i class="pi pi-pencil text-[11px]"></i>
+                Manual (Eksternal)
+              </button>
+            </div>
           </div>
-          <div class="flex flex-col gap-1.5">
-            <label class="text-xs font-bold text-textMuted uppercase">Folder / Kategori</label>
-            <Select
-              v-model="form.folder_id"
-              :options="folders"
-              option-label="nama"
-              option-value="id"
-              placeholder="Pilih folder (opsional)"
-              class="w-full !bg-surface2"
-              show-clear
+
+          <!-- Mode Otomatis View -->
+          <div v-if="nomorSuratMode === 'auto'" class="flex flex-col gap-2">
+            <div class="p-2.5 rounded-lg bg-surface border border-border flex items-center justify-between gap-3">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                  AUTO GENERATE
+                </span>
+                <span v-if="previewNomorSurat" class="font-mono font-bold text-sm text-accent truncate">
+                  {{ previewNomorSurat }}
+                </span>
+                <span v-else class="text-xs text-textMuted italic truncate">
+                  <span v-if="!selectedUnitKode && !selectedPerihalKode">Pilih Asal Surat (Unit) dan Perihal ber-kode terlebih dahulu</span>
+                  <span v-else-if="!selectedUnitKode">Pilih Asal Surat yang memiliki kode unit</span>
+                  <span v-else-if="!selectedPerihalKode">Pilih Perihal yang memiliki kode</span>
+                </span>
+              </div>
+              <Button
+                v-if="selectedUnitKode && selectedPerihalKode"
+                type="button"
+                icon="pi pi-refresh"
+                size="small"
+                text
+                rounded
+                severity="secondary"
+                :loading="loadingNomorSurat"
+                @click="triggerUpdateNomorSurat"
+                title="Muat ulang nomor urut"
+              />
+            </div>
+
+            <!-- Hint format & kode terdeteksi -->
+            <div class="flex items-center gap-3 text-[11px] text-textMuted flex-wrap">
+              <span>Format: <code class="bg-surface px-1 py-0.5 rounded border border-border text-[10px]">No.Urut / Unit / Perihal / Bulan / Tahun</code></span>
+              <span v-if="selectedUnitKode" class="flex items-center gap-1">
+                Unit: <strong class="text-brandBlue font-mono">{{ selectedUnitKode }}</strong>
+              </span>
+              <span v-if="selectedPerihalKode" class="flex items-center gap-1">
+                Perihal: <strong class="text-accent font-mono">{{ selectedPerihalKode }}</strong>
+              </span>
+            </div>
+          </div>
+
+          <!-- Mode Manual View -->
+          <div v-else class="flex flex-col gap-1.5">
+            <InputText
+              v-model="form.nomor_surat"
+              placeholder="Contoh: 445/012/DINKES/2026 atau BPJS/KES/001"
+              class="w-full !bg-surface text-sm !rounded-lg"
+              required
             />
+            <span class="text-[11px] text-textMuted">Gunakan nomor asli yang tertera pada surat fisik masuk (Dinkes, BPJS, Rekanan, dll).</span>
           </div>
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs font-bold text-textMuted uppercase">Folder / Kategori</label>
+          <Select
+            v-model="form.folder_id"
+            :options="folders"
+            option-label="nama"
+            option-value="id"
+            placeholder="Pilih folder (opsional)"
+            class="w-full !bg-surface2"
+            show-clear
+          />
         </div>
 
         <!-- Perihal dengan AutoComplete & Modal Picker Cerdas -->
@@ -924,8 +1133,13 @@ function fileUrl(path) {
             @click="selectPerihalFromMaster(p)"
           >
             <div class="flex-1 min-w-0">
-              <div class="text-sm font-semibold text-textMain group-hover:text-accent">{{ p.nama }}</div>
-              <div v-if="p.keterangan" class="text-xs text-textMuted truncate">{{ p.keterangan }}</div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-sm font-semibold text-textMain group-hover:text-accent">{{ p.nama }}</span>
+                <span v-if="p.kode" class="font-mono text-[10px] font-bold px-1.5 py-0.2 rounded bg-brandBlueBg text-brandBlue border border-brandBlue/30">
+                  {{ p.kode }}
+                </span>
+              </div>
+              <div v-if="p.keterangan" class="text-xs text-textMuted truncate mt-0.5">{{ p.keterangan }}</div>
             </div>
             <i class="pi pi-arrow-right text-xs text-textMuted group-hover:text-accent"></i>
           </div>

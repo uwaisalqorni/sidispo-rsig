@@ -101,6 +101,39 @@ class Surat extends MY_Controller {
     }
 
     /**
+     * GET /api/v1/surat/preview-nomor
+     * Preview nomor surat yang akan digenerate otomatis
+     * Params: unit_kode, perihal_kode, tanggal_surat
+     */
+    public function preview_nomor()
+    {
+        $this->require_auth();
+
+        $unit_kode    = $this->input->get('unit_kode');
+        $perihal_kode = $this->input->get('perihal_kode');
+        $tanggal      = $this->input->get('tanggal_surat') ?: date('Y-m-d');
+
+        if (empty($unit_kode) || empty($perihal_kode)) {
+            return $this->response([
+                'status' => 'error',
+                'message' => 'Parameter unit_kode dan perihal_kode wajib diisi.'
+            ], 400);
+        }
+
+        $nomor = $this->surat->generate_nomor_surat($unit_kode, $perihal_kode, $tanggal);
+
+        $this->response([
+            'status' => 'success',
+            'data' => [
+                'nomor_surat' => $nomor,
+                'unit_kode'   => strtoupper($unit_kode),
+                'perihal_kode'=> strtoupper($perihal_kode),
+                'tanggal'     => $tanggal
+            ]
+        ]);
+    }
+
+    /**
      * POST /surat/create
      * Create new surat + multiple file uploads
      * Needs to use FormData (multipart/form-data) instead of JSON
@@ -124,17 +157,29 @@ class Surat extends MY_Controller {
             $nomor_agenda = trim($nomor_agenda_input);
         }
 
+        // Tentukan nomor_surat (Otomatis vs Manual)
+        $nomor_surat_mode = $this->input->post('nomor_surat_mode');
+        $unit_kode        = $this->input->post('unit_kode');
+        $perihal_kode     = $this->input->post('perihal_kode');
+        $nomor_surat      = trim($this->input->post('nomor_surat') ?: '');
+        $tanggal_surat    = $this->input->post('tanggal_surat');
+
+        if ($nomor_surat_mode === 'auto' && !empty($unit_kode) && !empty($perihal_kode)) {
+            // Generate nomor surat otomatis berurutan per unit per tahun
+            $nomor_surat = $this->surat->generate_nomor_surat($unit_kode, $perihal_kode, $tanggal_surat);
+        }
+
         // Insert Surat Data
         $data = [
             'nomor_agenda'   => $nomor_agenda,
-            'nomor_surat' => $this->input->post('nomor_surat'),
-            'tanggal_surat' => $this->input->post('tanggal_surat'),
+            'nomor_surat'    => $nomor_surat,
+            'tanggal_surat'  => $tanggal_surat,
             'tanggal_terima' => $this->input->post('tanggal_terima', true) ?: date('Y-m-d'),
-            'asal_surat' => $this->input->post('asal_surat'),
-            'perihal' => $this->input->post('perihal'),
-            'folder_id' => $this->input->post('folder_id') ?: null,
-            'keterangan' => $this->input->post('keterangan'),
-            'input_oleh' => $this->current_user->id
+            'asal_surat'     => $this->input->post('asal_surat'),
+            'perihal'        => $this->input->post('perihal'),
+            'folder_id'      => $this->input->post('folder_id') ?: null,
+            'keterangan'     => $this->input->post('keterangan'),
+            'input_oleh'     => $this->current_user->id
         ];
 
         // Basic validation

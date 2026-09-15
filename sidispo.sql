@@ -279,7 +279,7 @@ CREATE TABLE `master_asal_surat` (
   PRIMARY KEY (`id`),
   KEY `idx_asal_active` (`is_active`),
   KEY `idx_asal_nama` (`nama`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -315,6 +315,7 @@ DROP TABLE IF EXISTS `master_perihal`;
 CREATE TABLE `master_perihal` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `nama` varchar(300) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `kode` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `keterangan` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `is_active` tinyint(1) NOT NULL DEFAULT 1,
   `created_by` bigint(20) unsigned DEFAULT NULL,
@@ -324,7 +325,7 @@ CREATE TABLE `master_perihal` (
   KEY `idx_active` (`is_active`),
   KEY `fk_perihal_user` (`created_by`),
   CONSTRAINT `fk_perihal_user` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -640,13 +641,13 @@ LOCK TABLES `jabatan_hierarki` WRITE;
 INSERT INTO `jabatan_hierarki` VALUES (9,1,2),(2,2,3),(3,3,4),(4,4,5);
 UNLOCK TABLES;
 LOCK TABLES `master_asal_surat` WRITE;
-INSERT INTO `master_asal_surat` VALUES (1,'BPJS Kesehatan Cabang Malang','BPJS','Asuransi',NULL,NULL,'Badan Penyelenggara Jaminan Sosial Kesehatan',1,NULL,'2026-09-03 07:40:11','2026-09-03 07:40:11'),(2,'Dinas Kesehatan Kabupaten Malang','DINKES','Pemerintah',NULL,NULL,'Dinas Kesehatan Kab. Malang',1,NULL,'2026-09-03 07:40:11','2026-09-03 07:40:11'),(3,'Kementerian Kesehatan RI','KEMENKES','Pemerintah',NULL,NULL,'Kementerian Kesehatan Republik Indonesia',1,NULL,'2026-09-03 07:40:11','2026-09-03 07:40:11'),(4,'RSUD Kanjuruhan Kepanjen','RSUD','Fasilitas Kesehatan',NULL,NULL,'Rumah Sakit Umum Daerah Kanjuruhan',1,NULL,'2026-09-03 07:40:11','2026-09-03 07:40:11'),(5,'Puskesmas Gondanglegi','PKM','Fasilitas Kesehatan',NULL,NULL,'Puskesmas Wilayah Gondanglegi',1,NULL,'2026-09-03 07:40:11','2026-09-03 07:40:11');
+INSERT INTO `master_asal_surat` VALUES (1,'BPJS Kesehatan Cabang Malang','BPJS','Asuransi',NULL,NULL,'Badan Penyelenggara Jaminan Sosial Kesehatan',1,NULL,'2026-09-03 07:40:11','2026-09-03 07:40:11'),(2,'Dinas Kesehatan Kabupaten Malang','DINKES','Pemerintah',NULL,NULL,'Dinas Kesehatan Kab. Malang',1,NULL,'2026-09-03 07:40:11','2026-09-03 07:40:11'),(3,'Kementerian Kesehatan RI','KEMENKES','Pemerintah',NULL,NULL,'Kementerian Kesehatan Republik Indonesia',1,NULL,'2026-09-03 07:40:11','2026-09-03 07:40:11'),(4,'RSUD Kanjuruhan Kepanjen','RSUD','Fasilitas Kesehatan',NULL,NULL,'Rumah Sakit Umum Daerah Kanjuruhan',1,NULL,'2026-09-03 07:40:11','2026-09-03 07:40:11'),(5,'Puskesmas Gondanglegi','PKM','Fasilitas Kesehatan',NULL,NULL,'Puskesmas Wilayah Gondanglegi',1,NULL,'2026-09-03 07:40:11','2026-09-03 07:40:11'),(6,'Teknologi Informasi','ITI','Internal RS',NULL,NULL,'Unit Teknologi Informasi RSI Gondanglegi',1,NULL,'2026-09-14 06:58:10','2026-09-14 06:58:10');
 UNLOCK TABLES;
 LOCK TABLES `master_jabatan` WRITE;
 INSERT INTO `master_jabatan` VALUES (1,'Staff','STAFF',1,'',1,'2026-09-05 03:22:37','2026-09-05 04:05:15'),(2,'Kepala Instalasi','KA_INSTALASI',2,NULL,1,'2026-09-05 03:22:37','2026-09-05 03:22:37'),(3,'Kepala Bidang','KABID',3,NULL,1,'2026-09-05 03:22:37','2026-09-05 03:22:37'),(4,'Wakil Direktur','WADIR',4,NULL,1,'2026-09-05 03:22:37','2026-09-05 03:22:37'),(5,'Direktur','DIREKTUR',5,NULL,1,'2026-09-05 03:22:37','2026-09-05 03:22:37'),(6,'Administrator','ADMIN',99,NULL,1,'2026-09-05 03:22:37','2026-09-05 03:22:37');
 UNLOCK TABLES;
 LOCK TABLES `master_perihal` WRITE;
-INSERT INTO `master_perihal` VALUES (1,'Undangan Rapat','Surat undangan untuk menghadiri rapat',1,NULL,'2026-05-25 06:22:47','2026-05-25 06:22:47'),(2,'Permohonan Cuti','Surat permohonan izin cuti pegawai',1,NULL,'2026-05-25 06:22:47','2026-05-25 06:22:47'),(3,'Laporan Kegiatan','Laporan pelaksanaan kegiatan',1,NULL,'2026-05-25 06:22:47','2026-05-25 06:22:47'),(4,'Surat Tugas','Surat penugasan pegawai',1,NULL,'2026-05-25 06:22:47','2026-05-25 06:22:47'),(5,'Pemberitahuan','Surat pemberitahuan resmi',1,NULL,'2026-05-25 06:22:47','2026-05-25 06:22:47'),(6,'Permohonan Dana','Permohonan pencairan atau pengajuan dana',1,NULL,'2026-05-25 06:22:47','2026-05-25 06:22:47'),(7,'Koordinasi Lintas Bidang','Koordinasi antar bidang atau unit kerja',1,NULL,'2026-05-25 06:22:47','2026-05-25 06:22:47'),(8,'Surat Edaran','Edaran kebijakan atau informasi',1,NULL,'2026-05-25 06:22:47','2026-05-25 06:22:47'),(9,'Persetujuan','Surat persetujuan suatu kegiatan atau pengajuan',1,NULL,'2026-05-25 06:22:47','2026-05-25 06:22:47'),(10,'Tindak Lanjut Disposisi','Tindak lanjut atas disposisi pimpinan',1,NULL,'2026-05-25 06:22:47','2026-05-25 06:22:47'),(11,'RKA','RaaaaKaaaaruAaaaannnnn',1,1,'2026-05-25 06:32:34','2026-05-25 06:32:34');
+INSERT INTO `master_perihal` VALUES (1,'Undangan Rapat','UND','Surat undangan untuk menghadiri rapat',1,NULL,'2026-05-25 06:22:47','2026-09-14 06:58:10'),(2,'Permohonan Cuti',NULL,'Surat permohonan izin cuti pegawai',1,NULL,'2026-05-25 06:22:47','2026-05-25 06:22:47'),(3,'Laporan Kegiatan',NULL,'Laporan pelaksanaan kegiatan',1,NULL,'2026-05-25 06:22:47','2026-05-25 06:22:47'),(4,'Surat Tugas','ST','Surat penugasan pegawai',1,NULL,'2026-05-25 06:22:47','2026-09-14 06:58:10'),(5,'Pemberitahuan','PBT','Surat pemberitahuan resmi',1,NULL,'2026-05-25 06:22:47','2026-09-14 06:58:10'),(6,'Permohonan Dana',NULL,'Permohonan pencairan atau pengajuan dana',1,NULL,'2026-05-25 06:22:47','2026-05-25 06:22:47'),(7,'Koordinasi Lintas Bidang',NULL,'Koordinasi antar bidang atau unit kerja',1,NULL,'2026-05-25 06:22:47','2026-05-25 06:22:47'),(8,'Surat Edaran','SE','Edaran kebijakan atau informasi',1,NULL,'2026-05-25 06:22:47','2026-09-14 06:58:10'),(9,'Persetujuan',NULL,'Surat persetujuan suatu kegiatan atau pengajuan',1,NULL,'2026-05-25 06:22:47','2026-05-25 06:22:47'),(10,'Tindak Lanjut Disposisi',NULL,'Tindak lanjut atas disposisi pimpinan',1,NULL,'2026-05-25 06:22:47','2026-05-25 06:22:47'),(11,'RKA',NULL,'RaaaaKaaaaruAaaaannnnn',1,1,'2026-05-25 06:32:34','2026-05-25 06:32:34'),(12,'Telaah Staf','TSF','Surat telaahan staf internal rumah sakit',1,NULL,'2026-09-14 06:58:10','2026-09-14 06:58:10');
 UNLOCK TABLES;
 
 --
@@ -671,6 +672,6 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-09-10 10:46:38
+-- Dump completed on 2026-09-14 13:58:20
 
 -- Dump completed

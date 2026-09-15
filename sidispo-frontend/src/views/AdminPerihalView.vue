@@ -14,7 +14,7 @@ const deleteTarget = ref(null)
 const msg          = ref({ type: '', text: '' })
 const searchQuery  = ref('')
 
-const form = ref({ nama: '', keterangan: '', is_active: true })
+const form = ref({ nama: '', kode: '', keterangan: '', is_active: true })
 
 // Filter berdasarkan search
 const filteredList = computed(() => {
@@ -22,6 +22,7 @@ const filteredList = computed(() => {
   if (!q) return perihalList.value
   return perihalList.value.filter(p =>
     p.nama.toLowerCase().includes(q) ||
+    (p.kode || '').toLowerCase().includes(q) ||
     (p.keterangan || '').toLowerCase().includes(q)
   )
 })
@@ -51,7 +52,7 @@ onMounted(load)
 function openCreate() {
   editMode.value = false
   editId.value   = null
-  form.value     = { nama: '', keterangan: '', is_active: true }
+  form.value     = { nama: '', kode: '', keterangan: '', is_active: true }
   msg.value      = { type: '', text: '' }
   showModal.value = true
 }
@@ -59,7 +60,7 @@ function openCreate() {
 function openEdit(p) {
   editMode.value = true
   editId.value   = p.id
-  form.value     = { nama: p.nama, keterangan: p.keterangan || '', is_active: !!Number(p.is_active) }
+  form.value     = { nama: p.nama, kode: p.kode || '', keterangan: p.keterangan || '', is_active: !!Number(p.is_active) }
   msg.value      = { type: '', text: '' }
   showModal.value = true
 }
@@ -79,6 +80,7 @@ const handleSubmit = async () => {
   try {
     const payload = {
       nama:       form.value.nama.trim(),
+      kode:       (form.value.kode || '').trim().toUpperCase(),
       keterangan: form.value.keterangan,
       is_active:  form.value.is_active ? 1 : 0
     }
@@ -153,6 +155,7 @@ function formatDate(d) {
             <tr>
               <th class="px-5 py-3 w-10">#</th>
               <th class="px-5 py-3">Nama Perihal</th>
+              <th class="px-5 py-3 w-28">Kode</th>
               <th class="px-5 py-3">Keterangan</th>
               <th class="px-5 py-3">Dibuat</th>
               <th class="px-5 py-3 text-center">Status</th>
@@ -162,7 +165,7 @@ function formatDate(d) {
           <tbody>
             <!-- Skeleton loading -->
             <tr v-if="loading" v-for="i in 5" :key="i" class="border-b border-border">
-              <td colspan="6" class="px-5 py-4">
+              <td colspan="7" class="px-5 py-4">
                 <div class="h-3 bg-surface3 rounded animate-pulse w-full"></div>
               </td>
             </tr>
@@ -173,6 +176,12 @@ function formatDate(d) {
               <td class="px-5 py-3 text-textDim text-xs font-mono">{{ first + idx + 1 }}</td>
               <td class="px-5 py-3">
                 <span class="font-semibold text-textMain">{{ p.nama }}</span>
+              </td>
+              <td class="px-5 py-3">
+                <span v-if="p.kode" class="font-mono text-xs font-bold px-2 py-0.5 rounded bg-brandBlueBg text-brandBlue border border-brandBlue/30">
+                  {{ p.kode }}
+                </span>
+                <span v-else class="text-textDim text-xs">—</span>
               </td>
               <td class="px-5 py-3 text-xs text-textMuted max-w-[280px] truncate" :title="p.keterangan">
                 {{ p.keterangan || '—' }}
@@ -203,7 +212,7 @@ function formatDate(d) {
 
             <!-- Empty state -->
             <tr v-if="!loading && filteredList.length === 0">
-              <td colspan="6" class="px-5 py-12 text-center text-textMuted">
+              <td colspan="7" class="px-5 py-12 text-center text-textMuted">
                 <div class="text-4xl mb-3">📭</div>
                 <div class="font-semibold">Belum ada data perihal.</div>
                 <div class="text-xs mt-1">Klik "Tambah Perihal" untuk menambahkan data baru.</div>
@@ -245,14 +254,24 @@ function formatDate(d) {
             {{ msg.text }}
           </div>
 
-          <!-- Nama -->
-          <div>
-            <label class="block text-xs font-bold text-textMuted uppercase mb-1.5">
-              Nama Perihal <span class="text-brandRed">*</span>
-            </label>
-            <input v-model="form.nama" type="text" placeholder="Contoh: Undangan Rapat Koordinasi"
-              class="w-full bg-surface2 border border-border rounded-lg px-3 py-2.5 text-sm text-textMain focus:border-accent focus:outline-none"
-              required autofocus />
+          <!-- Nama & Kode -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="sm:col-span-2">
+              <label class="block text-xs font-bold text-textMuted uppercase mb-1.5">
+                Nama Perihal <span class="text-brandRed">*</span>
+              </label>
+              <input v-model="form.nama" type="text" placeholder="Contoh: Telaah Staf"
+                class="w-full bg-surface2 border border-border rounded-lg px-3 py-2.5 text-sm text-textMain focus:border-accent focus:outline-none"
+                required autofocus />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-textMuted uppercase mb-1.5">
+                Kode Perihal
+              </label>
+              <input v-model="form.kode" type="text" placeholder="Contoh: TSF"
+                class="w-full bg-surface2 border border-border rounded-lg px-3 py-2.5 text-sm text-textMain focus:border-accent focus:outline-none uppercase font-mono" />
+              <p class="text-[10px] text-textMuted mt-1">Untuk format no. surat</p>
+            </div>
           </div>
 
           <!-- Keterangan -->

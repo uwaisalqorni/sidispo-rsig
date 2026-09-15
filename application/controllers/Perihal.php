@@ -81,6 +81,7 @@ class Perihal extends MY_Controller {
 
         $insert = [
             'nama'       => trim($data['nama']),
+            'kode'       => !empty($data['kode']) ? strtoupper(trim($data['kode'])) : null,
             'keterangan' => $data['keterangan'] ?? null,
             'is_active'  => isset($data['is_active']) ? (int)$data['is_active'] : 1,
             'created_by' => $this->current_user->id,
@@ -125,6 +126,7 @@ class Perihal extends MY_Controller {
 
         $update = [
             'nama'       => trim($data['nama']),
+            'kode'       => isset($data['kode']) ? (trim($data['kode']) !== '' ? strtoupper(trim($data['kode'])) : null) : $row['kode'],
             'keterangan' => $data['keterangan'] ?? $row['keterangan'],
             'is_active'  => isset($data['is_active']) ? (int)$data['is_active'] : (int)$row['is_active'],
         ];

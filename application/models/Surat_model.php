@@ -174,4 +174,62 @@ class Surat_model extends CI_Model {
         }
         return false;
     }
+
+    /**
+     * Konversi angka bulan (1-12) ke angka Romawi
+     */
+    public function get_roman_month($month)
+    {
+        $map = [
+            1 => 'I', 2 => 'II', 3 => 'III', 4 => 'IV',
+            5 => 'V', 6 => 'VI', 7 => 'VII', 8 => 'VIII',
+            9 => 'IX', 10 => 'X', 11 => 'XI', 12 => 'XII'
+        ];
+        return $map[(int)$month] ?? 'I';
+    }
+
+    /**
+     * Generate nomor surat otomatis berdasarkan Kode Unit (Asal Surat), Kode Perihal, dan Tanggal Surat
+     * Format: {no_urut}/{kode_unit}/{kode_perihal}/{bulan_romawi}/{tahun}
+     * Contoh: 001/ITI/TSF/IX/2026
+     * No urut berurutan per unit per tahun kalender
+     */
+    public function generate_nomor_surat($unit_kode, $perihal_kode, $tanggal_surat = null)
+    {
+        $unit_kode    = strtoupper(trim($unit_kode));
+        $perihal_kode = strtoupper(trim($perihal_kode));
+
+        $tgl = $tanggal_surat ? strtotime($tanggal_surat) : time();
+        if (!$tgl) $tgl = time();
+
+        $bulan_angka  = (int)date('n', $tgl);
+        $bulan_romawi = $this->get_roman_month($bulan_angka);
+        $tahun        = date('Y', $tgl);
+
+        // Cari nomor urut terbesar di tahun tersebut untuk unit terkait
+        // Format surat: [0-9]{3}/UNIT_KODE/.../TAHUN
+        $pattern = "%/{$unit_kode}/%/{$tahun}";
+
+        $query = $this->db->query("
+            SELECT nomor_surat FROM surat_masuk
+            WHERE nomor_surat LIKE ?
+        ", [$pattern]);
+
+        $max_seq = 0;
+        foreach ($query->result_array() as $row) {
+            $parts = explode('/', $row['nomor_surat']);
+            // Nomor urut berada di bagian pertama (index 0)
+            if (!empty($parts[0]) && is_numeric($parts[0])) {
+                $seq = (int)$parts[0];
+                if ($seq > $max_seq) {
+                    $max_seq = $seq;
+                }
+            }
+        }
+
+        $next_seq      = $max_seq + 1;
+        $seq_formatted = sprintf('%03d', $next_seq);
+
+        return "{$seq_formatted}/{$unit_kode}/{$perihal_kode}/{$bulan_romawi}/{$tahun}";
+    }
 }

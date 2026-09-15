@@ -101,6 +101,7 @@ $route['api/v1/folder/(:num)']['put']                      = 'Folder/update/$1';
 $route['api/v1/folder/(:num)']['delete']                   = 'Folder/delete/$1';        // DELETE – Hapus (jika kosong)
 
 // ── SURAT MASUK ───────────────────────────────────────────────────────────
+$route['api/v1/surat/preview-nomor']['get']                = 'Surat/preview_nomor';     // GET    – Preview nomor surat auto
 $route['api/v1/surat']['get']                              = 'Surat/index';             // GET    – List surat masuk
 $route['api/v1/surat']['post']                             = 'Surat/create';            // POST   – Input surat + upload file
 $route['api/v1/surat/(:num)']['get']                       = 'Surat/detail/$1';         // GET    – Detail surat + lampiran
